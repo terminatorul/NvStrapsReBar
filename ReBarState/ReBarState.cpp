@@ -18,8 +18,8 @@ SPDX-License-Identifier: MIT
 #define QUOTE(x) #x
 #define STR(x) QUOTE(x)
 
-#define VNAME ReBarState
-#define VGUID A3C5B77A-C88F-4A93-BF1C-4A92A32C65CE
+#define VNAME NvStrapsReBar
+#define VGUID 481893F5-2436-4FD5-9D5A-69B121C3F0BA
 
 #define VARIABLE_ATTRIBUTE_NON_VOLATILE 0x00000001
 #define VARIABLE_ATTRIBUTE_BOOTSERVICE_ACCESS 0x00000002
@@ -58,8 +58,8 @@ uint8_t GetState() {
 	UINT8 rBarState;
 	DWORD rSize;
 
-	const TCHAR name[] = TEXT("ReBarState");
-	const TCHAR guid[] = TEXT("{A3C5B77A-C88F-4A93-BF1C-4A92A32C65CE}");
+	const TCHAR name[] = TEXT("NvStrapsReBar");
+	const TCHAR guid[] = TEXT("{481893F5-2436-4FD5-9D5A-69B121C3F0BA}");
 
 	rSize = GetFirmwareEnvironmentVariable(name, guid, &rBarState, 1);
 
@@ -75,8 +75,8 @@ bool WriteState(uint8_t rBarState) {
 	DWORD size = sizeof(UINT8);
 	DWORD dwAttributes = VARIABLE_ATTRIBUTE_NON_VOLATILE | VARIABLE_ATTRIBUTE_BOOTSERVICE_ACCESS | VARIABLE_ATTRIBUTE_RUNTIME_ACCESS;
 
-	const TCHAR name[] = TEXT("ReBarState");
-	const TCHAR guid[] = TEXT("{A3C5B77A-C88F-4A93-BF1C-4A92A32C65CE}");
+	const TCHAR name[] = TEXT("NvStrapsReBar");
+	const TCHAR guid[] = TEXT("{481893F5-2436-4FD5-9D5A-69B121C3F0BA}");
 
 	return SetFirmwareEnvironmentVariableEx(name, guid, &rBarState, size, dwAttributes) != 0;
 }
@@ -142,7 +142,7 @@ int main()
 	std::string i;
 	uint8_t reBarState;
 
-	std::cout << "ReBarState (c) 2023 xCuri0\n\n";
+	std::cout << "NvStrapsReBar, based on ReBarState (c) 2023 xCuri0\n\n";
 	if (!CheckPriviledge()) {
 		std::cout << "Failed to obtain EFI variable access try running as admin/root\n";
 		ret = 1;
@@ -153,20 +153,20 @@ int main()
 
 	if (!notExist) {
 		if (reBarState == 0)
-			std::cout << "Current ReBarState " << +reBarState << " / Disabled\n";
+			std::cout << "Current NvStrapsReBar " << +reBarState << " / Disabled\n";
 		else
 			if (reBarState == 32)
-				std::cout << "Current ReBarState " << +reBarState << " / Unlimited\n";
+				std::cout << "Current NvStrapsReBar " << +reBarState << " / Unlimited\n";
 			else
-				std::cout << "Current ReBarState " << +reBarState << " / " << std::pow(2, reBarState) << " MB\n";
+				std::cout << "Current NvStrapsReBar " << +reBarState << " / " << std::pow(2, reBarState) << " MB\n";
 	}
 	else {
-		std::cout << "ReBarState variable doesn't exist / Disabled. Enter a value to create it\n";
+		std::cout << "NvStrapsReBar variable doesn't exist / Disabled. Enter a value to create it\n";
 	}
 
-	std::cout << "\nVerify that 4G Decoding is enabled and CSM is disabled otherwise system will not POST with GPU. If your ReBarState value keeps getting reset then check your system time.\n";
+	std::cout << "\nVerify that 4G Decoding is enabled and CSM is disabled otherwise system will not POST with GPU. If your NvStrapsReBar value keeps getting reset then check your system time.\n";
 	std::cout << "\nIt is recommended to first try smaller sizes above 256MB in case BIOS doesn't support large BARs.\n";
-	std::cout << "\nEnter ReBarState Value\n      0: Disabled \nAbove 0: Maximum BAR size set to 2^x MB \n     32: Unlimited BAR size\n\n";
+	std::cout << "\nEnter NvStrapsReBar Value\n      0: Disabled \nAbove 0: Maximum BAR size set to 2^x MB \n     32: Unlimited BAR size\n\n";
 
 	std::getline(std::cin, i);
 
@@ -178,18 +178,18 @@ int main()
 
 	if (reBarState < 20)
 		if (reBarState == 0)
-			std::cout << "Writing value of 0 / Disabled to ReBarState\n\n";
+			std::cout << "Writing value of 0 / Disabled to NvStrapsReBar\n\n";
 		else
-			std::cout << "Writing value of " << +reBarState << " / " << std::pow(2, reBarState) << " MB to ReBarState\n\n";
+			std::cout << "Writing value of " << +reBarState << " / " << std::pow(2, reBarState) << " MB to NvStrapsReBar\n\n";
 	else
-		std::cout << "Writing value to ReBarState\n\n";
+		std::cout << "Writing value to NvStrapsReBar\n\n";
 
 	if (WriteState(reBarState)) {
-		std::cout << "Successfully wrote ReBarState UEFI variable\n";
+		std::cout << "Successfully wrote NvStrapsReBar UEFI variable\n";
 		std::cout << "\nReboot for changes to take effect\n";
 	}
 	else {
-		std::cout << "Failed to write ReBarState UEFI variable\n";
+		std::cout << "Failed to write NvStrapsReBar UEFI variable\n";
 		#ifdef _MSC_VER
 		std::cout << "GetLastError: " << GetLastError() << "\n";
 		#endif

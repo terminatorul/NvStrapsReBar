@@ -10,14 +10,19 @@ SPDX-License-Identifier: MIT
 #include <IndustryStandard/Pci22.h>
 #include <Library/MemoryAllocationLib.h>
 #include <Library/DebugLib.h>
+
 #include "include/pciRegs.h"
 #include "include/PciHostBridgeResourceAllocation.h"
+#include "include/SetupNvStraps.h"
+#include "include/ReBar.h"
 
 #ifdef _MSC_VER
 #pragma warning(disable:28251)
 #include <intrin.h>
 #pragma warning(default:28251)
 #endif
+#include "Protocol/PciHostBridgeResourceAllocation.h"
+// #include "Build/ReBarUEFI/RELEASE_VS2019/X64/ReBarUEFI/ReBarDxe/ReBarDxe/DEBUG/AutoGen.h"
 
 #define PCI_POSSIBLE_ERROR(val) ((val) == 0xffffffff)
 
@@ -27,8 +32,8 @@ SPDX-License-Identifier: MIT
 // if system time is before this year then CMOS reset will be detected and rebar will be disabled.
 #define BUILD_YEAR 2023
 
-// a3c5b77a-c88f-4a93-bf1c-4a92a32c65ce
-static GUID reBarStateGuid = { 0xa3c5b77a, 0xc88f, 0x4a93, {0xbf, 0x1c, 0x4a, 0x92, 0xa3, 0x2c, 0x65, 0xce}};
+// 481893f5-2436-4fd5-9d5a-69b121c3f0ba
+static GUID reBarStateGuid = { 0x481893f5, 0x2436, 0x4fd5, {0x9d, 0x5a, 0x69, 0xb1, 0x21, 0xc3, 0xf0, 0xba}};
 
 // 0: disabled
 // >0: maximum BAR size (2^x) set to value. UINT8_MAX for unlimited
@@ -148,6 +153,7 @@ INTN pciRebarFindPos(UINTN pciAddress, INTN pos, UINT8 bar)
         if (bar_idx == bar)
             return pos;
     }
+    
     return -1;
 }
 
@@ -167,6 +173,9 @@ UINT32 pciRebarGetPossibleSizes(UINTN pciAddress, UINTN epos, UINT16 vid, UINT16
     if (vid == PCI_VENDOR_ID_ATI && did == 0x731f &&
         bar == 0 && cap == 0x7000)
         cap = 0x3f000;
+
+    if (NvStraps_CheckBARSizeListAdjust(pciAddress, vid, did, bar))
+        cap = NvStraps_AdjustBARSizeList(pciAddress, vid, did, bar, cap);
 
     return cap >> 4;
 }
@@ -205,10 +214,15 @@ VOID reBarSetupDevice(EFI_HANDLE handle, EFI_PCI_ROOT_BRIDGE_IO_PROTOCOL_PCI_ADD
 
     DEBUG((DEBUG_INFO, "ReBarDXE: Device vid:%x did:%x\n", vid, did));
 
+    NvStraps_EnumDevice(vid, did, &addrInfo, reBarState);
+
+    if (NvStraps_CheckDevice(vid, did, &addrInfo))
+        NvStraps_Setup(vid, did, &addrInfo);
+
     epos = pciFindExtCapability(pciAddress, PCI_EXT_CAP_ID_REBAR);
     if (epos)
     {
-        for (UINT8 bar = 0; bar < 6; bar++)
+        for (UINT8 bar = 0u; bar < PCI_STD_NUM_BARS; bar++)
         {
             UINT32 rBarS = pciRebarGetPossibleSizes(pciAddress, epos, vid, did, bar);
             if (!rBarS)

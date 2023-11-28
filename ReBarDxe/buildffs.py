@@ -10,9 +10,9 @@ import subprocess
 import glob
 from pefile import PE
 
-name = "ReBarDxe"
+name = "NvStrapsReBar"
 version = "1.0"
-GUID = "a8ee1777-a4f5-4345-9da4-13742084d31e"
+GUID = "90d10790-bbfa-404b-873b-5bdb3ada3c56"
 shell = sys.platform == "win32"
 buildtype = "RELEASE"
 
@@ -57,9 +57,9 @@ if len(sys.argv) == 3:
 else:
     os.chdir("../..")
 
-subprocess.run(["build", "--platform=ReBarUEFI/ReBarDxe/ReBar.dsc"], shell=shell, env=os.environ, stderr=sys.stderr, stdout=sys.stdout)
+subprocess.run(["build", "--platform=NvStrapsReBar/ReBarDxe/ReBar.dsc"], shell=shell, env=os.environ, stderr=sys.stderr, stdout=sys.stdout)
 
-ReBarDXE = glob.glob(f"./Build/ReBarUEFI/{buildtype}_*/X64/ReBarDxe.efi")
+ReBarDXE = glob.glob(f"./Build/NvStrapsReBar/{buildtype}_*/X64/NvStrapsReBar.efi")
 
 if len(ReBarDXE) != 1:
     print("Build failed")
@@ -79,13 +79,13 @@ os.chdir(os.path.dirname(ReBarDXE[0]))
 try:
     os.remove("pe32.sec")
     os.remove("name.sec")
-    os.remove("ReBarDxe.ffs")
+    os.remove("NvStrapsReBar.ffs")
 except FileNotFoundError:
     pass
 
-subprocess.run(["GenSec", "-o", "pe32.sec", "ReBarDxe.efi", "-S", "EFI_SECTION_PE32"], shell=shell, env=os.environ, stderr=sys.stderr, stdout=sys.stdout)
+subprocess.run(["GenSec", "-o", "pe32.sec", "NvStrapsReBar.efi", "-S", "EFI_SECTION_PE32"], shell=shell, env=os.environ, stderr=sys.stderr, stdout=sys.stdout)
 subprocess.run(["GenSec", "-o", "name.sec", "-S", "EFI_SECTION_USER_INTERFACE", "-n", name], shell=shell, env=os.environ, stderr=sys.stderr, stdout=sys.stdout)
-subprocess.run(["GenFfs", "-g", GUID, "-o", "ReBarDxe.ffs", "-i", "pe32.sec", "-i" ,"name.sec", "-t", "EFI_FV_FILETYPE_DRIVER", "--checksum"], shell=shell, env=os.environ, stderr=sys.stderr, stdout=sys.stdout)
+subprocess.run(["GenFfs", "-g", GUID, "-o", "NvStrapsReBar.ffs", "-i", "pe32.sec", "-i" ,"name.sec", "-t", "EFI_FV_FILETYPE_DRIVER", "--checksum"], shell=shell, env=os.environ, stderr=sys.stderr, stdout=sys.stdout)
 
 try:
     os.remove("pe32.sec")

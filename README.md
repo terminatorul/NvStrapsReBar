@@ -1,3 +1,48 @@
+<h1 align="center">NvStrapsReBar</h1>
+<p>This is a copy of the rather popular <a href="https://github.com/xCuri0/ReBARUEFI">ReBarUEFI</a> DXE driver. <a href="https://github.com/xCuri0/ReBARUEFI">ReBarUEFI</a> enables Resizable BAR for older motherboards and chipsets without ReBAR support from the manufacturer. NvStrapsReBar was created to test Resizable BAR support for NVIDIA GPUs from the RTX 2000 (and GTX 1600, Turing architecture) line. Apparently for the GTX 1000 cards (Pascal architecture) the Windows NVIDIA driver just resets the computer during Windows boot if the BAR size has been changed, so GTX 1000 cards still can not enable ReBAR.</p>
+
+Currently the location of the GPU on the PCI bus has to be hard-coded right into the motherboard UEFI, and so does the associated PCI-to-PCI bridge. All hard-coded values are in the header file `ReBarDxe/include/LocalPciGPU.h`, and all the values can be read from the GPU-Z .txt report file, if you want to change them to match your system. Currently these settings are:
+
+```C
+#define TARGET_GPU_PCI_VENDOR_ID        0x10DEu
+#define TARGET_GPU_PCI_DEVICE_ID        0x1E07u
+
+#define TARGET_GPU_PCI_BUS              0x41u
+#define TARGET_GPU_PCI_DEVICE           0x00u
+#define TARGET_GPU_PCI_FUNCTION         0x00u
+#define TARGET_GPU_BAR0_ADDRESS         UINT32_C(0x82000000)               // Should fall within memory range mapped by the bridge 
+
+#define TARGET_GPU_BAR1_SIZE_SELECTOR   _16G                               // Desired size for GPU BAR1, should cover the VRAM size
+
+// Secondary bus of the bridge must match the GPU bus
+// Check the output form CPU-Z .txt report
+
+#define TARGET_BRIDGE_PCI_VENDOR_ID     0x1022u
+#define TARGET_BRIDGE_PCI_DEVICE_ID     0x1453u
+
+#define TARGET_BRIDGE_PCI_BUS           0x40u
+#define TARGET_BRIDGE_PCI_DEVICE        0x03u
+#define TARGET_BRIDGE_PCI_FUNCTION      0x01u
+
+// Memory range and I/O port range (base + limit) mapped to bridge
+// from CPU-Z .txt report of the bridge and GPU
+#define TARGET_BRIDGE_MEM_BASE_LIMIT    UINT32_C(0x83008200)            // From offset 0x20 into the PCI config registers of the bridge,
+                                                                        // read as little-endian (reverse the byte order)
+                                                                        // The the range of values should cover the GPU BAR0 address
+#define TARGET_BRIDGE_IO_BASE_LIMIT     0x8181u                         // From offset 0x1C into the PCI config area of the bridge
+                                                                        // read as little-endian
+```
+
+Build the project with the same steps as the original [ReBarUEFI](https://github.com/xCuri0/ReBARUEFI).
+
+Credits go to the bellow github users, as I integrated and coded their findings and results:
+* [@mupuf](https://github.com/mupuf) and [envytools](https://github.com/envytools/envytools) for the original effort on reverse-engineering the register interface for NVIDIA GPUs, for use by the [nouveau](https://nouveau.freedesktop.org/) open-source driver in Linux.
+* [@Xelafic](https://github.com/Xelafic) who showed the idea and the first test for using the GPU STRAPS bits, documented by envtools, to select the BAR size during PCI bring-up in UEFI code.
+* [@xCuri0](https://github.com/xCuri0/ReBARUEFI") for the ReBarUEFI DXE driver that enables ReBAR on the motherboard, and allows intercepting and hooking into the PCI enumeration phases in UEFI code on the motherboard.
+
+<p>Bellow is the README page from the original project <a href="https://github.com/xCuri0/ReBarUEFI">xCuri0/ReBarUEFI</a>. Beware links point to the original project wiki as well, so this page may be out of date (out of sync) with the linked wiki pages.</p>
+
+
 <h1 align="center">ReBarUEFI</h1>
 <p align="center">
 <a href="https://github.com/xCuri0/ReBarUEFI/actions/workflows/ReBarDxe.yml"><img src="https://img.shields.io/github/actions/workflow/status/xCuri0/ReBarUEFI/ReBarDxe.yml?logo=github&label=ReBarDxe&style=flat-square" alt="GitHub Actions ReBarDxe"></a>

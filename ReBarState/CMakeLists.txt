@@ -6,8 +6,8 @@ cmake_minimum_required (VERSION 3.8)
 project ("ReBarState")
 set(CMAKE_CXX_STANDARD 17)
 
-add_executable (ReBarState "ReBarState.cpp")
+add_executable (NvStrapsReBar "ReBarState.cpp")
 
 if(WIN32)
-    set_target_properties(ReBarState PROPERTIES LINK_FLAGS " /MANIFESTUAC:\"level='requireAdministrator' uiAccess='false'\" ")
+    set_target_properties(NvStrapsReBar PROPERTIES LINK_FLAGS " /MANIFESTUAC:\"level='requireAdministrator' uiAccess='false'\" ")
 endif()
