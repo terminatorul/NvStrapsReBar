@@ -2,18 +2,30 @@
 Copyright (c) 2022-2023 xCuri0 <zkqri0@gmail.com>
 SPDX-License-Identifier: MIT
 */
-#include <iostream>
-#include <string>
+
+#include <cstddef>
+#include <cstdint>
 #include <cmath>
 #include <cstdint>
+#include <exception>
+#include <system_error>
+#include <string>
+#include <vector>
+#include <iostream>
+#include <iomanip>
+#include <algorithm>
 
-#ifdef _MSC_VER
+#if defined(WINDOWS) || defined(_WINDOWS) || defined(_WIN64) || defined(_WIN32)
 #include <Windows.h>
 #else
 #include <unistd.h>
 #include <linux/fs.h>
 #include <sys/ioctl.h>
 #endif
+
+#include "DeviceList.hh"
+
+#undef max
 
 #define QUOTE(x) #x
 #define STR(x) QUOTE(x)
@@ -25,10 +37,129 @@ SPDX-License-Identifier: MIT
 #define VARIABLE_ATTRIBUTE_BOOTSERVICE_ACCESS 0x00000002
 #define VARIABLE_ATTRIBUTE_RUNTIME_ACCESS 0x00000004
 
+using std::exception;
+using std::system_error;
+using std::max;
+using std::uint_least8_t;
+using std::uint_least64_t;
+using std::size_t;
+using std::string;
+using std::cout;
+using std::cerr;
+using std::wcout;
+using std::dec;
+using std::hex;
+using std::uppercase;
+using std::left;
+using std::right;
+using std::setw;
+using std::setfill;
+using std::endl;
+using std::string;
+using std::vector;
+using std::wstring;
+using std::to_string;
+using std::to_wstring;
+using namespace std::literals::string_literals;
+
 bool notExist = false;
 
-// Windows
-#ifdef _MSC_VER
+#if defined(WINDOWS) || defined(_WINDOWS) || defined(_WIN64) || defined(_WIN32)
+
+wstring formatMemorySize(uint_least64_t memorySize)
+{
+    if (!memorySize)
+        return L"    "s;
+
+    if (memorySize < 1024u * 1024u * 1024u)
+        return to_wstring((memorySize + 512u * 1024u) / (1024u * 1024u)) + L"M"s;
+
+    return to_wstring((memorySize + 512u * 1024u * 1024u) / (1024u * 1024u * 1024u)) + L"G"s;
+}
+
+wstring formatLocation(DeviceInfo const &devInfo)
+{
+    return L"bus: "s + to_wstring(devInfo.bus) + L", dev: "s + to_wstring(devInfo.device) + L", fn: "s + to_wstring(devInfo.function);
+}
+
+wstring formatBarSize(uint_least8_t barSizeSelector)
+{
+    switch (barSizeSelector)
+    {
+    case 0:
+        return L" "s;
+    case 1:
+        return L"512 MB"s;
+    case 2:
+        return L"1 GB"s;
+    case 3:
+        return L"2 GB"s;
+    case 4:
+        return L"4 GB"s;
+    case 5:
+        return L"8 GB"s;
+    case 6:
+        return L"16 GB"s;
+    case 7:
+        return L"32 GB"s;
+    case 8:
+        return L"64 GB"s;
+    case 9:
+        return L"128 GB"s;
+    case 10:
+        return L"256 GB"s;
+    case 11:
+        return L"512 GB"s;
+    default:
+        return L" "s;
+    }
+
+    return L" "s;
+}
+
+void showLocalGPUs(vector<DeviceInfo> const &deviceSet)
+{
+    if (deviceSet.empty())
+    {
+        cerr << "No display adapters found.\n";
+        return;
+    }
+
+    auto
+        nMaxLocationSize = "Pci bus location"s.size(),
+        nMaxBarSize = "BAR"s.size(),
+        nMaxVRAMSize = "VRAM"s.size(),
+        nMaxNameSize = "Product Name"s.size();
+
+    for (auto const &deviceInfo: deviceSet)
+    {
+        nMaxLocationSize = max(nMaxLocationSize, formatLocation(deviceInfo).size());
+        nMaxBarSize = max(nMaxBarSize, formatBarSize(deviceInfo.barSizeSelector).size());
+        nMaxVRAMSize = max(nMaxVRAMSize, formatMemorySize(deviceInfo.dedicatedVideoMemory).size());
+        nMaxNameSize = max(nMaxNameSize, deviceInfo.productName.size());
+    }
+
+
+    wcout << L"+----+-----------+-"s << wstring(nMaxLocationSize, L'-') << L"-+-"s << wstring(nMaxBarSize, L'-') << L"-+-"s << wstring(nMaxVRAMSize, L'-') << L"-+-"s << wstring(nMaxNameSize, L'-') << L"-+\n"s;
+    wcout << L"| Nr | PCI ID    | "s << setw(nMaxLocationSize) << left << L"PCI bus location"s << L" | "s << setw(nMaxBarSize) << L"BAR"s << L" | "s << setw(nMaxVRAMSize) << L"VRAM"s << L" | "s << setw(nMaxNameSize) << L"Product Name"s << L" |\n"s;
+    wcout << L"+----+-----------+-"s << wstring(nMaxLocationSize, L'-') << L"-+-"s << wstring(nMaxBarSize, L'-') << L"-+-"s << wstring(nMaxVRAMSize, L'-') << L"-+-"s << wstring(nMaxNameSize, L'-') << L"-+\n"s;
+
+    unsigned i = 1u;
+
+    for (auto const &deviceInfo: deviceSet)
+    {
+        wcout << L"| "s << dec << right << setw(2u) << setfill(L' ') << i++;
+        wcout << L" | "s << hex << setw(sizeof(WORD) * 2u) << setfill(L'0') << uppercase << deviceInfo.vendorID << L':' << hex << setw(sizeof(WORD) * 2u) << setfill(L'0') << deviceInfo.deviceID;
+        wcout << L" | "s << right << setw(nMaxLocationSize) << formatLocation(deviceInfo);
+        wcout << L" | "s << dec << setw(nMaxBarSize) << setfill(L' ') << formatBarSize(deviceInfo.barSizeSelector);
+        wcout << L" | "s << dec << setw(nMaxVRAMSize) << setfill(L' ') << formatMemorySize(deviceInfo.dedicatedVideoMemory);
+        wcout << L" | "s << left << setw(nMaxNameSize) << deviceInfo.productName;
+        wcout << L" |\n"s;
+    }
+
+    wcout << L"+----+-----------+-"s << wstring(nMaxLocationSize, L'-') << L"-+-"s << wstring(nMaxBarSize, L'-') << L"-+-"s << wstring(nMaxVRAMSize, L'-') << L"-+-"s << wstring(nMaxNameSize, L'-') << L"-+\n\n";
+}
+
 bool CheckPriviledge()
 {
 	DWORD len;
@@ -91,6 +222,10 @@ struct __attribute__((__packed__)) rebarVar {
 	uint8_t value;
 };
 
+bool showLocalGPUs()
+{
+}
+
 bool CheckPriviledge() {
 	return getuid() == 0;
 }
@@ -136,13 +271,17 @@ bool WriteState(uint8_t rBarState) {
 #endif
 
 
-int main()
+int main(int argc, char const *argv[])
+try
 {
 	int ret = 0;
 	std::string i;
 	uint8_t reBarState;
 
 	std::cout << "NvStrapsReBar, based on ReBarState (c) 2023 xCuri0\n\n";
+
+        showLocalGPUs(getDeviceList());
+
 	if (!CheckPriviledge()) {
 		std::cout << "Failed to obtain EFI variable access try running as admin/root\n";
 		ret = 1;
@@ -204,4 +343,19 @@ exit:
 exit:
 	#endif
 	return ret;
+}
+catch (system_error const &ex)
+{
+    cerr << "Application error: " << ex.code().message() << endl;
+    return 252u;
+}
+catch (exception const &ex)
+{
+    cerr << "Application error: " << ex.what() << endl;
+    return 253u;
+}
+catch (...)
+{
+    cerr << "Application error!" << endl;
+    return 254u;
 }
