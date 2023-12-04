@@ -1,0 +1,6 @@
+[*.{c,cc,cpp,cxx,h,hh,hpp,hxx}]
+indent_size=4
+tab_width=8
+intent_style="tab"
+trim_trailling_whitespace="true"
+insert_final_newline="true"

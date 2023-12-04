@@ -18,6 +18,7 @@
 #include <dxgi.h>
 #endif
 
+#include "WinAPIError.hh"
 #include "DeviceList.hh"
 
 using std::move;
@@ -26,7 +27,6 @@ using std::string;
 using std::wstring;
 using std::vector;
 using std::runtime_error;
-using std::error_category;
 using std::system_error;
 using std::unique_ptr;
 using std::stringstream;
@@ -39,60 +39,11 @@ using std::setfill;
 using std::setw;
 using std::endl;
 using std::isprint;
+namespace ranges = std::ranges;
 namespace regexp_constants = std::regex_constants;
 using namespace std::literals::string_literals;
 
 #if defined(WINDOWS) || defined(_WINDOWS) || defined(_WIN64) || defined(_WIN32)
-
-class WinAPIErrorCategory: public error_category
-{
-public:
-    char const *name() const noexcept override;
-    string message(int error) const override;
-
-protected:
-    WinAPIErrorCategory() = default;
-
-    friend error_category const &winapi_error_category();
-};
-
-char const *WinAPIErrorCategory::name() const noexcept
-{
-    return "winapi";
-}
-
-string WinAPIErrorCategory::message(int error) const
-{
-    struct LocalMem
-    {
-        HLOCAL hLocal = nullptr;
-        ~LocalMem()
-        {
-            ::LocalFree(exchange(hLocal, nullptr));
-        }
-    }
-        localMessageBuffer;
-
-    if (auto nLength = ::FormatMessageA(FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS | FORMAT_MESSAGE_ALLOCATE_BUFFER, NULL, static_cast<DWORD>(error),
-        MAKELANGID(LANG_NEUTRAL, SUBLANG_NEUTRAL), static_cast<LPSTR>(static_cast<void *>(&localMessageBuffer.hLocal)), 0, nullptr))
-    {
-        return { static_cast<char const *>(static_cast<void *>(localMessageBuffer.hLocal)), nLength };
-    }
-    else
-    {
-        auto dwFormatMessageError = ::GetLastError();
-
-        return static_cast<stringstream &>(stringstream { "Windows API error 0x"s } << hex << setfill('0') << setw(sizeof(DWORD) * 2u) << static_cast<DWORD>(error) << endl
-                 << "(FormatError() returned 0x" << hex << setfill('0') << setw(sizeof(dwFormatMessageError) * 2) << dwFormatMessageError << ')').str();
-    }
-}
-
-inline error_category const &winapi_error_category()
-{
-    static WinAPIErrorCategory errorCategory;
-
-    return errorCategory;
-}
 
 static bool fillDedicatedMemorySize(vector<DeviceInfo> &deviceSet)
 {
@@ -114,13 +65,11 @@ static bool fillDedicatedMemorySize(vector<DeviceInfo> &deviceSet)
 
                 if (SUCCEEDED(pAdapter->GetDesc(&adapterDescription)))
                 {
-                    auto it = std::ranges::find_if(deviceSet, [&adapterDescription](auto &devInfo) -> bool
-                        {
-                            return devInfo.vendorID == adapterDescription.VendorId && devInfo.deviceID == adapterDescription.DeviceId;
-                        });
-
-                    if (it != deviceSet.end())
-                        it->dedicatedVideoMemory = adapterDescription.DedicatedVideoMemory;
+                    ranges::for_each(deviceSet, [&adapterDescription](auto &devInfo)
+                    {
+                        if (devInfo.vendorID == adapterDescription.VendorId && devInfo.deviceID == adapterDescription.DeviceId)
+                            devInfo.dedicatedVideoMemory = adapterDescription.DedicatedVideoMemory;
+                    });
                 }
 
                 iAdapter++;
@@ -144,10 +93,12 @@ static bool fillDedicatedMemorySize(vector<DeviceInfo> &deviceSet)
     return false;
 }
 
-// System-defined setup class for Display Adapters: https://learn.microsoft.com/en-us/windows-hardware/drivers/install/system-defined-device-setup-classes-available-to-vendors
+// System-defined setup class for Display Adapters:
+// https://learn.microsoft.com/en-us/windows-hardware/drivers/install/system-defined-device-setup-classes-available-to-vendors
 static constexpr GUID const DisplayAdapterClass { 0x4d36e968, 0xe325, 0x11ce, 0xbf, 0xc1, 0x08, 0x00, 0x2b, 0xe1, 0x03, 0x18 };
-static wregexp const pciInstanceRegexp { L"^PCI\\\\VEN_([0-9a-fA-F]*)&DEV_([0-9a-fA-F]*).*$"s, regexp_constants::extended },
-        pciLocationRegexp { L"^PCI bus ([0-9]*), device ([0-9]*), function ([0-9]*).*$"s, regexp_constants::extended };
+
+static wregexp const pciInstanceRegexp { L"^PCI\\\\VEN_([0-9a-fA-F]{4})&DEV_([0-9a-fA-F]{4}).*$"s, regexp_constants::extended },
+        pciLocationRegexp { L"^PCI bus ([0-9]+), device ([0-9]+), function ([0-9]+).*$"s, regexp_constants::extended };
 
 static void enumPciDisplayAdapters(vector<DeviceInfo> &deviceSet)
 {
@@ -202,7 +153,7 @@ static void enumPciDisplayAdapters(vector<DeviceInfo> &deviceSet)
             {
                 deviceInfo.bus = static_cast<uint_least8_t>(wcstoul(matches[1u].first, nullptr, 10));
                 deviceInfo.device = static_cast<uint_least8_t>(wcstoul(matches[2u].first, nullptr, 10));
-                deviceInfo.device = static_cast<uint_least8_t>(wcstoul(matches[3u].first, nullptr, 10));
+                deviceInfo.function = static_cast<uint_least8_t>(wcstoul(matches[3u].first, nullptr, 10));
             }
             else
             {

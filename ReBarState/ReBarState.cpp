@@ -24,6 +24,7 @@ SPDX-License-Identifier: MIT
 #endif
 
 #include "DeviceList.hh"
+#include "NvStrapsPciConfig.hh"
 
 #undef max
 
@@ -79,7 +80,7 @@ wstring formatMemorySize(uint_least64_t memorySize)
 
 wstring formatLocation(DeviceInfo const &devInfo)
 {
-    return L"bus: "s + to_wstring(devInfo.bus) + L", dev: "s + to_wstring(devInfo.device) + L", fn: "s + to_wstring(devInfo.function);
+    return L"bus "s + to_wstring(devInfo.bus) + L" dev "s + to_wstring(devInfo.device) + L" fn "s + to_wstring(devInfo.function);
 }
 
 wstring formatBarSize(uint_least8_t barSizeSelector)
@@ -117,6 +118,14 @@ wstring formatBarSize(uint_least8_t barSizeSelector)
     return L" "s;
 }
 
+wchar_t formatSelectorChar(DeviceInfo const &devInfo, bool showBusLocationColumn)
+{
+    if (devInfo.barSizeSelector && devInfo.busLocationSelector == showBusLocationColumn)
+        return L'*';
+
+    return L' ';
+}
+
 void showLocalGPUs(vector<DeviceInfo> const &deviceSet)
 {
     if (deviceSet.empty())
@@ -126,7 +135,7 @@ void showLocalGPUs(vector<DeviceInfo> const &deviceSet)
     }
 
     auto
-        nMaxLocationSize = "Pci bus location"s.size(),
+        nMaxLocationSize = "PCI bus location"s.size(),
         nMaxBarSize = "BAR"s.size(),
         nMaxVRAMSize = "VRAM"s.size(),
         nMaxNameSize = "Product Name"s.size();
@@ -139,25 +148,24 @@ void showLocalGPUs(vector<DeviceInfo> const &deviceSet)
         nMaxNameSize = max(nMaxNameSize, deviceInfo.productName.size());
     }
 
-
-    wcout << L"+----+-----------+-"s << wstring(nMaxLocationSize, L'-') << L"-+-"s << wstring(nMaxBarSize, L'-') << L"-+-"s << wstring(nMaxVRAMSize, L'-') << L"-+-"s << wstring(nMaxNameSize, L'-') << L"-+\n"s;
-    wcout << L"| Nr | PCI ID    | "s << setw(nMaxLocationSize) << left << L"PCI bus location"s << L" | "s << setw(nMaxBarSize) << L"BAR"s << L" | "s << setw(nMaxVRAMSize) << L"VRAM"s << L" | "s << setw(nMaxNameSize) << L"Product Name"s << L" |\n"s;
-    wcout << L"+----+-----------+-"s << wstring(nMaxLocationSize, L'-') << L"-+-"s << wstring(nMaxBarSize, L'-') << L"-+-"s << wstring(nMaxVRAMSize, L'-') << L"-+-"s << wstring(nMaxNameSize, L'-') << L"-+\n"s;
+    wcout << L"+----+------------+--"s << wstring(nMaxLocationSize, L'-') << L"-+-"s << wstring(nMaxBarSize, L'-') << L"-+-"s << wstring(nMaxVRAMSize, L'-') << L"-+-"s << wstring(nMaxNameSize, L'-') << L"-+\n"s;
+    wcout << L"| Nr |  PCI ID    |  "s << setw(nMaxLocationSize) << left << L" PCI bus location"s << L" | "s << setw(nMaxBarSize) << L"BAR"s << L" | "s << setw(nMaxVRAMSize) << L"VRAM"s << L" | "s << setw(nMaxNameSize) << L"Product Name"s << L" |\n"s;
+    wcout << L"+----+------------+--"s << wstring(nMaxLocationSize, L'-') << L"-+-"s << wstring(nMaxBarSize, L'-') << L"-+-"s << wstring(nMaxVRAMSize, L'-') << L"-+-"s << wstring(nMaxNameSize, L'-') << L"-+\n"s;
 
     unsigned i = 1u;
 
     for (auto const &deviceInfo: deviceSet)
     {
         wcout << L"| "s << dec << right << setw(2u) << setfill(L' ') << i++;
-        wcout << L" | "s << hex << setw(sizeof(WORD) * 2u) << setfill(L'0') << uppercase << deviceInfo.vendorID << L':' << hex << setw(sizeof(WORD) * 2u) << setfill(L'0') << deviceInfo.deviceID;
-        wcout << L" | "s << right << setw(nMaxLocationSize) << formatLocation(deviceInfo);
+        wcout << L" | "s << formatSelectorChar(deviceInfo, false) << hex << setw(sizeof(WORD) * 2u) << setfill(L'0') << uppercase << deviceInfo.vendorID << L':' << hex << setw(sizeof(WORD) * 2u) << setfill(L'0') << deviceInfo.deviceID;
+        wcout << L" | "s << formatSelectorChar(deviceInfo, true) << right << setw(nMaxLocationSize) << formatLocation(deviceInfo);
         wcout << L" | "s << dec << setw(nMaxBarSize) << setfill(L' ') << formatBarSize(deviceInfo.barSizeSelector);
         wcout << L" | "s << dec << setw(nMaxVRAMSize) << setfill(L' ') << formatMemorySize(deviceInfo.dedicatedVideoMemory);
         wcout << L" | "s << left << setw(nMaxNameSize) << deviceInfo.productName;
         wcout << L" |\n"s;
     }
 
-    wcout << L"+----+-----------+-"s << wstring(nMaxLocationSize, L'-') << L"-+-"s << wstring(nMaxBarSize, L'-') << L"-+-"s << wstring(nMaxVRAMSize, L'-') << L"-+-"s << wstring(nMaxNameSize, L'-') << L"-+\n\n";
+    wcout << L"+----+------------+--"s << wstring(nMaxLocationSize, L'-') << L"-+-"s << wstring(nMaxBarSize, L'-') << L"-+-"s << wstring(nMaxVRAMSize, L'-') << L"-+-"s << wstring(nMaxNameSize, L'-') << L"-+\n\n";
 }
 
 bool CheckPriviledge()
