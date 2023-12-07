@@ -42,6 +42,61 @@ Credits go to the bellow github users, as I integrated and coded their findings 
 * [@Xelafic](https://github.com/Xelafic) who showed the idea and the first test for using the GPU STRAPS bits, documented by envtools, to select the BAR size during PCI bring-up in UEFI code.
 * [@xCuri0](https://github.com/xCuri0/ReBARUEFI") for the ReBarUEFI DXE driver that enables ReBAR on the motherboard, and allows intercepting and hooking into the PCI enumeration phases in UEFI code on the motherboard.
 
+## Building (Windows only)
+* Download and install [Visual Studio 2022 Community Edition](https://visualstudio.microsoft.com/vs/community/) from Microsoft. Be sure to select C/C++ Desktop Development option for installation.
+* Download and install [Python 3](https://www.python.org/downloads/)
+* Download and install [git](https://git-scm.com/download/win)
+* Download and install [CMake](https://cmake.org/download/)
+* Install pefile module for python:
+   - Use Win+R to open a cmd window and run `pip3 install pefile`
+* I also had to install [NASM](https://www.nasm.us/) and add it to path.
+* Get `edk2` framework from github. In a cmd window run:
+  ```
+  git clone https://github.com/tianocore/edk2.git
+  cd edk2
+  git submodule update --init
+  ```
+* Build edk2:
+  - `edksetup.bat Rebuild`
+* Configure `edk2`. Edit `Conf/target.txt` and modify it to read:
+  ```
+  TARGET                = RELEASE
+  TARGET_ARCH           = X64
+  TOOL_CHAIN_TAG        = VS2019
+  ```
+* Get `NvStrapsReBar` and place it as a subdirectory right under the `edk2` directory:
+  ```
+  :: cd edk2
+  git clone https://github.com/terminatorul/NvStrapsReBar.git
+  ```
+You can now build the UEFI DXE driver `NvStrapsReBar.ffs`, and the Windows executable `NvStrapsReBar.exe`
+* To build UEFI DXE driver NvStrapsReBar.ffs
+  ```
+  :: cd edk2
+  edksetup.bat
+  cd NvStrapsReBar/ReBarDxe
+  python3 buildffs.py
+  ```
+  The .ffs file will be found under the `edk2\Build` directory.
+* To build the Windows executable NvStrapsReBar.exe:
+  ```
+  :: cd edk2
+  :: edksetup.bat
+  cd NvStrapsRebar\ReBarState
+  mkdir build
+  chdir build
+  cmake .. -DCMAKE_BUILD_TYPE=Release
+  cmake --build .
+  ```
+  The .exe file will be found under the `Release\` subdirectory
+
+## Updating UEFI
+The resulting `NvStrapsReBar.ffs` file needs to be included in the motherboard UEFI image (downloaded from the montherboard manufacturer), and the resulting image should be flashed onto the motherboard as if it were a new UEFI version for that motherboard.
+See the original project [ReBarUEFI](https://github.com/xCuri0/ReBarUEFI/) for the instructions to update motherboard UEFI. Replace "ReBarUEFI.ffs" with "NvStrapsReBr.ffs" where appropriate.
+
+After flashing the motherboard with the new UEFI image, you need to run `NvStrapsReBar.exe` running as Administrator, and input a non-zero value when prompted (usually 32 for any possible BAR size)
+
+
 <p>Bellow is the README page from the original project <a href="https://github.com/xCuri0/ReBarUEFI">xCuri0/ReBarUEFI</a>. Beware links point to the original project wiki as well, so this page may be out of date (out of sync) with the linked wiki pages.</p>
 
 
