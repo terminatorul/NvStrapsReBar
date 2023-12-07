@@ -1,7 +1,7 @@
 <h1 align="center">NvStrapsReBar</h1>
 <p>This is a copy of the rather popular <a href="https://github.com/xCuri0/ReBARUEFI">ReBarUEFI</a> DXE driver. <a href="https://github.com/xCuri0/ReBARUEFI">ReBarUEFI</a> enables Resizable BAR for older motherboards and chipsets without ReBAR support from the manufacturer. NvStrapsReBar was created to test Resizable BAR support for NVIDIA GPUs from the RTX 2000 (and GTX 1600, Turing architecture) line. Apparently for the GTX 1000 cards (Pascal architecture) the Windows NVIDIA driver just resets the computer during Windows boot if the BAR size has been changed, so GTX 1000 cards still can not enable ReBAR.</p>
 
-Currently the location of the GPU on the PCI bus has to be hard-coded right into the motherboard UEFI, and so does the associated PCI-to-PCI bridge. All hard-coded values are in the header file `ReBarDxe/include/LocalPciGPU.h`, and all the values can be read from the CPU-Z .txt report file, if you want to change them to match your system. Currently these settings are listed below, where all numeric values are examples for my computer:
+Currently the location of the GPU on the PCI bus has to be hard-coded right into the motherboard UEFI, and so does the associated PCI-to-PCI bridge. All hard-coded values are in the header file `ReBarDxe/include/LocalPciGPU.h`, and all the values can be read from the CPU-Z .txt report file, if you want to change them to match your system. Currently these settings are listed below, where all numeric values are examples only (for my computer):
 
 ```C
 #define TARGET_GPU_PCI_VENDOR_ID        0x10DEu
