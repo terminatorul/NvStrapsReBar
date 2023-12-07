@@ -39,7 +39,7 @@ Rebuild the project using the instructions below (that were slightly adapted fro
 
 Credits go to the bellow github users, as I integrated and coded their findings and results:
 * [envytools](https://github.com/envytools/envytools) project for the original effort on reverse-engineering the register interface for NVIDIA GPUs, a very long time ago, for use by the [nouveau](https://nouveau.freedesktop.org/) open-source driver in Linux. Amazing how this documentation could still help us today !
-* [@mupuf](https://github.com/mupuf) from [envytools](https://github.com/envytools/envytools) project for bringing up the idea and the exact registers from the documentation that could enable resizable BAR
+* [@mupuf](https://github.com/mupuf) from [envytools](https://github.com/envytools/envytools) project for bringing up the idea and the exact (low level) registers from the documentation that enable resizable BAR
 * [@Xelafic](https://github.com/Xelafic) for the first code samples (written in assembly!) and the first test for using the GPU STRAPS bits, documented by envytools, to select the BAR size during PCIe bring-up in UEFI code.
 * [@xCuri0](https://github.com/xCuri0/ReBARUEFI") for the ReBarUEFI DXE driver that enables ReBAR on the motherboard, and allows intercepting and hooking into the PCIe enumeration phases in UEFI code on the motherboard.
 
