@@ -50,7 +50,7 @@ Credits go to the bellow github users, as I integrated and coded their findings 
 * Download and install [CMake](https://cmake.org/download/)
 * Install pefile module for python:
    - Use Win+R to open a cmd window and run `pip3 install pefile`
-* I also had to install [NASM](https://www.nasm.us/) and add it to path.
+* I also had to install [NASM](https://www.nasm.us/) and add it to the PATH environment variable (in Windows Settings).
 * Get `edk2` framework from github. In a cmd window run:
   ```
   ChDir "%UserProfile%
