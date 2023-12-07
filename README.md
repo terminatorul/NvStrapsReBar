@@ -52,13 +52,19 @@ Credits go to the bellow github users, as I integrated and coded their findings 
 * I also had to install [NASM](https://www.nasm.us/) and add it to path.
 * Get `edk2` framework from github. In a cmd window run:
   ```
+  ChDir "%UserProfile%
   git clone https://github.com/tianocore/edk2.git
-  cd edk2
+  ChDir edk2
   git submodule update --init
   ```
-* Build edk2:
+* Build edk2. Open x86 Native Tools Command Prompt from the start menu (like in the image)
+  
+  ![image](https://github.com/terminatorul/NvStrapsReBar/assets/378924/3e10ca0a-5544-45d3-b2f9-f81a7f7e2510)
+
+  and type the following commands in the resulting console window:
+  - `ChDir "%UserProfile%\edk2"`
   - `edksetup.bat Rebuild`
-* Configure `edk2`. Edit `Conf/target.txt` and modify it to read:
+* Configure `edk2`. Edit file `%UserProfile%\edk2\Conf\target.txt` with a text editor like Notepad for example and search, in order, for the lines begining with `TARGET =`, `TARGET_ARCH = ` and `TOOL_CHAIN_TAG =` (without any # characters -- if needed remove the leading # character from such lines, to uncomment them). Modify these lines to read:
   ```
   TARGET                = RELEASE
   TARGET_ARCH           = X64
@@ -66,33 +72,33 @@ Credits go to the bellow github users, as I integrated and coded their findings 
   ```
 * Get `NvStrapsReBar` and place it as a subdirectory right under the `edk2` directory:
   ```
-  :: cd edk2
+  ChDir "%UserProfile%\edk2"
   git clone https://github.com/terminatorul/NvStrapsReBar.git
   ```
 You can now build the UEFI DXE driver `NvStrapsReBar.ffs`, and the Windows executable `NvStrapsReBar.exe`
-* To build UEFI DXE driver NvStrapsReBar.ffs
+* To build UEFI DXE driver NvStrapsReBar.ffs, run the following commands in the x86 Native Tools Command Prompt window
   ```
-  :: cd edk2
-  edksetup.bat
-  cd NvStrapsReBar/ReBarDxe
+  ChDir "%UserProfile%\edk2"
+  If Not Defined EDK_TOOLS_BIN edksetup.bat
+  ChDir NvStrapsReBar/ReBarDxe
   python3 buildffs.py
   ```
-  The .ffs file will be found under the `edk2\Build` directory.
-* To build the Windows executable NvStrapsReBar.exe:
+  The NvStrapsReBar.ffs file will be found under the directory `%UserProfile%\edk2\Build\NvStrapsReBar\RELEASE_VS2019\X64\`.
+* To build the Windows executable NvStrapsReBar.exe, run the following commands in the x86 Native Tools Command Prompt window
   ```
-  :: cd edk2
-  :: edksetup.bat
-  cd NvStrapsRebar\ReBarState
-  mkdir build
-  chdir build
-  cmake .. -DCMAKE_BUILD_TYPE=Release
-  cmake --build .
+  ChDir "%UserProfile%\edk2"
+  If Not Defined EDK_TOOLS_BIN edksetup.bat
+  ChDir NvStrapsRebar\ReBarState
+  MkDir build
+  ChDir build
+  cmake ..
+  cmake --build . --config Release
   ```
-  The .exe file will be found under the `Release\` subdirectory
+  The NvStrapsRebar.exe file will be found under the `%UserProfile%\edk2\NvStrapsRebar\ReBarState\build\Release\` subdirectory
 
 ## Updating UEFI
 The resulting `NvStrapsReBar.ffs` file needs to be included in the motherboard UEFI image (downloaded from the montherboard manufacturer), and the resulting image should be flashed onto the motherboard as if it were a new UEFI version for that motherboard.
-See the original project [ReBarUEFI](https://github.com/xCuri0/ReBarUEFI/) for the instructions to update motherboard UEFI. Replace "ReBarUEFI.ffs" with "NvStrapsReBr.ffs" where appropriate.
+See the original project [ReBarUEFI](https://github.com/xCuri0/ReBarUEFI/) for the instructions to update motherboard UEFI. Replace "ReBarUEFI.ffs" with "NvStrapsReBar.ffs" where appropriate.
 
 After flashing the motherboard with the new UEFI image, you need to run `NvStrapsReBar.exe` running as Administrator, and input a non-zero value when prompted (usually 32 for any possible BAR size)
 
