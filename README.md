@@ -1,7 +1,7 @@
 <h1 align="center">NvStrapsReBar</h1>
 <p>This is a copy of the rather popular <a href="https://github.com/xCuri0/ReBARUEFI">ReBarUEFI</a> DXE driver. <a href="https://github.com/xCuri0/ReBARUEFI">ReBarUEFI</a> enables Resizable BAR for older motherboards and chipsets without ReBAR support from the manufacturer. NvStrapsReBar was created to test Resizable BAR support for NVIDIA GPUs from the RTX 2000 (and GTX 1600, Turing architecture) line. Apparently for the GTX 1000 cards (Pascal architecture) the Windows NVIDIA driver just resets the computer during Windows boot if the BAR size has been changed, so GTX 1000 cards still can not enable ReBAR.</p>
 
-Currently the location of the GPU on the PCI bus has to be hard-coded right into the motherboard UEFI, and so does the associated PCI-to-PCI bridge. All hard-coded values are in the header file `ReBarDxe/include/LocalPciGPU.h`, and all the values can be read from the CPU-Z .txt report file, if you want to change them to match your system. Currently these settings are listed below, all numeric values are examples for my computer:
+Currently the location of the GPU on the PCI bus has to be hard-coded right into the motherboard UEFI, and so does the associated PCI-to-PCI bridge. All hard-coded values are in the header file `ReBarDxe/include/LocalPciGPU.h`, and all the values can be read from the CPU-Z .txt report file, if you want to change them to match your system. Currently these settings are listed below, where all numeric values are examples for my computer:
 
 ```C
 #define TARGET_GPU_PCI_VENDOR_ID        0x10DEu
@@ -35,12 +35,13 @@ Currently the location of the GPU on the PCI bus has to be hard-coded right into
 
 See https://github.com/xCuri0/ReBarUEFI/discussions/89#discussioncomment-7697768 for the step-by-step details.
 
-Build the project with the same steps as the original [ReBarUEFI](https://github.com/xCuri0/ReBARUEFI).
+Rebuild the project using the instructions below (that were slightly adapted from the original [ReBarUEFI](https://github.com/xCuri0/ReBARUEFI) project).
 
 Credits go to the bellow github users, as I integrated and coded their findings and results:
-* [@mupuf](https://github.com/mupuf) and [envytools](https://github.com/envytools/envytools) for the original effort on reverse-engineering the register interface for NVIDIA GPUs, for use by the [nouveau](https://nouveau.freedesktop.org/) open-source driver in Linux.
-* [@Xelafic](https://github.com/Xelafic) who showed the idea and the first test for using the GPU STRAPS bits, documented by envtools, to select the BAR size during PCI bring-up in UEFI code.
-* [@xCuri0](https://github.com/xCuri0/ReBARUEFI") for the ReBarUEFI DXE driver that enables ReBAR on the motherboard, and allows intercepting and hooking into the PCI enumeration phases in UEFI code on the motherboard.
+* [envytools](https://github.com/envytools/envytools) project for the original effort on reverse-engineering the register interface for NVIDIA GPUs, a very long time ago, for use by the [nouveau](https://nouveau.freedesktop.org/) open-source driver in Linux. Amazing how this documentation could still help us today !
+* [@mupuf](https://github.com/mupuf) from [envytools](https://github.com/envytools/envytools) project for bringing up the idea and the exact registers from the documentation that could enable resizable BAR
+* [@Xelafic](https://github.com/Xelafic) for the first code samples (written in assembly!) and the first test for using the GPU STRAPS bits, documented by envytools, to select the BAR size during PCIe bring-up in UEFI code.
+* [@xCuri0](https://github.com/xCuri0/ReBARUEFI") for the ReBarUEFI DXE driver that enables ReBAR on the motherboard, and allows intercepting and hooking into the PCIe enumeration phases in UEFI code on the motherboard.
 
 ## Building (Windows only)
 * Download and install [Visual Studio 2022 Community Edition](https://visualstudio.microsoft.com/vs/community/) from Microsoft. Be sure to select C/C++ Desktop Development option for installation.
@@ -70,7 +71,7 @@ Credits go to the bellow github users, as I integrated and coded their findings 
   TARGET_ARCH           = X64
   TOOL_CHAIN_TAG        = VS2019
   ```
-* Get `NvStrapsReBar` and place it as a subdirectory right under the `edk2` directory:
+* Get `NvStrapsReBar` from this repository, and place it as a subdirectory right under the `edk2` directory, with the following commands:
   ```
   ChDir "%UserProfile%\edk2"
   git clone https://github.com/terminatorul/NvStrapsReBar.git
@@ -100,7 +101,7 @@ You can now build the UEFI DXE driver `NvStrapsReBar.ffs`, and the Windows execu
 The resulting `NvStrapsReBar.ffs` file needs to be included in the motherboard UEFI image (downloaded from the montherboard manufacturer), and the resulting image should be flashed onto the motherboard as if it were a new UEFI version for that motherboard.
 See the original project [ReBarUEFI](https://github.com/xCuri0/ReBarUEFI/) for the instructions to update motherboard UEFI. Replace "ReBarUEFI.ffs" with "NvStrapsReBar.ffs" where appropriate.
 
-After flashing the motherboard with the new UEFI image, you need to run `NvStrapsReBar.exe` running as Administrator, and input a non-zero value when prompted (usually 32 for any possible BAR size)
+After flashing the motherboard with the new UEFI image, you need to enable "Above 4G decoding" and disable CSM in UEFI setup, and then run `NvStrapsReBar.exe` as Administrator, and input a non-zero value when prompted (usually 32 for any possible BAR size)
 
 
 <p>Bellow is the README page from the original project <a href="https://github.com/xCuri0/ReBarUEFI">xCuri0/ReBarUEFI</a>. Beware links point to the original project wiki as well, so this page may be out of date (out of sync) with the linked wiki pages.</p>
