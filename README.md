@@ -58,6 +58,7 @@ in the below format
 * VRAM size:
 * New BAR size (GPU-Z):
 * New BAR size (nvidia-smi):
+* driver version:
 
 Use command `nvidia-smi -q -d memory` to check the new BAR size reported by the Windows/Linux driver.
 
