@@ -15,6 +15,8 @@ add_executable(NvStrapsReBar
         "WinApiError.cc"
         "DeviceList.hh"
         "DeviceList.cc"
+        "${REBAR_DXE_DIRECTORY}/include/DeviceRegistry.hh"
+        "${REBAR_DXE_DIRECTORY}/DeviceRegistry.cc"
         "${REBAR_DXE_DIRECTORY}/include/NvStrapsPciConfig.hh"
         "${REBAR_DXE_DIRECTORY}/NvStrapsPciConfig.cc"
         "ReBarState.cpp")

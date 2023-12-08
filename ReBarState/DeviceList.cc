@@ -6,6 +6,8 @@
 #include <iomanip>
 #include <regex>
 #include <vector>
+#include <string_view>
+#include <span>
 #include <utility>
 #include <ranges>
 #include <iostream>
@@ -34,6 +36,8 @@ using wregexp = std::wregex;
 using std::match_results;
 using std::regex_match;
 using std::wcmatch;
+using std::span;
+using std::wstring_view;
 using std::hex;
 using std::setfill;
 using std::setw;
@@ -93,7 +97,7 @@ static bool fillDedicatedMemorySize(vector<DeviceInfo> &deviceSet)
     return false;
 }
 
-// System-defined setup class for Display Adapters:
+// System-defined setup class for Display Adapters, from:
 // https://learn.microsoft.com/en-us/windows-hardware/drivers/install/system-defined-device-setup-classes-available-to-vendors
 static constexpr GUID const DisplayAdapterClass { 0x4d36e968, 0xe325, 0x11ce, 0xbf, 0xc1, 0x08, 0x00, 0x2b, 0xe1, 0x03, 0x18 };
 
@@ -115,7 +119,7 @@ static void enumPciDisplayAdapters(vector<DeviceInfo> &deviceSet)
         dev;
 
     if (dev.hDeviceInfoSet == INVALID_HANDLE_VALUE)
-        throw system_error(static_cast<int>(::GetLastError()), winapi_error_category(), "Error listing display adapters");
+        throw system_error(static_cast<int>(::GetLastError()), winapi_error_category(), "Error listing display adapters"s);
 
     DWORD iDeviceIndex = 0u;
     SP_DEVINFO_DATA devInfoData { .cbSize = sizeof devInfoData, .Reserved = 0ul };
@@ -131,7 +135,7 @@ static void enumPciDisplayAdapters(vector<DeviceInfo> &deviceSet)
         DeviceInfo deviceInfo { .barSizeSelector = 0u, .dedicatedVideoMemory = 0ull };
 
         if (!::SetupDiGetDevicePropertyW(dev.hDeviceInfoSet, &devInfoData, &DEVPKEY_Device_InstanceId, &devPropType, devPropBuffer, sizeof devPropBuffer, &devPropLength, 0u))
-            throw system_error(static_cast<int>(::GetLastError()), winapi_error_category(), "Error listing display adapters");
+            throw system_error(static_cast<int>(::GetLastError()), winapi_error_category(), "Error listing display adapters"s);
 
         if (wcmatch matches; regex_match(devProp, devProp + devPropLength / sizeof *devProp, matches, pciInstanceRegexp))
         {
@@ -139,7 +143,7 @@ static void enumPciDisplayAdapters(vector<DeviceInfo> &deviceSet)
             deviceInfo.deviceID = static_cast<uint_least16_t>(std::wcstoul(matches[2u].first, nullptr, 16));
 
             if (!::SetupDiGetDevicePropertyW(dev.hDeviceInfoSet, &devInfoData, &DEVPKEY_NAME, &devPropType, devPropBuffer, sizeof devPropBuffer, &devPropLength, 0u))
-                throw system_error(static_cast<int>(::GetLastError()), winapi_error_category(), "Error listing display adapters");
+                throw system_error(static_cast<int>(::GetLastError()), winapi_error_category(), "Error listing display adapters"s);
 
             deviceInfo.productName.assign(static_cast<wchar_t *>(static_cast<void *>(devPropBuffer)), devPropLength / sizeof(wchar_t));
 
@@ -147,7 +151,7 @@ static void enumPciDisplayAdapters(vector<DeviceInfo> &deviceSet)
                 deviceInfo.productName.pop_back();
 
             if (!::SetupDiGetDevicePropertyW(dev.hDeviceInfoSet, &devInfoData, &DEVPKEY_Device_LocationInfo, &devPropType, devPropBuffer, sizeof devPropBuffer, &devPropLength, 0u))
-                throw system_error(static_cast<int>(::GetLastError()), winapi_error_category(), "Error listing display adapters");
+                throw system_error(static_cast<int>(::GetLastError()), winapi_error_category(), "Error listing display adapters"s);
 
             if (wcmatch matches; regex_match(devProp, devProp + devPropLength / sizeof *devProp, matches, pciLocationRegexp))
             {
@@ -157,19 +161,22 @@ static void enumPciDisplayAdapters(vector<DeviceInfo> &deviceSet)
             }
             else
             {
-                std::wcout << "PCI location: [" << wstring(devProp, devPropLength / sizeof *devProp) << ']' << std::endl;
-                throw runtime_error("Error listing display adapters: wrong PCI location property value.");
+                std::wcout << L"PCI location: ["s << wstring_view(devProp, devPropLength / sizeof *devProp) << ']' << std::endl;
+                throw runtime_error("Error listing display adapters: wrong PCI location property value."s);
             }
         }
         else
-            throw runtime_error("Error listing display adapters: wrong PCI instance ID property value");
+        {
+            std::wcout << L"Device instace ID: "s << wstring_view(devProp, devPropLength / sizeof *devProp) << std::endl;
+            throw runtime_error("Error listing display adapters: wrong PCI instance ID property value"s);
+        }
 
         deviceSet.push_back(move(deviceInfo));
         devInfoData.Reserved = 0ul;
     }
 
     if (DWORD dwLastError = ::GetLastError(); dwLastError != ERROR_NO_MORE_ITEMS)
-        throw system_error(static_cast<int>(dwLastError), winapi_error_category(), "Error listing display adapters");
+        throw system_error(static_cast<int>(dwLastError), winapi_error_category(), "Error listing display adapters"s);
 }
 
 vector<DeviceInfo> &getDeviceList()

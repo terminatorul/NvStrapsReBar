@@ -10,9 +10,11 @@
   include/PciHostBridgeResourceAllocation.h
   include/pciRegs.h
   include/ReBar.h
+  include/DeviceRegistry.hh
   include/LocalPciGPU.h
   include/SetupNvStraps.h
   include/NvStrapsPciConfig.hh
+  DeviceRegistry.cc
   SetupNvStraps.c
   NvStrapsPciConfig.cc
   ReBar.c
