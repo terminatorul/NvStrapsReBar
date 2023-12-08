@@ -308,7 +308,7 @@ EFI_STATUS EFIAPI rebarInit(
     DEBUG((DEBUG_INFO, "ReBarDXE: Loaded\n"));
 
     // Read ReBarState variable
-    status = gRT->GetVariable(L"ReBarState", &reBarStateGuid,
+    status = gRT->GetVariable(L"NvStrapsReBar", &reBarStateGuid,
         &attributes,
         &bufferSize, &reBarState);
 
@@ -327,7 +327,7 @@ EFI_STATUS EFIAPI rebarInit(
             bufferSize = 1;
             attributes = EFI_VARIABLE_NON_VOLATILE | EFI_VARIABLE_BOOTSERVICE_ACCESS | EFI_VARIABLE_RUNTIME_ACCESS;
 
-            status = gRT->SetVariable(L"ReBarState", &reBarStateGuid,
+            status = gRT->SetVariable(L"NvStrapsReBar", &reBarStateGuid,
                 attributes,
                 bufferSize, &reBarState);
 
