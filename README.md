@@ -56,7 +56,10 @@ in the below format
 * GPU PCI VendorID:DeviceID (check GPU-Z):
 * GPU PCI subsystem IDs (check GPU-Z):
 * VRAM size:
-* New BAR size:
+* New BAR size (GPU-Z):
+* New BAR size (nvidia-smi):
+
+Use command `nvidia-smi -q -d memory` to check the new BAR size reported by the Windows/Linux driver.
 
 Also post GPU-Z screenshots with the main GPU page + ReBAR page, and the main CPU-X page screenshot. If you needed to apply more changes to make ReBAR work, please post about them as well.
 
