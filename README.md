@@ -43,6 +43,21 @@ Credits go to the bellow github users, as I integrated and coded their findings 
 * [@Xelafic](https://github.com/Xelafic) for the first code samples (written in assembly!) and the first test for using the GPU STRAPS bits, documented by envytools, to select the BAR size during PCIe bring-up in UEFI code.
 * [@xCuri0](https://github.com/xCuri0/ReBARUEFI") for the ReBarUEFI DXE driver that enables ReBAR on the motherboard, and allows intercepting and hooking into the PCIe enumeration phases in UEFI code on the motherboard.
 
+## Working GPUs
+If you get Resizeable BAR working on your Turing or pre-Ampere GPU (and Windows does not crash), please post your system information on issue https://github.com/terminatorul/NvStrapsReBar/issues/1 here on github,
+in the below format
+
+* Motherboard model:
+* Motherboard chipset:
+* Graphics card model:
+* GPU chipset:
+* GPU PCI VendorID:DeviceID (check GPU-Z):
+* GPU PCI subsystem IDs (check GPU-Z):
+* VRAM size:
+* New BAR size:
+
+Also post GPU-Z screenshots with the main GPU page + ReBAR page, and the main CPU-X page screenshot. If you needed to apply more changes to make ReBAR work, please post about them as well.
+
 ## Building (Windows only)
 * Download and install [Visual Studio 2022 Community Edition](https://visualstudio.microsoft.com/vs/community/) from Microsoft. Be sure to select C/C++ Desktop Development option for installation.
 * Download and install [Python 3](https://www.python.org/downloads/)
