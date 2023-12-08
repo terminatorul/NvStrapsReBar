@@ -44,7 +44,9 @@ Credits go to the bellow github users, as I integrated and coded their findings 
 * [@xCuri0](https://github.com/xCuri0/ReBARUEFI") for the ReBarUEFI DXE driver that enables ReBAR on the motherboard, and allows intercepting and hooking into the PCIe enumeration phases in UEFI code on the motherboard.
 
 ## Working GPUs
-If you get Resizeable BAR working on your Turing or pre-Ampere GPU (and Windows does not crash), please post your system information on issue https://github.com/terminatorul/NvStrapsReBar/issues/1 here on github,
+Check issue https://github.com/terminatorul/NvStrapsReBar/issues/1 for a list of known working GPUs (and motherboards).
+
+If you get Resizable BAR working on your Turing or pre-Ampere GPU (and Windows does not crash), please post your system information on issue https://github.com/terminatorul/NvStrapsReBar/issues/1 here on github,
 in the below format
 
 * Motherboard model:
