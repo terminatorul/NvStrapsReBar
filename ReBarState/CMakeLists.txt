@@ -13,6 +13,8 @@ endif()
 add_executable(NvStrapsReBar
         "WinApiError.hh"
         "WinApiError.cc"
+        "ConfigManagerError.hh"
+        "ConfigManagerError.cc"
         "DeviceList.hh"
         "DeviceList.cc"
         "${REBAR_DXE_DIRECTORY}/include/DeviceRegistry.hh"
@@ -23,6 +25,6 @@ add_executable(NvStrapsReBar
 target_include_directories(NvStrapsReBar PRIVATE "${REBAR_DXE_DIRECTORY}/include" "${NvStrapsReBar_SOURCE_DIR}")
 
 if(WIN32)
-    target_link_libraries(NvStrapsReBar PRIVATE "DXGI" "SetupAPI")
+    target_link_libraries(NvStrapsReBar PRIVATE "DXGI" "SetupAPI" "CfgMgr32")
     set_target_properties(NvStrapsReBar PROPERTIES LINK_FLAGS " /MANIFESTUAC:\"level='requireAdministrator' uiAccess='false'\" ")
 endif()

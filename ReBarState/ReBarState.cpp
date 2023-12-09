@@ -67,15 +67,12 @@ bool notExist = false;
 
 #if defined(WINDOWS) || defined(_WINDOWS) || defined(_WIN64) || defined(_WIN32)
 
-wstring formatMemorySize(uint_least64_t memorySize)
+wstring formatDirectMemorySize(uint_least64_t memorySize)
 {
     if (!memorySize)
         return L"    "s;
 
-    if (memorySize < 1024u * 1024u * 1024u)
-        return to_wstring((memorySize + 512u * 1024u) / (1024u * 1024u)) + L"M"s;
-
-    return to_wstring((memorySize + 512u * 1024u * 1024u) / (1024u * 1024u * 1024u)) + L"G"s;
+    return formatMemorySize(memorySize);
 }
 
 wstring formatLocation(DeviceInfo const &devInfo)
@@ -83,7 +80,15 @@ wstring formatLocation(DeviceInfo const &devInfo)
     return L"bus "s + to_wstring(devInfo.bus) + L" dev "s + to_wstring(devInfo.device) + L" fn "s + to_wstring(devInfo.function);
 }
 
-wstring formatBarSize(uint_least8_t barSizeSelector)
+wstring formatDirectBARSize(uint_least64_t size)
+{
+    if (size < 64u * 1024u * 1024u)
+        return { };
+
+    return formatMemorySize(size);
+}
+
+wstring formatBarSizeSelector(uint_least8_t barSizeSelector)
 {
     switch (barSizeSelector)
     {
@@ -136,21 +141,24 @@ void showLocalGPUs(vector<DeviceInfo> const &deviceSet)
 
     auto
         nMaxLocationSize = "PCI bus location"s.size(),
-        nMaxBarSize = "BAR"s.size(),
+        nMaxTargetBarSize = max("Target"s.size(), "BAR size"s.size()),
+        nMaxCurrentBarSize = max("current"s.size(), "BAR size"s.size()),
         nMaxVRAMSize = "VRAM"s.size(),
         nMaxNameSize = "Product Name"s.size();
 
     for (auto const &deviceInfo: deviceSet)
     {
         nMaxLocationSize = max(nMaxLocationSize, formatLocation(deviceInfo).size());
-        nMaxBarSize = max(nMaxBarSize, formatBarSize(deviceInfo.barSizeSelector).size());
-        nMaxVRAMSize = max(nMaxVRAMSize, formatMemorySize(deviceInfo.dedicatedVideoMemory).size());
+        nMaxCurrentBarSize = max<uint_least64_t>(nMaxCurrentBarSize, formatMemorySize(deviceInfo.currentBARSize).size());
+        nMaxTargetBarSize = max(nMaxTargetBarSize, formatBarSizeSelector(deviceInfo.barSizeSelector).size());
+        nMaxVRAMSize = max(nMaxVRAMSize, formatDirectMemorySize(deviceInfo.dedicatedVideoMemory).size());
         nMaxNameSize = max(nMaxNameSize, deviceInfo.productName.size());
     }
 
-    wcout << L"+----+------------+--"s << wstring(nMaxLocationSize, L'-') << L"-+-"s << wstring(nMaxBarSize, L'-') << L"-+-"s << wstring(nMaxVRAMSize, L'-') << L"-+-"s << wstring(nMaxNameSize, L'-') << L"-+\n"s;
-    wcout << L"| Nr |  PCI ID    |  "s << setw(nMaxLocationSize) << left << L" PCI bus location"s << L" | "s << setw(nMaxBarSize) << L"BAR"s << L" | "s << setw(nMaxVRAMSize) << L"VRAM"s << L" | "s << setw(nMaxNameSize) << L"Product Name"s << L" |\n"s;
-    wcout << L"+----+------------+--"s << wstring(nMaxLocationSize, L'-') << L"-+-"s << wstring(nMaxBarSize, L'-') << L"-+-"s << wstring(nMaxVRAMSize, L'-') << L"-+-"s << wstring(nMaxNameSize, L'-') << L"-+\n"s;
+    wcout << L"+----+------------+--"s << wstring(nMaxLocationSize, L'-') << L"-+-"s << wstring(nMaxTargetBarSize, L'-') << L"-+-"s << wstring(nMaxCurrentBarSize, L'-') << L"-+-"s << wstring(nMaxVRAMSize, L'-') << L"-+-"s << wstring(nMaxNameSize, L'-') << L"-+\n"s;
+    wcout << L"|    |            |  "s << wstring(nMaxLocationSize, L' ') << L" | "s << left << setw(nMaxTargetBarSize) << " Target " << L" | "s << setw(nMaxTargetBarSize) << left << "Current" << L" | "s << wstring(nMaxVRAMSize, L' ') << L" | "s << wstring(nMaxNameSize, L' ') << L" |\n"s;
+    wcout << L"| Nr |  PCI ID    |  "s << setw(nMaxLocationSize) << left << L" PCI bus location"s << L" | "s << setw(nMaxTargetBarSize) << L"BAR size"s << L" | "s << setw(nMaxCurrentBarSize) << L"BAR size"s << L" | "s << setw(nMaxVRAMSize) << L"VRAM"s << L" | "s << setw(nMaxNameSize) << L"Product Name"s << L" |\n"s;
+    wcout << L"+----+------------+--"s << wstring(nMaxLocationSize, L'-') << L"-+-"s << wstring(nMaxTargetBarSize, L'-') << L"-+-"s << wstring(nMaxCurrentBarSize, L'-') << L"-+-"s << wstring(nMaxVRAMSize, L'-') << L"-+-"s << wstring(nMaxNameSize, L'-') << L"-+\n"s;
 
     unsigned i = 1u;
 
@@ -159,13 +167,14 @@ void showLocalGPUs(vector<DeviceInfo> const &deviceSet)
         wcout << L"| "s << dec << right << setw(2u) << setfill(L' ') << i++;
         wcout << L" | "s << formatSelectorChar(deviceInfo, false) << hex << setw(sizeof(WORD) * 2u) << setfill(L'0') << uppercase << deviceInfo.vendorID << L':' << hex << setw(sizeof(WORD) * 2u) << setfill(L'0') << deviceInfo.deviceID;
         wcout << L" | "s << formatSelectorChar(deviceInfo, true) << right << setw(nMaxLocationSize) << formatLocation(deviceInfo);
-        wcout << L" | "s << dec << setw(nMaxBarSize) << setfill(L' ') << formatBarSize(deviceInfo.barSizeSelector);
-        wcout << L" | "s << dec << setw(nMaxVRAMSize) << setfill(L' ') << formatMemorySize(deviceInfo.dedicatedVideoMemory);
+        wcout << L" | "s << dec << setw(nMaxTargetBarSize) << setfill(L' ') << formatBarSizeSelector(deviceInfo.barSizeSelector);
+        wcout << L" | "s << dec << setw(nMaxCurrentBarSize) << setfill(L' ') << formatDirectBARSize(deviceInfo.currentBARSize);
+        wcout << L" | "s << dec << setw(nMaxVRAMSize) << setfill(L' ') << formatDirectMemorySize(deviceInfo.dedicatedVideoMemory);
         wcout << L" | "s << left << setw(nMaxNameSize) << deviceInfo.productName;
         wcout << L" |\n"s;
     }
 
-    wcout << L"+----+------------+--"s << wstring(nMaxLocationSize, L'-') << L"-+-"s << wstring(nMaxBarSize, L'-') << L"-+-"s << wstring(nMaxVRAMSize, L'-') << L"-+-"s << wstring(nMaxNameSize, L'-') << L"-+\n\n";
+    wcout << L"+----+------------+--"s << wstring(nMaxLocationSize, L'-') << L"-+-"s << wstring(nMaxTargetBarSize, L'-') << L"-+-"s << wstring(nMaxCurrentBarSize, L'-')  << L"-+-"s << wstring(nMaxVRAMSize, L'-') << L"-+-"s << wstring(nMaxNameSize, L'-') << L"-+\n\n";
 }
 
 bool CheckPriviledge()
@@ -311,7 +320,8 @@ try
 		std::cout << "NvStrapsReBar variable doesn't exist / Disabled. Enter a value to create it\n";
 	}
 
-	std::cout << "\nVerify that 4G Decoding is enabled and CSM is disabled otherwise system will not POST with GPU. If your NvStrapsReBar value keeps getting reset then check your system time.\n";
+	std::cout << "\nVerify that 4G Decoding is enabled and CSM is disabled otherwise system will not POST with GPU.\n";
+        std::cout << "If your NvStrapsReBar value keeps getting reset then check your system time.\n";
 	std::cout << "\nIt is recommended to first try smaller sizes above 256MB in case BIOS doesn't support large BARs.\n";
 	std::cout << "\nEnter NvStrapsReBar Value\n      0: Disabled \nAbove 0: Maximum BAR size set to 2^x MB \n     32: Unlimited BAR size\n\n";
 

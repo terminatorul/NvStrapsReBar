@@ -11,10 +11,12 @@ struct DeviceInfo
     std::uint_least8_t  bus, device, function;
     bool                busLocationSelector;
     std::uint_least8_t  barSizeSelector;
+    std::uint_least64_t currentBARSize;
     std::uint_least64_t dedicatedVideoMemory;
     std::wstring        productName;
 };
 
+std::wstring formatMemorySize(uint_least64_t size);
 std::vector<DeviceInfo> &getDeviceList();
 
 #endif          // !defined(NVSTRAPS_REBAR_STATE_DEVICE_LIST_HH)

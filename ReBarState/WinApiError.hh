@@ -6,15 +6,11 @@
 #include <string>
 #include <system_error>
 
-using std::exchange;
-using std::string;
-using std::error_category;
-
-class WinAPIErrorCategory: public error_category
+class WinAPIErrorCategory: public std::error_category
 {
 public:
     char const *name() const noexcept override;
-    string message(int error) const override;
+    std::string message(int error) const override;
 
 protected:
     WinAPIErrorCategory() = default;
@@ -27,7 +23,7 @@ inline char const *WinAPIErrorCategory::name() const noexcept
     return "winapi";
 }
 
-inline error_category const &winapi_error_category()
+inline std::error_category const &winapi_error_category()
 {
     static WinAPIErrorCategory errorCategory;
 

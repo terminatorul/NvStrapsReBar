@@ -8,12 +8,15 @@
 #include <windef.h>
 #include <winbase.h>
 
+#include <string>
 #include <utility>
 #include <sstream>
 #include <iomanip>
 
 #include "WinApiError.hh"
 
+using std::string;
+using std::exchange;
 using std::stringstream;
 using std::hex;
 using std::setfill;
