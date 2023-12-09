@@ -1,7 +1,8 @@
 <h1 align="center">NvStrapsReBar</h1>
-<p>This is a copy of the rather popular <a href="https://github.com/xCuri0/ReBARUEFI">ReBarUEFI</a> DXE driver. <a href="https://github.com/xCuri0/ReBARUEFI">ReBarUEFI</a> enables Resizable BAR for older motherboards and chipsets without ReBAR support from the manufacturer. NvStrapsReBar was created to test Resizable BAR support for NVIDIA GPUs from the RTX 2000 (and GTX 1600, Turing architecture) line. Apparently for the GTX 1000 cards (Pascal architecture) the Windows NVIDIA driver just resets the computer during Windows boot if the BAR size has been changed, so GTX 1000 cards still can not enable ReBAR.</p>
+<p>UEFI driver to test and enable Resizable BAR on Turing graphics cards (RTX 2000, GTX 1600). Pre-Pascal cards might also work.</p>
+<p>This is a copy of the rather popular <a href="https://github.com/xCuri0/ReBARUEFI">ReBarUEFI</a> DXE driver. <a href="https://github.com/xCuri0/ReBARUEFI">ReBarUEFI</a> enables Resizable BAR for older motherboards and chipsets without ReBAR support from the manufacturer. NvStrapsReBar was created to test Resizable BAR support for GPUs from the RTX 2000 (and GTX 1600, Turing architecture) line. Apparently for the GTX 1000 cards (Pascal architecture) the Windows driver just resets the computer during boot if the BAR size has been changed, so GTX 1000 cards still can not enable ReBAR (maybe the Studio driver is better). The Linux driver does not crash, but does not pick up the new BAR size either.</p>
 
-Currently the location of the GPU on the PCI bus has to be hard-coded right into the motherboard UEFI, and so does the associated PCI-to-PCI bridge. All hard-coded values are in the header file `ReBarDxe/include/LocalPciGPU.h`, and all the values can be read from the CPU-Z .txt report file, if you want to change them to match your system. Currently these settings are listed below, where all numeric values are examples only (for my computer):
+Currently the location of the GPU on the PCI bus has to be hard-coded right into the motherboard UEFI, and so does the associated PCI-to-PCI bridge. All hard-coded values are in the header file `ReBarDxe/include/LocalPciGPU.h`, and all the values can be read from the CPU-Z .txt report file, so you can manually change them to match your system. Currently these settings are listed below, where all numeric values are examples only (for my computer):
 
 ```C
 #define TARGET_GPU_PCI_VENDOR_ID        0x10DEu
@@ -38,7 +39,7 @@ See https://github.com/xCuri0/ReBarUEFI/discussions/89#discussioncomment-7697768
 Rebuild the project using the instructions below (that were slightly adapted from the original [ReBarUEFI](https://github.com/xCuri0/ReBARUEFI) project).
 
 Credits go to the bellow github users, as I integrated and coded their findings and results:
-* [envytools](https://github.com/envytools/envytools) project for the original effort on reverse-engineering the register interface for NVIDIA GPUs, a very long time ago, for use by the [nouveau](https://nouveau.freedesktop.org/) open-source driver in Linux. Amazing how this documentation could still help us today !
+* [envytools](https://github.com/envytools/envytools) project for the original effort on reverse-engineering the register interface for the GPUs, a very long time ago, for use by the [nouveau](https://nouveau.freedesktop.org/) open-source driver in Linux. Amazing how this documentation could still help us today !
 * [@mupuf](https://github.com/mupuf) from [envytools](https://github.com/envytools/envytools) project for bringing up the idea and the exact (low level) registers from the documentation that enable resizable BAR
 * [@Xelafic](https://github.com/Xelafic) for the first code samples (written in assembly!) and the first test for using the GPU STRAPS bits, documented by envytools, to select the BAR size during PCIe bring-up in UEFI code.
 * [@xCuri0](https://github.com/xCuri0/ReBARUEFI") for the ReBarUEFI DXE driver that enables ReBAR on the motherboard, and allows intercepting and hooking into the PCIe enumeration phases in UEFI code on the motherboard.
@@ -46,7 +47,7 @@ Credits go to the bellow github users, as I integrated and coded their findings 
 ## Working GPUs
 Check issue https://github.com/terminatorul/NvStrapsReBar/issues/1 for a list of known working GPUs (and motherboards).
 
-If you get Resizable BAR working on your Turing or pre-Ampere GPU (and Windows does not crash), please post your system information on issue https://github.com/terminatorul/NvStrapsReBar/issues/1 here on github,
+If you get Resizable BAR working on your Turing (or earlier) GPU, please post your system information on issue https://github.com/terminatorul/NvStrapsReBar/issues/1 here on github,
 in the below format
 
 * Motherboard model:
