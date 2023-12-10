@@ -113,15 +113,6 @@ bool WriteState(uint8_t rBarState)
                 || (throw system_error(static_cast<int>(::GetLastError()), winapi_error_category()), FALSE);
 }
 
-void pause()
-{
-// Linux will probably be run from terminal not requiring this
-#if defined(WINDOWS) || defined(_WINDOWS) || defined(_WIN64) || defined(_WIN32)
-	cout << "You can close the app now\n";
-        cin.get();
-#endif
-}
-
 #else   // Linux
 
 #define REBARPATH /sys/firmware/efi/efivars/VNAME-VGUID
@@ -176,6 +167,14 @@ bool WriteState(uint8_t rBarState) {
 }
 #endif
 
+void pause()
+{
+// Linux will probably be run from terminal not requiring this
+#if defined(WINDOWS) || defined(_WINDOWS) || defined(_WIN64) || defined(_WIN32)
+	cout << "You can close the app now\n";
+        cin.get();
+#endif
+}
 
 int main(int argc, char const *argv[])
 try
