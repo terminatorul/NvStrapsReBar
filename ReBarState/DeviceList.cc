@@ -39,6 +39,7 @@ using std::min;
 using std::uint_least64_t;
 using std::move;
 using std::exchange;
+using std::wcstoul;
 using std::to_string;
 using std::to_wstring;
 using std::string;
@@ -94,7 +95,8 @@ static bool fillDedicatedMemorySize(vector<DeviceInfo> &deviceSet)
                 {
                     ranges::for_each(deviceSet, [&adapterDescription](auto &devInfo)
                     {
-                        if (devInfo.vendorID == adapterDescription.VendorId && devInfo.deviceID == adapterDescription.DeviceId)
+                        if (devInfo.vendorID == adapterDescription.VendorId && devInfo.deviceID == adapterDescription.DeviceId
+                                && (uint_least32_t { devInfo.subsystemDeviceID } << 16u | devInfo.subsystemVendorID) == adapterDescription.SubSysId)
                             devInfo.dedicatedVideoMemory = adapterDescription.DedicatedVideoMemory;
                     });
                 }
@@ -123,7 +125,7 @@ static bool fillDedicatedMemorySize(vector<DeviceInfo> &deviceSet)
 wstring formatMemorySize(uint_least64_t size)
 {
     wchar_t const * const suffixes[] = { L"Bytes", L"KB", L"MB", L"GB", L"TB", L"PB" };
-    wchar_t const *unit = L"EB";
+    wchar_t const *unit = L"EB"; // UINT64 can hold values up to 2 EBytes - 1
 
     for (auto suffix: suffixes)
         if (size >= 1024u)
@@ -221,7 +223,7 @@ static constexpr GUID const DisplayAdapterClass { 0x4d36e968, 0xe325, 0x11ce, 0x
 
 // Identifiers from the PCI bus driver, see:
 // https://learn.microsoft.com/en-us/windows-hardware/drivers/install/identifiers-for-pci-devices
-static wregexp const pciInstanceRegexp { L"^PCI\\\\VEN_([0-9a-fA-F]{4})&DEV_([0-9a-fA-F]{4}).*$"s, regexp_constants::extended },
+static wregexp const pciInstanceRegexp { L"^PCI\\\\VEN_([0-9a-fA-F]{4})&DEV_([0-9a-fA-F]{4})&SUBSYS_([0-9a-fA-F]{4})([0-9a-fA-F]{4}).*$"s, regexp_constants::extended },
         pciLocationRegexp { L"^PCI bus ([0-9]+), device ([0-9]+), function ([0-9]+).*$"s, regexp_constants::extended };
 
 static void enumPciDisplayAdapters(vector<DeviceInfo> &deviceSet)
@@ -259,8 +261,10 @@ static void enumPciDisplayAdapters(vector<DeviceInfo> &deviceSet)
 
         if (wcmatch matches; regex_match(devProp, devProp + devPropLength / sizeof *devProp, matches, pciInstanceRegexp))
         {
-            deviceInfo.vendorID = static_cast<uint_least16_t>(std::wcstoul(matches[1u].first, nullptr, 16));
-            deviceInfo.deviceID = static_cast<uint_least16_t>(std::wcstoul(matches[2u].first, nullptr, 16));
+            deviceInfo.vendorID = static_cast<uint_least16_t>(wcstoul(matches[1u].str().c_str(), nullptr, 16));
+            deviceInfo.deviceID = static_cast<uint_least16_t>(wcstoul(matches[2u].str().c_str(), nullptr, 16));
+            deviceInfo.subsystemDeviceID = static_cast<uint_least16_t>(wcstoul(matches[3u].str().c_str(), nullptr, 16));
+            deviceInfo.subsystemVendorID = static_cast<uint_least16_t>(wcstoul(matches[4u].str().c_str(), nullptr, 16));
 
             if (!::SetupDiGetDevicePropertyW(dev.hDeviceInfoSet, &devInfoData, &DEVPKEY_NAME, &devPropType, devPropBuffer, sizeof devPropBuffer, &devPropLength, 0u))
                 throw system_error(static_cast<int>(::GetLastError()), winapi_error_category(), "Error listing display adapters"s);

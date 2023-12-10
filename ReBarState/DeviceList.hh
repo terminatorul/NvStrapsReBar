@@ -7,7 +7,7 @@
 
 struct DeviceInfo
 {
-    std::uint_least16_t vendorID, deviceID;
+    std::uint_least16_t vendorID, deviceID, subsystemVendorID, subsystemDeviceID;
     std::uint_least8_t  bus, device, function;
     bool                busLocationSelector;
     std::uint_least8_t  barSizeSelector;

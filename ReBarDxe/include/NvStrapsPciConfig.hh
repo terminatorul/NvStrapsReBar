@@ -14,6 +14,12 @@ typedef std::uint_least64_t UINT64;
 
 #endif
 
+constexpr size_t const
+        BYTE_SIZE = 1u,
+        WORD_SIZE = 2u,
+        DWORD_SIZE= 4u,
+        QWORD_SIZE = 8u;
+
 struct NvStrapsConfig
 {
     static constexpr unsigned const GPU_MAX_COUNT = 8u;

@@ -17,11 +17,15 @@ add_executable(NvStrapsReBar
         "ConfigManagerError.cc"
         "DeviceList.hh"
         "DeviceList.cc"
+        "TextWizardPage.hh"
+        "TextWizardPage.cc"
+        "ConfigurationWizard.hh"
+        "ConfigurationWizard.cc"
         "${REBAR_DXE_DIRECTORY}/include/DeviceRegistry.hh"
         "${REBAR_DXE_DIRECTORY}/DeviceRegistry.cc"
         "${REBAR_DXE_DIRECTORY}/include/NvStrapsPciConfig.hh"
         "${REBAR_DXE_DIRECTORY}/NvStrapsPciConfig.cc"
-        "ReBarState.cpp")
+        "ReBarState.cc")
 target_include_directories(NvStrapsReBar PRIVATE "${REBAR_DXE_DIRECTORY}/include" "${NvStrapsReBar_SOURCE_DIR}")
 
 if(WIN32)

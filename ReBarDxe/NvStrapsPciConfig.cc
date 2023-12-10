@@ -57,10 +57,6 @@ template <typename ContainerType>
 static NvStrapsConfig strapsConfig { .nGPUSelector = 0xFFu };
 
 constexpr size_t const
-        BYTE_SIZE = 1u,
-        WORD_SIZE = 2u,
-        DWORD_SIZE= 4u,
-        QWORD_SIZE = 8u,
         GPU_SELECTOR_SIZE = WORD_SIZE + 3u * BYTE_SIZE,
         GPU_CONFIG_SIZE = WORD_SIZE + BYTE_SIZE + DWORD_SIZE,
         BRIDGE_CONFIG_SIZE = 2u * WORD_SIZE + 4u * BYTE_SIZE + WORD_SIZE + DWORD_SIZE,
