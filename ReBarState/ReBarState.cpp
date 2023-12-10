@@ -1,4 +1,4 @@
-﻿/*
+/*
 Copyright (c) 2022-2023 xCuri0 <zkqri0@gmail.com>
 SPDX-License-Identifier: MIT
 */
@@ -157,7 +157,7 @@ void showLocalGPUs(vector<DeviceInfo> const &deviceSet)
 
     wcout << L"+----+------------+--"s << wstring(nMaxLocationSize, L'-') << L"-+-"s << wstring(nMaxTargetBarSize, L'-') << L"-+-"s << wstring(nMaxCurrentBarSize, L'-') << L"-+-"s << wstring(nMaxVRAMSize, L'-') << L"-+-"s << wstring(nMaxNameSize, L'-') << L"-+\n"s;
     wcout << L"|    |            |  "s << wstring(nMaxLocationSize, L' ') << L" | "s << left << setw(nMaxTargetBarSize) << " Target " << L" | "s << setw(nMaxTargetBarSize) << left << "Current" << L" | "s << wstring(nMaxVRAMSize, L' ') << L" | "s << wstring(nMaxNameSize, L' ') << L" |\n"s;
-    wcout << L"| Nr |  PCI ID    |  "s << setw(nMaxLocationSize) << left << L" PCI bus location"s << L" | "s << setw(nMaxTargetBarSize) << L"BAR size"s << L" | "s << setw(nMaxCurrentBarSize) << L"BAR size"s << L" | "s << setw(nMaxVRAMSize) << L"VRAM"s << L" | "s << setw(nMaxNameSize) << L"Product Name"s << L" |\n"s;
+    wcout << L"| Nr |  PCI ID    |  "s << setw(nMaxLocationSize) << left << L"PCI bus location"s << L" | "s << setw(nMaxTargetBarSize) << L"BAR size"s << L" | "s << setw(nMaxCurrentBarSize) << L"BAR size"s << L" | "s << setw(nMaxVRAMSize) << L"VRAM"s << L" | "s << setw(nMaxNameSize) << L"Product Name"s << L" |\n"s;
     wcout << L"+----+------------+--"s << wstring(nMaxLocationSize, L'-') << L"-+-"s << wstring(nMaxTargetBarSize, L'-') << L"-+-"s << wstring(nMaxCurrentBarSize, L'-') << L"-+-"s << wstring(nMaxVRAMSize, L'-') << L"-+-"s << wstring(nMaxNameSize, L'-') << L"-+\n"s;
 
     unsigned i = 1u;
