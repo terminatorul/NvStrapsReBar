@@ -34,7 +34,7 @@ Currently the location of the GPU on the PCI bus has to be hard-coded right into
                                                                         // read as little-endian
 ```
 
-See https://github.com/xCuri0/ReBarUEFI/discussions/89#discussioncomment-7697768 for the step-by-step details.
+See https://github.com/xCuri0/ReBarUEFI/discussions/89#discussioncomment-7697768 for more step-by-step details.
 
 Rebuild the project using the instructions below (that were slightly adapted from the original [ReBarUEFI](https://github.com/xCuri0/ReBARUEFI) project).
 
