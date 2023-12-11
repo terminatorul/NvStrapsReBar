@@ -1,6 +1,29 @@
+#if defined(WINDOWS) || defined(_WINDOWS) || defined(_WIN64) || defined(_WIN32)
+# if defined(_M_AMD64) && !defined(_AMD64_)
+#  define _AMD64_
+# endif
+#endif
+
 #include <cstdint>
+#include <tuple>
+#include <utility>
+#include <span>
 
 #include "DeviceRegistry.hh"
+
+using std::tuple;
+using std::get;
+using std::span;
+namespace ranges = std::ranges;
+
+// See envytools documentation at:
+// https://envytools.readthedocs.io/en/latest/hw/pciid.html#introduction
+static constexpr tuple<UINT16, UINT16> const
+    PCI_ID_RANGE_TU102 { UINT16 { 0x1E00u }, UINT16 { 0x1E7Fu } },
+    PCI_ID_RANGE_TU104 { UINT16 { 0x1E80u }, UINT16 { 0x1EFFu } },
+    PCI_ID_RANGE_TU106 { UINT16 { 0x1F00u }, UINT16 { 0x1F7Fu } },
+    PCI_ID_RANGE_TU116 { UINT16 { 0x2180u }, UINT16 { 0x21FFu } },
+    PCI_ID_RANGE_TU117 { UINT16 { 0x1F80u }, UINT16 { 0x1FFFu } };
 
 // See:
 //      - https://admin.pci-ids.ucw.cz/read/PC/10de
@@ -9,7 +32,7 @@
 static UINT16 Turing_Device_List_Skip[]
 {
         // Tesla GPUs have some virtual memory with large BARs
-        // Quadro GPUs already have resizable BAR
+        // Some Quadro GPUs already have resizable BAR
 
         UINT16_C(0x1E30),               // TU102GL [Quadro RTX 6000/8000] 24GB / 48GB
         UINT16_C(0x1E36),               // TU102GL [Quadro RTX 6000]	24GB
@@ -24,7 +47,15 @@ static UINT16 Turing_Device_List_Skip[]
         UINT16_C(0x1EBA),               // TU104GL [PG189 SKU600]
         UINT16_C(0x1EBE),               // TU104GL
 },
-              Turing_Device_List_4GB[] =
+        Turing_Device_List_2GB[] =
+{
+        UINT16_C(0x1F97),               // TU117M [GeForce MX450] 2GB
+        UINT16_C(0x1F98),               // TU117M [GeForce MX450] 2GB
+        UINT16_C(0x1F9C),               // TU117M [GeForce MX450] 2GB
+        UINT16_C(0x1F9F),               // TU117M [GeForce MX550] 2GB
+        UINT16_C(0x1FA0),               // TU117M [GeForce MX550] 2GB
+},
+        Turing_Device_List_4GB[] =
 {
         UINT16_C(0x1F0A),               // TU106 [GeForce GTX 1650] 4GB
 
@@ -36,14 +67,9 @@ static UINT16 Turing_Device_List_Skip[]
         UINT16_C(0x1F94),               // TU117M [GeForce GTX 1650 Mobile] 4GB
         UINT16_C(0x1F95),               // TU117M [GeForce GTX 1650 Ti Mobile] 4GB
         UINT16_C(0x1F96),               // TU117M [GeForce GTX 1650 Mobile / Max-Q] 4GB
-        //UINT16_C(0x1F97),               // TU117M [GeForce MX450] 2GB
-        //UINT16_C(0x1F98),               // TU117M [GeForce MX450] 2GB
         UINT16_C(0x1F99),               // TU117M [GeForce GTX 1650 Mobile / Max-Q] 4GB
-        //UINT16_C(0x1F9C),               // TU117M [GeForce MX450] 2GB
         UINT16_C(0x1F9D),               // TU117M [GeForce GTX 1650 Mobile / Max-Q] 4GB
         //UINT16_C(0x1F9E),
-        //UINT16_C(0x1F9F),               // TU117M [GeForce MX550] 2GB
-        //UINT16_C(0x1FA0),               // TU117M [GeForce MX550] 2GB
         //UINT16_C(0x1FA1),               // TU117M
 
         //UINT16_C(0x1FAE),               // TU117GL
@@ -66,7 +92,7 @@ static UINT16 Turing_Device_List_Skip[]
         UINT16_C(0x1FF9),               // TU117GLM [Quadro T1000 Mobile] 4GB
 
 },
-              Turing_Device_List_8GB[] =
+        Turing_Device_List_8GB[] =
 {
         UINT16_C(0x1E81),               // TU104 [GeForce RTX 2080 SUPER] 8GB
         UINT16_C(0x1E82),               // TU104 [GeForce RTX 2080] 8GB
@@ -114,7 +140,7 @@ static UINT16 Turing_Device_List_Skip[]
         UINT16_C(0x1F76),               // TU106GLM [Quadro RTX 3000 Mobile Refresh] 6GB
         UINT16_C(0x1FF0),               // TU117GL [T1000 8GB]
 },
-              Turing_Device_List_16GB[] =
+        Turing_Device_List_16GB[] =
 {
         UINT16_C(0x1E03),               // TU102 [GeForce RTX 2080 Ti 12GB]
         UINT16_C(0X1E04),               // TU102 [GeForce RTX 2080 Ti] 11GB
@@ -132,7 +158,67 @@ static UINT16 Turing_Device_List_Skip[]
         UINT16_C(0x1F03),               // TU106 [GeForce RTX 2060 12GB] 12GB
 },
 
-              Turing_Device_List_32GB[] =
+        Turing_Device_List_32GB[] =
 {
         UINT16_C(0x1E02),               // TU102 [Titan RTX] 24GB
 };
+
+static inline bool inRange(UINT16 value, tuple<UINT16, UINT16> const &range)
+{
+    return get<0u>(range) <= value && value <= get<1u>(range);
+}
+
+static inline bool isTU102(UINT16 deviceID)
+{
+    return inRange(deviceID, PCI_ID_RANGE_TU102);
+}
+
+static inline bool isTU104(UINT16 deviceID)
+{
+    return inRange(deviceID, PCI_ID_RANGE_TU104);
+}
+
+static inline bool isTU106(UINT16 deviceID)
+{
+    return inRange(deviceID, PCI_ID_RANGE_TU106);
+}
+
+static inline bool isTU116(UINT16 deviceID)
+{
+    return inRange(deviceID, PCI_ID_RANGE_TU116);
+}
+
+static inline bool isTU117(UINT16 deviceID)
+{
+    return inRange(deviceID, PCI_ID_RANGE_TU117);
+}
+
+bool isTuringGPU(UINT16 deviceID)
+{
+    return isTU102(deviceID) || isTU104(deviceID) || isTU106(deviceID) || isTU116(deviceID) || isTU117(deviceID);
+}
+
+static constexpr struct
+{
+    BarSizeSelector barSize;
+    span<UINT16>    values;
+}
+    const DeviceRegistry[] =
+{
+    BarSizeSelector::Excluded, span { Turing_Device_List_Skip },
+    BarSizeSelector:: _2G,     span { Turing_Device_List_2GB  },
+    BarSizeSelector:: _4G,     span { Turing_Device_List_4GB  },
+    BarSizeSelector:: _8G,     span { Turing_Device_List_8GB  },
+    BarSizeSelector::_16G,     span { Turing_Device_List_16GB },
+    BarSizeSelector::_32G,     span { Turing_Device_List_32GB }
+};
+
+BarSizeSelector lookupBarSizeInRegistry(UINT16 deviceID)
+{
+    for (auto const &group: DeviceRegistry)
+        for (auto value: group.values)
+            if (value == deviceID)
+                return group.barSize;
+
+    return BarSizeSelector::None;
+}

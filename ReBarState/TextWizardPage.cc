@@ -131,8 +131,8 @@ static void showLocalGPUs(vector<DeviceInfo> const &deviceSet)
     }
 
     wcout << L"+----+------------+------------+--"s << wstring(nMaxLocationSize, L'-') << L"-+-"s << wstring(nMaxTargetBarSize, L'-') << L"-+-"s << wstring(nMaxCurrentBarSize, L'-') << L"-+-"s << wstring(nMaxVRAMSize, L'-') << L"-+-"s << wstring(nMaxNameSize, L'-') << L"-+\n"s;
-    wcout << L"|    |   PCI ID   |  subsystem |  "s << left << setw(nMaxLocationSize) << L"PCI location"s << L" | "s << left << setw(nMaxTargetBarSize) << " Target " << L" | "s << setw(nMaxTargetBarSize) << left << "Current" << L" | "s << wstring(nMaxVRAMSize, L' ') << L" | "s << wstring(nMaxNameSize, L' ') << L" |\n"s;
-    wcout << L"| Nr |  VID:DID   |   VID:DID  |  "s << setw(nMaxLocationSize) << left << "bus:dev.fn" << L" | "s << setw(nMaxTargetBarSize) << L"BAR size"s << L" | "s << setw(nMaxCurrentBarSize) << L"BAR size"s << L" | "s << setw(nMaxVRAMSize) << L"VRAM"s << L" | "s << setw(nMaxNameSize) << L"Product Name"s << L" |\n"s;
+    wcout << L"| Nr |   PCI ID   |  subsystem |  "s << left << setw(nMaxLocationSize) << L"PCI location"s << L" | "s << left << setw(nMaxTargetBarSize) << " Target " << L" | "s << setw(nMaxTargetBarSize) << left << "Current" << L" | "s << setw(nMaxVRAMSize) << L"VRAM"s << L" | "s << setw(nMaxNameSize) << L"Product Name"s << L" |\n"s;
+    wcout << L"|    |  VID:DID   |   VID:DID  |  "s << setw(nMaxLocationSize) << left << "bus:dev.fn" << L" | "s << setw(nMaxTargetBarSize) << L"BAR size"s << L" | "s << setw(nMaxCurrentBarSize) << L"BAR size"s << L" | "s << setw(nMaxVRAMSize) << L"size"s << L" | "s << wstring(nMaxNameSize, L' ') << L" |\n"s;
     wcout << L"+----+------------+------------+--"s << wstring(nMaxLocationSize, L'-') << L"-+-"s << wstring(nMaxTargetBarSize, L'-') << L"-+-"s << wstring(nMaxCurrentBarSize, L'-') << L"-+-"s << wstring(nMaxVRAMSize, L'-') << L"-+-"s << wstring(nMaxNameSize, L'-') << L"-+\n"s;
 
     unsigned i = 1u;

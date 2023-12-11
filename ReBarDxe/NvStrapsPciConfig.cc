@@ -8,19 +8,39 @@
 #  include <winbase.h>
 #  include <errhandlingapi.h>
 # endif
+# include <execution>
 #endif
 
 #include <cstddef>
 #include <cstdint>
 #include <iterator>
 #include <algorithm>
+#include <tuple>
 #include <utility>
+#include <ranges>
 
+#include "DeviceRegistry.hh"
 #include "NvStrapsPciConfig.hh"
 
+using std::size_t;
+using std::byte;
+using std::to_integer;
 using std::as_const;
+using std::exchange;
 using std::begin;
+using std::end;
 using std::size;
+using std::find_if;
+using std::copy;
+using std::tuple;
+using std::tie;
+
+#if defined(UEFI_SOURCE) || defined(EFIAPI)
+#else
+namespace execution = std::execution;
+#endif
+
+namespace views = std::views;
 
 #if defined(UEFI_SOURCE) || defined(EFIAPI)
 
@@ -54,166 +74,184 @@ template <typename ContainerType>
 
 #endif          // #elseif defined(UEFI_SOURCE) || defined(EFIAPI)
 
-static NvStrapsConfig strapsConfig { .nGPUSelector = 0xFFu };
+static NvStrapsConfig strapsConfig;
 
-constexpr size_t const
-        GPU_SELECTOR_SIZE = WORD_SIZE + 3u * BYTE_SIZE,
-        GPU_CONFIG_SIZE = WORD_SIZE + BYTE_SIZE + DWORD_SIZE,
-        BRIDGE_CONFIG_SIZE = 2u * WORD_SIZE + 4u * BYTE_SIZE + WORD_SIZE + DWORD_SIZE,
-        NV_STRAPS_CONFIG_SIZE = BYTE_SIZE + GPU_SELECTOR_SIZE * ARRAY_SIZE(strapsConfig.GPUs)
-                              + BYTE_SIZE + GPU_CONFIG_SIZE * ARRAY_SIZE(strapsConfig.gpuConfig)
-                              + BYTE_SIZE + BRIDGE_CONFIG_SIZE * ARRAY_SIZE(strapsConfig.bridge);
-
-template <typename UnsignedType>
-    static UnsignedType unpack(BYTE const *&buffer)
+template <typename UnsignedType, size_t SIZE>
+    static inline UnsignedType unpack(byte const *&buffer)
 {
+    static_assert(sizeof(UnsignedType) >= SIZE, "Result type for unpack<>() too small for the number of bytes requested");
     UnsignedType value = UnsignedType { };
 
-    for (auto i = 0u; i < sizeof value; i++)
-        value |= *buffer++ << 0x08u * i;
+    for (auto i = 0u; i < SIZE; i++)
+        value |= to_integer<UnsignedType>(*buffer++) << 0x08u * i;
 
     return value;
 }
 
-template <typename UnsignedType>
-    static BYTE *pack(BYTE *&buffer, UnsignedType &&value)
+static inline UINT8 unpack_BYTE(byte const *&buffer)
 {
-    for (auto i = 0u; i < sizeof value; i++)
-        *buffer++ = BYTE { value >> i & 0xFFu };
+    return unpack<UINT8, BYTE_SIZE>(buffer);
+}
+
+static inline UINT16 unpack_WORD(byte const *&buffer)
+{
+    return unpack<UINT16, WORD_SIZE>(buffer);
+}
+
+static inline UINT32 unpack_DWORD(byte const *&buffer)
+{
+    return unpack<UINT32, DWORD_SIZE>(buffer);
+}
+
+static inline UINT64 unpack_QWORD(byte const *&buffer)
+{
+    return unpack<UINT64, QWORD_SIZE>(buffer);
+}
+
+template <size_t SIZE, typename UnsignedType>
+    static inline byte *pack(byte *&buffer, UnsignedType &&value)
+{
+    static_assert(sizeof value >= SIZE, "Source type for pack<>() too small for the number of bytes requested");
+
+    for (auto i = 0u; i < SIZE; i++)
+        *buffer++ = byte { value >> i & 0xFFu };
 
     return buffer;
 }
 
-template <>
-    NvStrapsConfig::GPUSelector unpack<NvStrapsConfig::GPUSelector>(BYTE const *&buffer)
+static inline byte *pack_BYTE(byte *&buffer, UINT8 value)
+{
+    return pack<BYTE_SIZE>(buffer, value);
+}
+
+static inline byte *pack_WORD(byte *&buffer, UINT16 value)
+{
+    return pack<WORD_SIZE>(buffer, value);
+}
+
+static inline byte *pack_DWORD(byte *&buffer, UINT32 value)
+{
+    return pack<DWORD_SIZE>(buffer, value);
+}
+
+static inline byte *pack_QWORD(byte *&buffer, UINT64 value)
+{
+    return pack<QWORD_SIZE>(buffer, value);
+}
+
+void NvStrapsConfig::GPUSelector::unpack(byte const *&buffer)
 {
     UINT8 busPos;
 
-    return NvStrapsConfig::GPUSelector
-    {
-        .deviceID         = unpack<UINT16>(buffer),
-        .bus              = unpack<UINT8>(buffer),
-        .device           = UINT8 { (busPos = unpack<UINT8>(buffer), busPos >> 3u & 0b0001'1111u) },
-        .function         = UINT8 { busPos & 0b0111u },
-        .barSizeSelector  = unpack<UINT8>(buffer)
-    };
+    deviceID         = unpack_WORD(buffer);
+    subsysVendorID   = unpack_WORD(buffer);
+    subsysDeviceID   = unpack_WORD(buffer);
+    bus              = unpack_BYTE(buffer);
+    device           = UINT8 { (busPos = unpack_BYTE(buffer), busPos >> 3u & 0b0001'1111u) };
+    function         = UINT8 { busPos & 0b0111u };
+    barSizeSelector  = unpack_BYTE(buffer);
 }
 
-template <>
-    BYTE *pack<NvStrapsConfig::GPUSelector const &>(BYTE *&buffer, NvStrapsConfig::GPUSelector const &gpuSelector)
+byte *NvStrapsConfig::GPUSelector::pack(byte *&buffer) const
 {
-    pack(buffer, gpuSelector.deviceID);
-    pack(buffer, gpuSelector.bus);
-    pack(buffer, UINT8 { unsigned { gpuSelector.device } << 3u & 0x1111'1000u | unsigned { gpuSelector.function } & 0b0111u });
-    pack(buffer, gpuSelector.barSizeSelector);
+    pack_WORD(buffer, deviceID);
+    pack_WORD(buffer, subsysVendorID);
+    pack_WORD(buffer, subsysDeviceID);
+    pack_BYTE(buffer, bus);
+    pack_BYTE(buffer, UINT8 { unsigned { device } << 3u & 0x1111'1000u | unsigned { function } & 0b0111u });
+    pack_BYTE(buffer, barSizeSelector);
 
     return buffer;
 }
 
-template <>
-    BYTE *pack<NvStrapsConfig::GPUSelector &>(BYTE *&buffer, NvStrapsConfig::GPUSelector &gpuSelector)
+void NvStrapsConfig::GPUConfig::unpack(byte const *&buffer)
 {
-    return pack(buffer, as_const(gpuSelector));
+    deviceID            = unpack_WORD(buffer);
+    subsysVendorID      = unpack_WORD(buffer);
+    subsysDeviceID      = unpack_WORD(buffer);
+    bus                 = unpack_BYTE(buffer);
+    baseAddressSelector = unpack_DWORD(buffer);
 }
 
-
-template <>
-    NvStrapsConfig::GPUConfig unpack<NvStrapsConfig::GPUConfig>(BYTE const *&buffer)
+byte *NvStrapsConfig::GPUConfig::pack(byte *&buffer) const
 {
-    return NvStrapsConfig::GPUConfig
-    {
-        .deviceID            = unpack<UINT16>(buffer),
-        .bus                 = unpack<UINT8>(buffer),
-        .baseAddressSelector = unpack<UINT32>(buffer)
-    };
-}
-
-template <>
-    BYTE *pack<NvStrapsConfig::GPUConfig const &>(BYTE *&buffer, NvStrapsConfig::GPUConfig const &gpuConfig)
-{
-    pack(buffer, gpuConfig.deviceID);
-    pack(buffer, gpuConfig.bus);
-    pack(buffer, gpuConfig.baseAddressSelector);
+    pack_WORD(buffer, deviceID);
+    pack_WORD(buffer, subsysVendorID);
+    pack_WORD(buffer, subsysDeviceID);
+    pack_BYTE(buffer, bus);
+    pack_DWORD(buffer, baseAddressSelector);
 
     return buffer;
 }
 
-template <>
-    BYTE *pack<NvStrapsConfig::GPUConfig &>(BYTE *&buffer, NvStrapsConfig::GPUConfig &gpuConfig)
-{
-    return pack(buffer, as_const(gpuConfig));
-}
-
-template <>
-    NvStrapsConfig::BridgeConfig unpack<NvStrapsConfig::BridgeConfig>(BYTE const *&buffer)
+void NvStrapsConfig::BridgeConfig::unpack(byte const *&buffer)
 {
     UINT8 busPos;
 
-    return NvStrapsConfig::BridgeConfig
-    {
-        .vendorID            = unpack<UINT16>(buffer),
-        .deviceID            = unpack<UINT16>(buffer),
-        .bridgeBus           = unpack<UINT8>(buffer),
-        .bridgeDevice        = UINT8 { (busPos = unpack<UINT8>(buffer), busPos >> 3u & 0b0001'1111u) },
-        .bridgeFunction      = UINT8 { busPos & 0b0111u },
-        .bridgeSecondaryBus  = unpack<UINT8>(buffer),
-        .bridgeSubsidiaryBus = unpack<UINT8>(buffer),
-        .bridgeIOBaseLimit   = unpack<UINT16>(buffer),
-        .bridgeMemBaseLimit  = unpack<UINT32>(buffer)
-    };
+    vendorID            = unpack_WORD(buffer);
+    deviceID            = unpack_WORD(buffer);
+    bridgeBus           = unpack_BYTE(buffer);
+    bridgeDevice        = UINT8 { (busPos = unpack_BYTE(buffer), busPos >> 3u & 0b0001'1111u) };
+    bridgeFunction      = UINT8 { busPos & 0b0111u };
+    bridgeSecondaryBus  = unpack_BYTE(buffer);
+    bridgeSubsidiaryBus = unpack_BYTE(buffer);
+    bridgeIOBaseLimit   = unpack_WORD(buffer);
+    bridgeMemBaseLimit  = unpack_DWORD(buffer);
 }
 
-template <>
-    BYTE *pack<NvStrapsConfig::BridgeConfig const &>(BYTE *&buffer, NvStrapsConfig::BridgeConfig const &pciConfig)
+byte *NvStrapsConfig::BridgeConfig::pack(byte *&buffer) const
 {
-    pack(buffer, pciConfig.vendorID);
-    pack(buffer, pciConfig.deviceID);
-    pack(buffer, pciConfig.bridgeBus);
-    pack(buffer, UINT8 { unsigned { pciConfig.bridgeDevice } << 3u & 0b1111'1000u | unsigned { pciConfig.bridgeFunction } & 0b0111u });
-    pack(buffer, pciConfig.bridgeSecondaryBus);
-    pack(buffer, pciConfig.bridgeSubsidiaryBus);
-    pack(buffer, pciConfig.bridgeIOBaseLimit);
-    pack(buffer, pciConfig.bridgeMemBaseLimit);
+    pack_WORD(buffer, vendorID);
+    pack_WORD(buffer, deviceID);
+    pack_BYTE(buffer, bridgeBus);
+    pack_BYTE(buffer, UINT8 { unsigned { bridgeDevice } << 3u & 0b1111'1000u | unsigned { bridgeFunction } & 0b0111u });
+    pack_BYTE(buffer, bridgeSecondaryBus);
+    pack_BYTE(buffer, bridgeSubsidiaryBus);
+    pack_WORD(buffer, bridgeIOBaseLimit);
+    pack_DWORD(buffer, bridgeMemBaseLimit);
 
     return buffer;
 }
 
-template <>
-    BYTE *pack<NvStrapsConfig::BridgeConfig &>(BYTE *&buffer, NvStrapsConfig::BridgeConfig &pciConfig)
+void NvStrapsConfig::clear()
 {
-    return pack(buffer, as_const(pciConfig));
+    nGlobalEnable = 0u;
+    nGPUSelector = 0xFFu;
+    nGPUConfig = 0u;
+    nBridgeConfig = 0u;
 }
 
-static void unpackStrapsConfig(BYTE const *buffer, unsigned size)
+void NvStrapsConfig::load(byte const *buffer, unsigned size)
 {
     do
     {
-        if (!size)
+        if (size < 4u)
             break;
 
-        strapsConfig.nGPUSelector = unpack<UINT8>(buffer);
+        nGlobalEnable = unpack_BYTE(buffer);
+        nGPUSelector = unpack_BYTE(buffer);
 
-        if (strapsConfig.nGPUSelector > ARRAY_SIZE(strapsConfig.GPUs) || size < BYTE_SIZE + strapsConfig.nGPUSelector * GPU_SELECTOR_SIZE + BYTE_SIZE)
+        if (strapsConfig.nGPUSelector > ARRAY_SIZE(strapsConfig.GPUs) || size < 2u * BYTE_SIZE + strapsConfig.nGPUSelector * GPU_SELECTOR_SIZE + BYTE_SIZE)
             break;
 
         for (auto index = 0u; index < strapsConfig.nGPUSelector; index++)
-            strapsConfig.GPUs[index] = unpack<NvStrapsConfig::GPUSelector>(buffer);
+            strapsConfig.GPUs[index].unpack(buffer);
 
-        strapsConfig.nGPUConfig = unpack<UINT8>(buffer);
+        strapsConfig.nGPUConfig = unpack_BYTE(buffer);
 
         if (strapsConfig.nGPUConfig > ARRAY_SIZE(strapsConfig.gpuConfig)
-                || size < BYTE_SIZE + strapsConfig.nGPUSelector * GPU_SELECTOR_SIZE + BYTE_SIZE + strapsConfig.nGPUConfig * GPU_CONFIG_SIZE)
+                || size < 2u * BYTE_SIZE + strapsConfig.nGPUSelector * GPU_SELECTOR_SIZE + BYTE_SIZE + strapsConfig.nGPUConfig * GPU_CONFIG_SIZE + BYTE_SIZE)
         {
             break;
         }
 
         for (auto index = 0u; index < strapsConfig.nGPUConfig; index++)
-            strapsConfig.gpuConfig[index] = unpack<NvStrapsConfig::GPUConfig>(buffer);
+            strapsConfig.gpuConfig[index].unpack(buffer);
 
-        strapsConfig.nBridgeConfig = unpack<UINT8>(buffer);
+        strapsConfig.nBridgeConfig = unpack_BYTE(buffer);
 
         if (strapsConfig.nBridgeConfig > ARRAY_SIZE(strapsConfig.bridge)
-                 || size < BYTE_SIZE + strapsConfig.nGPUSelector * GPU_SELECTOR_SIZE
+                 || size < 2u * BYTE_SIZE + strapsConfig.nGPUSelector * GPU_SELECTOR_SIZE
                          + BYTE_SIZE + strapsConfig.nGPUConfig * GPU_CONFIG_SIZE
                          + BYTE_SIZE + strapsConfig.nBridgeConfig * BRIDGE_CONFIG_SIZE)
         {
@@ -221,51 +259,180 @@ static void unpackStrapsConfig(BYTE const *buffer, unsigned size)
         }
 
         for (auto index = 0u; index < strapsConfig.nBridgeConfig; index++)
-            strapsConfig.bridge[index] = unpack<NvStrapsConfig::BridgeConfig>(buffer);
+            strapsConfig.bridge[index].unpack(buffer);
 
         return;
     }
     while (false);
 
-    strapsConfig = NvStrapsConfig { };
+    clear();
 }
 
-static unsigned packStrapsConfig(BYTE *buffer)
+unsigned NvStrapsConfig::save(byte *buffer) const
 {
-    if (strapsConfig.nGPUSelector
-         && strapsConfig.nGPUSelector < ARRAY_SIZE(strapsConfig.GPUs)
-         && strapsConfig.nGPUConfig < ARRAY_SIZE(strapsConfig.gpuConfig)
-         && strapsConfig.nBridgeConfig < ARRAY_SIZE(strapsConfig.bridge))
+    if ((nGlobalEnable || nGPUSelector)
+         && nGPUSelector < ARRAY_SIZE(GPUs)
+         && nGPUConfig < ARRAY_SIZE(gpuConfig)
+         && nBridgeConfig < ARRAY_SIZE(bridge))
     {
-        pack(buffer, strapsConfig.nGPUSelector);
+        pack_BYTE(buffer, nGlobalEnable);
+        pack_BYTE(buffer, nGPUSelector);
 
-        for (auto index = 0u; index < strapsConfig.nGPUSelector; index++)
-            pack(buffer, strapsConfig.GPUs[index]);
+        for (auto index = 0u; index < nGPUSelector; index++)
+            GPUs[index].pack(buffer);
 
-        pack(buffer, strapsConfig.nGPUConfig);
+        pack_BYTE(buffer, nGPUConfig);
 
-        for (unsigned index = 0u; index < strapsConfig.nGPUConfig; index++)
-            pack(buffer, strapsConfig.gpuConfig[index]);
+        for (unsigned index = 0u; index < nGPUConfig; index++)
+            gpuConfig[index].pack(buffer);
 
-        pack(buffer, strapsConfig.nBridgeConfig);
+        pack_BYTE(buffer, nBridgeConfig);
 
-        for (auto index = 0u; index < strapsConfig.nBridgeConfig; index++)
-            pack(buffer, strapsConfig.bridge[index]);
+        for (auto index = 0u; index < nBridgeConfig; index++)
+            bridge[index].pack(buffer);
 
-        return BYTE_SIZE + strapsConfig.nGPUSelector * GPU_SELECTOR_SIZE
-             + BYTE_SIZE + strapsConfig.nGPUConfig * GPU_CONFIG_SIZE
-             + BYTE_SIZE + strapsConfig.nBridgeConfig * BRIDGE_CONFIG_SIZE;
+        return BYTE_SIZE + nGPUSelector * GPU_SELECTOR_SIZE
+             + BYTE_SIZE + nGPUConfig * GPU_CONFIG_SIZE
+             + BYTE_SIZE + nBridgeConfig * BRIDGE_CONFIG_SIZE;
     }
 
     return 0u;
 }
 
+bool NvStrapsConfig::isConfigured() const
+{
+    return nGlobalEnable || nGPUSelector;
+};
+
+bool NvStrapsConfig::GPUSelector::deviceMatch(UINT16 devID) const
+{
+    return deviceID == devID;
+}
+
+bool NvStrapsConfig::GPUSelector::subsystemMatch(UINT16 subsysVenID, UINT16 subsysDevID) const
+{
+    return subsysVendorID == subsysVenID && subsysDeviceID == subsysDevID;
+}
+
+bool NvStrapsConfig::GPUSelector::busLocationMatch(UINT8 busNr, UINT8 dev, UINT8 func) const
+{
+    return bus == busNr && device == dev && function == func;
+}
+
+#if defined(UEFI_SOURCE) || defined(EFIAPI)
+#else
+
+bool NvStrapsConfig::setGPUSelector(UINT16 deviceID, UINT16 subsysDevID, UINT16 subsysVenID, UINT8 bus, UINT8 dev, UINT8 fn, UINT8 barSizeSelector)
+{
+    GPUSelector gpuSelector
+    {
+        .deviceID = deviceID,
+        .subsysVendorID = subsysVenID,
+        .subsysDeviceID = subsysDevID,
+        .bus = bus,
+        .device = dev,
+        .function = fn,
+        .barSizeSelector = barSizeSelector
+    };
+
+    auto end_it = begin(GPUs) + nGPUSelector;
+    auto it = find_if(execution::par_unseq, begin(GPUs), end_it, [&gpuSelector](auto const &selector)
+        {
+            return selector.deviceMatch(gpuSelector.deviceID)
+                 && selector.subsystemMatch(gpuSelector.subsysVendorID, gpuSelector.subsysDeviceID)
+                 && selector.busLocationMatch(gpuSelector.bus, gpuSelector.device, gpuSelector.function);
+        });
+
+    if (it == end_it)
+        if (nGPUSelector >= size(GPUs))
+            return false;
+        else
+            GPUs[nGPUSelector++] = gpuSelector;
+    else
+        *it = gpuSelector;
+
+    return true;
+}
+
+bool NvStrapsConfig::clearGPUSelector(UINT16 deviceID, UINT16 subsysDevID, UINT16 subsysVenID, UINT8 bus, UINT8 dev, UINT8 fn)
+{
+    GPUSelector gpuSelector
+    {
+        .deviceID = deviceID,
+        .subsysVendorID = subsysVenID,
+        .subsysDeviceID = subsysDevID,
+        .bus = bus,
+        .device = dev,
+        .function = fn
+    };
+
+    auto end_it = begin(GPUs) + nGPUSelector;
+    auto it = find_if(execution::par_unseq, begin(GPUs), end_it, [&gpuSelector](auto const &selector)
+        {
+            return selector.deviceMatch(gpuSelector.deviceID)
+                 && selector.subsystemMatch(gpuSelector.subsysVendorID, gpuSelector.subsysDeviceID)
+                 && selector.busLocationMatch(gpuSelector.bus, gpuSelector.device, gpuSelector.function);
+        });
+
+    if (it == end_it)
+        return false;
+
+    copy(it + 1u, end_it, it);
+    nGPUSelector--;
+
+    return true;
+}
+
+bool NvStrapsConfig::clearGPUSelectors()
+{
+    return !!exchange(nGPUSelector, 0u);
+}
+
+#endif          // #lse defined(UEFI_SOURCE)...
+
+tuple<ConfigPriority, BarSizeSelector> NvStrapsConfig::lookupBarSize(UINT16 deviceID, UINT16 subsysDevID, UINT16 subsysVenID, UINT8 bus, UINT8 dev, UINT8 fn) const
+{
+    ConfigPriority configPriority = ConfigPriority::UNCONFIGURED;
+    BarSizeSelector barSizeSelector;
+
+    for (auto const &selector: GPUs | views::take(nGPUSelector))
+        if (selector.deviceMatch(deviceID))
+            if (selector.subsystemMatch(subsysVenID, subsysDevID))
+                if (selector.busLocationMatch(bus, dev, fn))
+                    return tuple { ConfigPriority::EXPLICIT_PCI_LOCATION, BarSizeSelector { selector.barSizeSelector } };
+                else
+                    tie(configPriority, barSizeSelector) = tuple { ConfigPriority::EXPLICIT_SUBSYSTEM_ID, BarSizeSelector {selector.barSizeSelector } };
+            else
+            {
+                if (configPriority < ConfigPriority::EXPLICIT_SUBSYSTEM_ID)
+                    tie(configPriority, barSizeSelector) = tuple { ConfigPriority::EXPLICIT_PCI_ID, BarSizeSelector { selector.barSizeSelector } };
+            }
+
+    if (configPriority == ConfigPriority::UNCONFIGURED && nGlobalEnable)
+    {
+        barSizeSelector = lookupBarSizeInRegistry(deviceID);
+
+        if (barSizeSelector == BarSizeSelector::None)
+        {
+            if (nGlobalEnable > 1u && isTuringGPU(deviceID))
+                return tuple { ConfigPriority::IMPLIED_GLOBAL, BarSizeSelector::_2G };
+        }
+        else
+            configPriority = ConfigPriority::FOUND_GLOBAL;
+    }
+
+    return tuple { configPriority, barSizeSelector };
+}
+
 NvStrapsConfig &GetNvStrapsPciConfig()
 {
-    if (strapsConfig.nGPUSelector == 0xFFu)
+    static bool isLoaded = false;
+
+    if (!isLoaded)
     {
+        byte buffer[strapsConfig.bufferSize()];
+
 #if defined(UEFI_SOURCE) || defined(EFIAPI)
-        BYTE buffer[NV_STRAPS_CONFIG_SIZE];
         UINTN bufferSize = sizeof buffer;
         UINT32 attributes = 0u;
         EFI_STATUS status = gRT->GetVariable(static_cast<CHAR16 *>(static_cast<void *>(NvStrapsPciConfigName)), &NvStrapsPciConfigGUID, &attributes, &bufferSize, buffer);
@@ -273,12 +440,13 @@ NvStrapsConfig &GetNvStrapsPciConfig()
         if (status != EFI_SUCCESS)
             bufferSize = 0u;
 #else
-        BYTE buffer[NV_STRAPS_CONFIG_SIZE];
         DWORD bufferSize = GetFirmwareEnvironmentVariable(NvStrapsPciConfigName, NvStrapsPciConfigGUID, buffer, sizeof buffer);
 #endif
 
-        unpackStrapsConfig(buffer, static_cast<unsigned>(bufferSize));
-    }
+        strapsConfig.load(buffer, static_cast<unsigned>(bufferSize));
+
+        isLoaded = true;
+    };
 
     return strapsConfig;
 }
@@ -286,17 +454,17 @@ NvStrapsConfig &GetNvStrapsPciConfig()
 bool SaveNvStrapsPciConfig()
 {
     constexpr auto const attributes = EFI_VARIABLE_NON_VOLATILE | EFI_VARIABLE_BOOTSERVICE_ACCESS | EFI_VARIABLE_RUNTIME_ACCESS;
-    BYTE buffer[NV_STRAPS_CONFIG_SIZE];
+    byte buffer[strapsConfig.bufferSize()];
     bool done = false;
 
 #if defined(UEFI_SOURCE) || defined(EFIAPI)
-    if (strapsConfig.nGPUSelector && strapsConfig.nGPUSelector != 0xFFu)
+    if (strapsConfig.isConfigured())
         done = gRT->SetVariable(static_cast<CHAR16 *>(static_cast<void *>(NvStrapsPciConfigName)), &NvStrapsPciConfigGUID, attributes, sizeof buffer, buffer) == EFI_SUCCESS;
     else
         done = gRT->SetVariable(static_cast<CHAR16 *>(static_cast<void *>(NvStrapsPciConfigName)), &NvStrapsPciConfigGUID, attributes, 0u, buffer) == EFI_SUCCESS;
 #else
-    if (strapsConfig.nGPUSelector && strapsConfig.nGPUSelector != 0xFFu)
-        done = !!SetFirmwareEnvironmentVariableEx(NvStrapsPciConfigName, NvStrapsPciConfigGUID, buffer, packStrapsConfig(buffer), attributes);
+    if (strapsConfig.isConfigured())
+        done = !!SetFirmwareEnvironmentVariableEx(NvStrapsPciConfigName, NvStrapsPciConfigGUID, buffer, strapsConfig.save(buffer), attributes);
     else
         done = !!SetFirmwareEnvironmentVariableEx(NvStrapsPciConfigName, NvStrapsPciConfigGUID, buffer, 0u, attributes);
 

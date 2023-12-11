@@ -17,6 +17,7 @@
 #include <ranges>
 #include <iostream>
 #include <ranges>
+#include <utility>
 
 #if defined(WINDOWS) || defined(_WINDOWS) || defined(_WIN64) || defined(_WIN32)
 #include <initguid.h>
@@ -39,6 +40,7 @@ using std::min;
 using std::uint_least64_t;
 using std::move;
 using std::exchange;
+using std::forward;
 using std::wcstoul;
 using std::to_string;
 using std::to_wstring;
@@ -56,7 +58,6 @@ using std::endl;
 using std::wcout;
 using wregexp = std::wregex;
 using std::match_results;
-using std::regex_match;
 using std::wcmatch;
 using std::span;
 using std::wstring_view;
@@ -70,6 +71,12 @@ namespace ranges = std::ranges;
 namespace views = std::ranges::views;
 namespace regexp_constants = std::regex_constants;
 using namespace std::literals::string_literals;
+
+template <typename ...ArgsT>
+    static inline auto regexp_match(ArgsT && ...args) ->decltype(std::regex_match(forward<ArgsT>(args)...))
+{
+    return std::regex_match(forward<ArgsT>(args)...);
+}
 
 #if defined(WINDOWS) || defined(_WINDOWS) || defined(_WIN64) || defined(_WIN32)
 
@@ -259,7 +266,7 @@ static void enumPciDisplayAdapters(vector<DeviceInfo> &deviceSet)
         if (!::SetupDiGetDevicePropertyW(dev.hDeviceInfoSet, &devInfoData, &DEVPKEY_Device_InstanceId, &devPropType, devPropBuffer, sizeof devPropBuffer, &devPropLength, 0u))
             throw system_error(static_cast<int>(::GetLastError()), winapi_error_category(), "Error listing display adapters"s);
 
-        if (wcmatch matches; regex_match(devProp, devProp + devPropLength / sizeof *devProp, matches, pciInstanceRegexp))
+        if (wcmatch matches; regexp_match(devProp, devProp + devPropLength / sizeof *devProp, matches, pciInstanceRegexp))
         {
             deviceInfo.vendorID = static_cast<uint_least16_t>(wcstoul(matches[1u].str().c_str(), nullptr, 16));
             deviceInfo.deviceID = static_cast<uint_least16_t>(wcstoul(matches[2u].str().c_str(), nullptr, 16));
@@ -277,7 +284,7 @@ static void enumPciDisplayAdapters(vector<DeviceInfo> &deviceSet)
             if (!::SetupDiGetDevicePropertyW(dev.hDeviceInfoSet, &devInfoData, &DEVPKEY_Device_LocationInfo, &devPropType, devPropBuffer, sizeof devPropBuffer, &devPropLength, 0u))
                 throw system_error(static_cast<int>(::GetLastError()), winapi_error_category(), "Error listing display adapters"s);
 
-            if (wcmatch matches; regex_match(devProp, devProp + devPropLength / sizeof *devProp, matches, pciLocationRegexp))
+            if (wcmatch matches; regexp_match(devProp, devProp + devPropLength / sizeof *devProp, matches, pciLocationRegexp))
             {
                 deviceInfo.bus = static_cast<uint_least8_t>(wcstoul(matches[1u].first, nullptr, 10));
                 deviceInfo.device = static_cast<uint_least8_t>(wcstoul(matches[2u].first, nullptr, 10));
@@ -310,6 +317,7 @@ static vector<DeviceInfo> emptyDeviceSet;
 vector<DeviceInfo> &getDeviceList()
 try
 {
+        UINT16 var = 8u;
     static vector<DeviceInfo> deviceSet;
 
     if (deviceSet.empty())

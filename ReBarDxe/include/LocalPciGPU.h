@@ -26,7 +26,7 @@ enum BARSizeSelect
 #define TARGET_GPU_PCI_BUS              0x41u
 #define TARGET_GPU_PCI_DEVICE           0x00u
 #define TARGET_GPU_PCI_FUNCTION         0x00u
-#define TARGET_GPU_BAR0_ADDRESS         UINT32_C(0x8200'0000)               // Should fall within memory range mapped by the bridge 
+#define TARGET_GPU_BAR0_ADDRESS         UINT32_C(0x8200'0000)               // Should fall within memory range mapped by the bridge
 
 #define TARGET_GPU_BAR1_SIZE_SELECTOR   _16G                                // Desired size for GPU BAR1, should cover the VRAM size
 
