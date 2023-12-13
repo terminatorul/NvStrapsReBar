@@ -91,6 +91,7 @@ Also post GPU-Z screenshots with the main GPU page + ReBAR page, and the main CP
   ![image](https://github.com/terminatorul/NvStrapsReBar/assets/378924/3e10ca0a-5544-45d3-b2f9-f81a7f7e2510)
 
   and type the following commands in the resulting console window:
+  - `If Not Defined VSCMD_VER "%ProgramFiles%\Microsoft Visual Studio\2022\Community\VC\Auxiliary\Build\vcvars32.bat"`
   - `ChDir "%UserProfile%\edk2"`
   - `edksetup.bat Rebuild`
 * Configure `edk2`. Edit file `%UserProfile%\edk2\Conf\target.txt` with a text editor like Notepad for example and search, in order, for the lines begining with `TARGET =`, `TARGET_ARCH = ` and `TOOL_CHAIN_TAG =` (without any # characters -- if needed remove the leading # character from such lines, to uncomment them). Modify these lines to read:
@@ -107,6 +108,7 @@ Also post GPU-Z screenshots with the main GPU page + ReBAR page, and the main CP
 You can now build the UEFI DXE driver `NvStrapsReBar.ffs`, and the Windows executable `NvStrapsReBar.exe`
 * To build UEFI DXE driver NvStrapsReBar.ffs, run the following commands in the x86 Native Tools Command Prompt window
   ```
+  If Not Defined VSCMD_VER "%ProgramFiles%\Microsoft Visual Studio\2022\Community\VC\Auxiliary\Build\vcvars32.bat"
   ChDir "%UserProfile%\edk2"
   If Not Defined EDK_TOOLS_BIN edksetup.bat
   ChDir NvStrapsReBar/ReBarDxe
@@ -115,10 +117,11 @@ You can now build the UEFI DXE driver `NvStrapsReBar.ffs`, and the Windows execu
   The NvStrapsReBar.ffs file will be found under the directory `%UserProfile%\edk2\Build\NvStrapsReBar\RELEASE_VS2019\X64\`.
 * To build the Windows executable NvStrapsReBar.exe, run the following commands in the x86 Native Tools Command Prompt window
   ```
+  If Not Defined VSCMD_VER "%ProgramFiles%\Microsoft Visual Studio\2022\Community\VC\Auxiliary\Build\vcvars32.bat"
   ChDir "%UserProfile%\edk2"
   If Not Defined EDK_TOOLS_BIN edksetup.bat
   ChDir NvStrapsRebar\ReBarState
-  MkDir build
+  If Not Exist build MkDir build
   ChDir build
   cmake ..
   cmake --build . --config Release
