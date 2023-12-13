@@ -2,18 +2,23 @@
 <p>UEFI driver to test and enable Resizable BAR on Turing graphics cards (RTX 2000, GTX 1600). Pre-Pascal cards might also work.</p>
 <p>This is a copy of the rather popular <a href="https://github.com/xCuri0/ReBARUEFI">ReBarUEFI</a> DXE driver. <a href="https://github.com/xCuri0/ReBARUEFI">ReBarUEFI</a> enables Resizable BAR for older motherboards and chipsets without ReBAR support from the manufacturer. NvStrapsReBar was created to test Resizable BAR support for GPUs from the RTX 2000 (and GTX 1600, Turing architecture) line. Apparently for the GTX 1000 cards (Pascal architecture) the Windows driver just resets the computer during boot if the BAR size has been changed, so GTX 1000 cards still can not enable ReBAR. The Linux driver does not crash, but does not pick up the new BAR size either.</p>
 
-Currently the location of the GPU on the PCI bus has to be hard-coded right into the motherboard UEFI, and so does the associated PCI-to-PCI bridge. All hard-coded values are in the header file `ReBarDxe/include/LocalPciGPU.h`, and all the values can be read from the CPU-Z .txt report file, so you can manually change them to match your system. Currently these settings are listed below, where all numeric values are examples only (for my computer):
+### Do I need to flash a new UEFI image on the motherboard, to enable ReBAR on the GPU ?
+Yes, this is how it works for Turing GPUs (RTX 2000 / GTX 1600). It's ususally the video BIOS (vBIOS) that should enable ReBAR, but the vBIOS is digitally signed and can not be modified (is locked-down). The motherboard UEFI image can also be signed or have integrity checks, but in general it is thankfully not as locked down, and users and UEFI modders still have a way to modify it.
 
-```C
+Currently the location of the GPU on the PCI bus has to be hard-coded right into the motherboard UEFI, and so does the associated PCI-to-PCI bridge. All hard-coded values are in the header file [`ReBarDxe/include/LocalPciGPU.h`](https://github.com/terminatorul/NvStrapsReBar/blob/master/ReBarDxe/include/LocalPciGPU.h), and all the values can be read from the CPU-Z .txt report file, so you can manually change them to match your system. Currently these settings are listed below, where all numeric values are examples only (for my computer):
+
+```C++
 #define TARGET_GPU_PCI_VENDOR_ID        0x10DEu
 #define TARGET_GPU_PCI_DEVICE_ID        0x1E07u
 
 #define TARGET_GPU_PCI_BUS              0x41u
 #define TARGET_GPU_PCI_DEVICE           0x00u
 #define TARGET_GPU_PCI_FUNCTION         0x00u
-#define TARGET_GPU_BAR0_ADDRESS         UINT32_C(0x82000000)               // Should fall within memory range mapped by the bridge 
 
-#define TARGET_GPU_BAR1_SIZE_SELECTOR   _16G                               // Desired size for GPU BAR1, should cover the VRAM size
+// PCIe config register offset 0x10
+#define TARGET_GPU_BAR0_ADDRESS         UINT32_C(0x8200'0000)               // Should fall within memory range mapped by the bridge
+
+#define TARGET_GPU_BAR1_SIZE_SELECTOR   _16G                                // Desired size for GPU BAR1, should cover the VRAM size
 
 // Secondary bus of the bridge must match the GPU bus
 // Check the output form CPU-Z .txt report
@@ -27,11 +32,12 @@ Currently the location of the GPU on the PCI bus has to be hard-coded right into
 
 // Memory range and I/O port range (base + limit) mapped to bridge
 // from CPU-Z .txt report of the bridge and GPU
-#define TARGET_BRIDGE_MEM_BASE_LIMIT    UINT32_C(0x83008200)            // From offset 0x20 into the PCI config registers of the bridge,
-                                                                        // read as little-endian (reverse the byte order)
-                                                                        // The the range of values should cover the GPU BAR0 address
-#define TARGET_BRIDGE_IO_BASE_LIMIT     0x8181u                         // From offset 0x1C into the PCI config area of the bridge
-                                                                        // read as little-endian
+
+// PCIe config register offset 0x20
+#define TARGET_BRIDGE_MEM_BASE_LIMIT  UINT32_C(0x8300'8200)                 // Should cover the GPU BAR0
+
+// PCIe config register offset 0x1C
+#define TARGET_BRIDGE_IO_BASE_LIMIT   0x8181u
 ```
 
 See https://github.com/xCuri0/ReBarUEFI/discussions/89#discussioncomment-7697768 for more step-by-step details.
