@@ -322,7 +322,7 @@ bool NvStrapsConfig::GPUSelector::busLocationMatch(UINT8 busNr, UINT8 dev, UINT8
 #if defined(UEFI_SOURCE) || defined(EFIAPI)
 #else
 
-bool NvStrapsConfig::setGPUSelector(UINT16 deviceID, UINT16 subsysDevID, UINT16 subsysVenID, UINT8 bus, UINT8 dev, UINT8 fn, UINT8 barSizeSelector)
+bool NvStrapsConfig::setGPUSelector(UINT16 deviceID, UINT16 subsysVenID, UINT16 subsysDevID, UINT8 bus, UINT8 dev, UINT8 fn, UINT8 barSizeSelector)
 {
     GPUSelector gpuSelector
     {
@@ -354,7 +354,7 @@ bool NvStrapsConfig::setGPUSelector(UINT16 deviceID, UINT16 subsysDevID, UINT16 
     return true;
 }
 
-bool NvStrapsConfig::clearGPUSelector(UINT16 deviceID, UINT16 subsysDevID, UINT16 subsysVenID, UINT8 bus, UINT8 dev, UINT8 fn)
+bool NvStrapsConfig::clearGPUSelector(UINT16 deviceID, UINT16 subsysVenID, UINT16 subsysDevID, UINT8 bus, UINT8 dev, UINT8 fn)
 {
     GPUSelector gpuSelector
     {
@@ -390,7 +390,7 @@ bool NvStrapsConfig::clearGPUSelectors()
 
 #endif          // #lse defined(UEFI_SOURCE)...
 
-tuple<ConfigPriority, BarSizeSelector> NvStrapsConfig::lookupBarSize(UINT16 deviceID, UINT16 subsysDevID, UINT16 subsysVenID, UINT8 bus, UINT8 dev, UINT8 fn) const
+tuple<ConfigPriority, BarSizeSelector> NvStrapsConfig::lookupBarSize(UINT16 deviceID, UINT16 subsysVenID, UINT16 subsysDevID, UINT8 bus, UINT8 dev, UINT8 fn) const
 {
     ConfigPriority configPriority = ConfigPriority::UNCONFIGURED;
     BarSizeSelector barSizeSelector;

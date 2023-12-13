@@ -1,5 +1,5 @@
-#if !defined(REBAR_UEFI_LOCAL_PCI_GPU_H)
-#define REBAR_UEFI_LOCAL_PCI_GPU_H
+#if !defined(NV_STRAPS_REBAR_LOCAL_PCI_GPU_H)
+#define NV_STRAPS_REBAR_LOCAL_PCI_GPU_H
 
 // Hard-coded values that must match the local system
 
@@ -26,6 +26,8 @@ enum BARSizeSelect
 #define TARGET_GPU_PCI_BUS              0x41u
 #define TARGET_GPU_PCI_DEVICE           0x00u
 #define TARGET_GPU_PCI_FUNCTION         0x00u
+
+// PCIe config register offset 0x10
 #define TARGET_GPU_BAR0_ADDRESS         UINT32_C(0x8200'0000)               // Should fall within memory range mapped by the bridge
 
 #define TARGET_GPU_BAR1_SIZE_SELECTOR   _16G                                // Desired size for GPU BAR1, should cover the VRAM size
@@ -42,10 +44,14 @@ enum BARSizeSelect
 
 // Memory range and I/O port range (base + limit) mapped to bridge
 // from CPU-Z .txt report of the bridge and GPU
-#define TARGET_BRIDGE_MEM_BASE_LIMIT  UINT32_C(0x8300'8200)             // Should cover the GPU BAR0
+
+// PCIe config register offset 0x20
+#define TARGET_BRIDGE_MEM_BASE_LIMIT  UINT32_C(0x8300'8200)                 // Should cover the GPU BAR0
+
+// PCIe config register offset 0x1C
 #define TARGET_BRIDGE_IO_BASE_LIMIT   0x8181u
 
 static_assert((TARGET_GPU_BAR0_ADDRESS & UINT32_C(0x0000'0001)) == 0u, "Unexpected GPU BAR0 in the I/O port range");
 static_assert((TARGET_GPU_BAR0_ADDRESS & UINT32_C(0x0000'0006)) == 0u, "Unexpected GPU BAR0 in the 64-bit memory address space");
 
-#endif          // !defined(REBAR_UEFI_LOCAL_PCI_GPU_H)
+#endif          // !defined(NV_STRAPS_REBAR_LOCAL_PCI_GPU_H)

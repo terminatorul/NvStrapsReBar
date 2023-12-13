@@ -91,6 +91,9 @@ static UINT16 Turing_Device_List_Skip[]
         UINT16_C(0x1FF2),               // TU117GL [T400 4GB]
         UINT16_C(0x1FF9),               // TU117GLM [Quadro T1000 Mobile] 4GB
 
+        UINT16_C(0x2187),               // TU116 [GeForce GTX 1650 SUPER] 4GB
+        UINT16_C(0x2188),               // TU116 [GeForce GTX 1650] 4GB
+        UINT16_C(0x2192),	        // TU116M [GeForce GTX 1650 Ti Mobile] 4GB
 },
         Turing_Device_List_8GB[] =
 {
@@ -139,6 +142,15 @@ static UINT16 Turing_Device_List_Skip[]
 
         UINT16_C(0x1F76),               // TU106GLM [Quadro RTX 3000 Mobile Refresh] 6GB
         UINT16_C(0x1FF0),               // TU117GL [T1000 8GB]
+        UINT16_C(0x2189),	        // TU116 [CMP 30HX] 6GB
+        UINT16_C(0x2191),	        // TU116M [GeForce GTX 1660 Ti Mobile] 6GB
+
+        UINT16_C(0x2182),                // TU116 [GeForce GTX 1660 Ti] 6GB
+        UINT16_C(0x2183),                // TU116 [GeForce GTX 1660 Ti 8GB] 8GB
+        UINT16_C(0x2184),                // TU116 [GeForce GTX 1660] 6GB
+        // UINT16_C(0x21AE),             // TU116GL
+        // UINT16_C(0x21BF),             // TU116GL
+        // UINT16_C(0x21C2),             // TU116
 },
         Turing_Device_List_16GB[] =
 {
@@ -155,7 +167,7 @@ static UINT16 Turing_Device_List_Skip[]
         UINT16_C(0x1EB8),               // TU104GL [Tesla T4] 16GB
         UINT16_C(0x1EF5),               // TU104GLM [Quadro RTX 5000 Mobile Refresh] 16GB
 
-        UINT16_C(0x1F03),               // TU106 [GeForce RTX 2060 12GB] 12GB
+        UINT16_C(0x1F03)                // TU106 [GeForce RTX 2060 12GB] 12GB
 },
 
         Turing_Device_List_32GB[] =

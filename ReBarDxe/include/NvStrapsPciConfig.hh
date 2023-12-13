@@ -18,7 +18,7 @@
 constexpr std::size_t const
         BYTE_SIZE = 1u,
         WORD_SIZE = 2u,
-        DWORD_SIZE= 4u,
+        DWORD_SIZE = 4u,
         QWORD_SIZE = 8u;
 
 enum class ConfigPriority
@@ -110,11 +110,11 @@ public:
     UINT8 isGlobalEnable() const;
     UINT8 setGloablEnable(UINT8 gloablEnable);
 
-    bool setGPUSelector(UINT16 deviceID, UINT16 subsysDevID, UINT16 subsysVenID, UINT8 bus, UINT8 dev, UINT8 fn, UINT8 barSizeSelector);
-    bool clearGPUSelector(UINT16 deviceID, UINT16 subsysDevID, UINT16 subsysVenID, UINT8 bus, UINT8 dev, UINT8 fn);
+    bool setGPUSelector(UINT16 deviceID, UINT16 subsysVenID, UINT16 subsysDevID, UINT8 bus, UINT8 dev, UINT8 fn, UINT8 barSizeSelector);
+    bool clearGPUSelector(UINT16 deviceID, UINT16 subsysVenID, UINT16 subsysDevID, UINT8 bus, UINT8 dev, UINT8 fn);
     bool clearGPUSelectors();
 
-    std::tuple<ConfigPriority, BarSizeSelector> lookupBarSize(UINT16 deviceID, UINT16 subsysDevID, UINT16 subsysVenID, UINT8 bus, UINT8 dev, UINT8 fn) const;
+    std::tuple<ConfigPriority, BarSizeSelector> lookupBarSize(UINT16 deviceID, UINT16 subsysVenID, UINT16 subsysDevID, UINT8 bus, UINT8 dev, UINT8 fn) const;
 };
 
 NvStrapsConfig &GetNvStrapsPciConfig();

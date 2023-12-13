@@ -9,6 +9,7 @@ SPDX-License-Identifier: MIT
 #include <exception>
 #include <stdexcept>
 #include <system_error>
+#include <optional>
 #include <string>
 #include <iostream>
 #include <ranges>
@@ -22,6 +23,8 @@ SPDX-License-Identifier: MIT
 #include <sys/ioctl.h>
 #endif
 
+#include "NvStrapsPciConfig.hh"
+#include "TextWizardPage.hh"
 #include "ConfigurationWizard.hh"
 
 #define QUOTE(x) #x
@@ -51,6 +54,7 @@ using std::out_of_range;
 using std::system_error;
 using std::make_error_code;
 using std::errc;
+using std::optional;
 using std::string;
 using std::cin;
 using std::cout;
@@ -88,28 +92,24 @@ bool CheckPriviledge()
 	return cout << "Obtained SE_SYSTEM_ENVIRONMENT_NAME\n", true;
 }
 
-uint_least8_t GetState()
+optional<uint_least8_t> getReBarState()
 {
-	UINT8 rBarState;
-	DWORD rSize;
+    UINT8 rBarState;
+    DWORD rSize;
 
-	rSize = GetFirmwareEnvironmentVariable(NVAR_Name, NVAR_GUID, &rBarState, 1);
+    rSize = GetFirmwareEnvironmentVariable(NVAR_Name, NVAR_GUID, &rBarState, 1);
 
-	if (rSize == 1)
-		return rBarState;
-	else
-        {
-		notExist = true;
-		return 0u;
-	}
+    if (rSize)
+    	return rBarState;
+
+    return { };
 }
 
-bool WriteState(uint8_t rBarState)
+bool setReBarState(uint_least8_t rBarState)
 {
-	DWORD size = sizeof(UINT8);
 	DWORD dwAttributes = VARIABLE_ATTRIBUTE_NON_VOLATILE | VARIABLE_ATTRIBUTE_BOOTSERVICE_ACCESS | VARIABLE_ATTRIBUTE_RUNTIME_ACCESS;
 
-	return SetFirmwareEnvironmentVariableEx(NVAR_Name, NVAR_GUID, &rBarState, size, dwAttributes)
+	return SetFirmwareEnvironmentVariableEx(NVAR_Name, NVAR_GUID, &rBarState, BYTE_SIZE, dwAttributes)
                 || (throw system_error(static_cast<int>(::GetLastError()), winapi_error_category()), FALSE);
 }
 
@@ -127,43 +127,46 @@ bool CheckPriviledge() {
 	return getuid() == 0;
 }
 
-uint8_t GetState() {
-	uint8_t rebarState[5];
+optional<uint_lest8_t> GetState()
+{
+    uint8_t rebarState[5];
 
-	FILE* f = fopen(REBARPS, "rb");
+    FILE *f = fopen(REBARPS, "rb");
 
-	if (!(f && (fread(&rebarState, 5, 1, f) == 1))) {
-		rebarState[4] = 0;
-		notExist = true;
-	} else
-		fclose(f);
+    if (!(f && (fread(&rebarState, 5u, 1u, f) == 1u)))
+        return { };
 
-	return rebarState[4];
+    fclose(f);
+
+    return rebarState[4u];
 }
 
-bool WriteState(uint8_t rBarState) {
-	int attr;
-	rebarVar rVar;
-	FILE* f = fopen(REBARPS, "rb");
+bool setReBarState(uint8_t rBarState)
+{
+    int attr;
+    rebarVar rVar;
+    FILE* f = fopen(REBARPS, "rb");
 
-	if (f) {
-		// remove immuteable flag that linux sets on all unknown efi variables
-		ioctl(fileno(f), FS_IOC_GETFLAGS, &attr);
-		attr &= ~FS_IMMUTABLE_FL;
-		ioctl(fileno(f), FS_IOC_SETFLAGS, &attr);
+    if (f)
+    {
+    	// remove immuteable flag that linux sets on all unknown efi variables
+    	ioctl(fileno(f), FS_IOC_GETFLAGS, &attr);
+    	attr &= ~FS_IMMUTABLE_FL;
+    	ioctl(fileno(f), FS_IOC_SETFLAGS, &attr);
 
-		if (remove(REBARPS) != 0) {
-			std::cout << "Failed to remove old variable\n";
-			return false;
-		}
-	}
+    	if (remove(REBARPS) != 0)
+        {
+    		std::cout << "Failed to remove old variable\n";
+    		return false;
+    	}
+    }
 
-	f = fopen(REBARPS, "wb");
+    f = fopen(REBARPS, "wb");
 
-	rVar.attr = VARIABLE_ATTRIBUTE_NON_VOLATILE | VARIABLE_ATTRIBUTE_BOOTSERVICE_ACCESS | VARIABLE_ATTRIBUTE_RUNTIME_ACCESS;
-	rVar.value = rBarState;
+    rVar.attr = VARIABLE_ATTRIBUTE_NON_VOLATILE | VARIABLE_ATTRIBUTE_BOOTSERVICE_ACCESS | VARIABLE_ATTRIBUTE_RUNTIME_ACCESS;
+    rVar.value = rBarState;
 
-	return fwrite(&rVar, sizeof(rVar), 1, f) == 1;;
+    return fwrite(&rVar, sizeof(rVar), 1, f) == 1;;
 }
 #endif
 
@@ -180,35 +183,15 @@ int main(int argc, char const *argv[])
 try
 {
 	int ret = 0;
-	string i;
-	uint8_t reBarState;
 
-	cout << "NvStrapsReBar, based on ReBarState (c) 2023 xCuri0\n\n";
+        showStartupLogo();
 
 	if (!CheckPriviledge())
                 throw system_error(make_error_code(errc::permission_denied), "Failed to obtain EFI variable access try running as admin/root"s);
 
         runConfigurationWizard();
 
-	reBarState = GetState();
-
-	if (!notExist) {
-		if (reBarState == 0)
-			cout << "Current NvStrapsReBar " << +reBarState << " / Disabled\n";
-		else
-			if (reBarState == 32)
-				cout << "Current NvStrapsReBar " << +reBarState << " / Unlimited\n";
-			else
-				cout << "Current NvStrapsReBar " << +reBarState << " / " << pow(2, reBarState) << " MB\n";
-	}
-	else
-		cout << "NvStrapsReBar variable doesn't exist / Disabled. Enter a value to create it\n";
-
-	cout << "\nVerify that 4G Decoding is enabled and CSM is disabled otherwise system will not POST with GPU.\n";
-        cout << "If your NvStrapsReBar value keeps getting reset then check your system time.\n";
-	cout << "\nIt is recommended to first try smaller sizes above 256MB in case an old BIOS doesn't support large BARs.\n";
-	cout << "\nEnter NvStrapsReBar Value\n      0: Disabled \nAbove 0: Maximum BAR size set to 2^x MB \n     32: Unlimited BAR size\n\n";
-
+	string i;
 	getline(cin, i);
 
         while (i | all && std::isspace(*i.crbegin()))
@@ -217,13 +200,13 @@ try
         if (i.empty())
         {
                 cerr << "No BAR size changes to apply\n";
-                return EXIT_FAILURE;
+                return pause(), EXIT_SUCCESS;
         }
 
 	if (stoi(i) < 0 || stoi(i) > 32)
                 throw out_of_range("Invalid BAR size selector value");
 
-	reBarState = stoi(i);
+	uint8_t reBarState = stoi(i);
 
 	if (reBarState < 20)
 		if (reBarState == 0)
@@ -233,7 +216,7 @@ try
 	else
 		cout << "Writing value to NvStrapsReBar\n\n";
 
-	if (WriteState(reBarState))
+	if (setReBarState(reBarState))
         {
 		cout << "Successfully wrote NvStrapsReBar UEFI variable\n";
 		cout << "\nReboot for changes to take effect\n";
