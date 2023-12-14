@@ -76,7 +76,7 @@ Also post GPU-Z screenshots with the main GPU page + ReBAR page, and the main CP
 * Download and install [Python 3](https://www.python.org/downloads/). Make sure you select the option to add python to PATH during installation.
 * Download and install [git](https://git-scm.com/download/win)
 * Download and install [CMake](https://cmake.org/download/)
-* Downlaod and install [NASM](https://www.nasm.us/) and add it to the PATH environment variable (in Windows Settings). The NASM installer does not show the option to add NASM to path at install time, so you will have to add it manually. NASM is by default installed at `%ProgramFiles%\NASM`, and you should add this directory to PATH
+* Downlaod and install [NASM](https://www.nasm.us/) and add the install directory to the PATH environment variable (in Windows Settings). The NASM installer does not show the option to add NASM to path at install time, so you will have to add it manually. NASM is by default installed at `%ProgramFiles%\NASM`, and you should add this directory to PATH. You can change your PATH variable from Windows Settings | System | About | Advanced Windows Settings | Environment Variables | System variables | PATH | Edit... | New...
 * You can check all installed commands are available on PATH: open a new `cmd` console window, and run the following commands:
   ```
   python --version
