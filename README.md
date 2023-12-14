@@ -87,7 +87,7 @@ Also post GPU-Z screenshots with the main GPU page + ReBAR page, and the main CP
   ```
   If the output from any of the above commands says `'cmd-name' si not recognized as an internal or external command...` you need to check PATH environment variable again. Also make sure `python --version` outputs version 3 and not version 2.
 * Install pefile module for python:
-   - Use Win+R to open a cmd window and run `pip3 install pefile`
+   - Use Win+R to open a cmd window and run `pip install pefile`
 * Get `edk2` framework from github. In a cmd window run:
   ```
   ChDir "%UserProfile%
@@ -121,7 +121,7 @@ You can now build the UEFI DXE driver `NvStrapsReBar.ffs`, and the Windows execu
   ChDir "%UserProfile%\edk2"
   If Not Defined EDK_TOOLS_BIN edksetup.bat
   ChDir NvStrapsReBar\ReBarDxe
-  python3 buildffs.py
+  python buildffs.py
   ```
   The NvStrapsReBar.ffs file will be found under the directory `%UserProfile%\edk2\Build\NvStrapsReBar\RELEASE_VS2019\X64\`.
 * To build the Windows executable NvStrapsReBar.exe, run the following commands in the x86 Native Tools Command Prompt window
