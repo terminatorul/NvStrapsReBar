@@ -138,7 +138,7 @@ You can now build the UEFI DXE driver `NvStrapsReBar.ffs`, and the Windows execu
   The NvStrapsRebar.exe file will be found under the `%UserProfile%\edk2\NvStrapsRebar\ReBarState\build\Release\` subdirectory
 
 ## Updating UEFI image
-The resulting `NvStrapsReBar.ffs` file needs to be included in the motherboard UEFI image (downloaded from the montherboard manufacturer), and the resulting image should be flashed onto the motherboard as if it were a new UEFI version for that motherboard.
+The resulting `NvStrapsReBar.ffs` file needs to be included in the motherboard UEFI image (downloaded from the montherboard manufacturer), and the resulting image should be flashed onto the motherboard as if it were a new UEFI version for that board.
 See the original project [ReBarUEFI](https://github.com/xCuri0/ReBarUEFI/) for the instructions to update motherboard UEFI. Replace "ReBarUEFI.ffs" with "NvStrapsReBar.ffs" where appropriate.
 
 After flashing the motherboard with the new UEFI image, you need to enable "Above 4G decoding" and disable CSM in UEFI setup, and then run `NvStrapsReBar.exe` as Administrator, and input a non-zero value when prompted (usually 32 for any possible BAR size)
