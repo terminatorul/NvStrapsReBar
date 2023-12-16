@@ -1,6 +1,8 @@
-#if defined(WINDOWS) || defined(_WINDOWS) || defined(_WIN64) || defined(_WIN32)
-# if defined(_M_AMD64) && !defined(_AMD64_)
-#  define _AMD64_
+#if !defined(UEFI_SOURCE) && !defined(EFIAPI)
+# if defined(WINDOWS) || defined(_WINDOWS) || defined(_WIN64) || defined(_WIN32)
+#  if defined(_M_AMD64) && !defined(_AMD64_)
+#   define _AMD64_
+#  endif
 # endif
 #endif
 

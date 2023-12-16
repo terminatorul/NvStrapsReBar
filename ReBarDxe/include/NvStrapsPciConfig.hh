@@ -10,12 +10,17 @@
 # include <cstdint>
 #endif
 
+#include <limits>
+#include <span>
 #include <tuple>
 #include <utility>
 
 #include "DeviceRegistry.hh"
 
+// static_assert(std::numeric_limits<unsigned char>::radix == 2u, "Binary digits expected for std::numeric_limits<>.");
+
 constexpr std::size_t const
+        BYTE_BITSIZE = std::numeric_limits<unsigned char>::digits,
         BYTE_SIZE = 1u,
         WORD_SIZE = 2u,
         DWORD_SIZE = 4u,
@@ -35,6 +40,8 @@ class NvStrapsConfig
 protected:
     static constexpr unsigned const GPU_MAX_COUNT = 8u;
 
+    mutable bool dirty = false;
+
     UINT8 nGlobalEnable = 0u;
     UINT8 nGPUSelector = 0u;
 
@@ -48,10 +55,14 @@ protected:
 
         bool deviceMatch(UINT16 deviceID) const;
         bool subsystemMatch(UINT16 subsysVendorID, UINT16 subsysDeviceID) const;
+        bool hasSubsystem() const;
         bool busLocationMatch(UINT8 bus, UINT8 device, UINT8 function) const;
+        bool hasBusLocation() const;
 
         std::byte *pack(std::byte *&buffer) const;
         void unpack(std::byte const *&buffer);
+
+        bool operator ==(GPUSelector const &other) const = default;
     }
         GPUs[GPU_MAX_COUNT];
 
@@ -91,33 +102,35 @@ protected:
         GPU_SELECTOR_SIZE = WORD_SIZE * 3u + BYTE_SIZE * 3u,
         GPU_CONFIG_SIZE = WORD_SIZE * 3u + BYTE_SIZE + DWORD_SIZE,
         BRIDGE_CONFIG_SIZE = 2u * WORD_SIZE + 4u * BYTE_SIZE + WORD_SIZE + DWORD_SIZE,
-        NV_STRAPS_CONFIG_SIZE = BYTE_SIZE + GPU_SELECTOR_SIZE * sizeof(GPUs) / sizeof(GPUs[0])
+        NV_STRAPS_CONFIG_SIZE = 2u * BYTE_SIZE + GPU_SELECTOR_SIZE * sizeof(GPUs) / sizeof(GPUs[0])
                                   + BYTE_SIZE + GPU_CONFIG_SIZE * sizeof(gpuConfig) / sizeof(gpuConfig[0])
                                   + BYTE_SIZE + BRIDGE_CONFIG_SIZE * sizeof(bridge) / sizeof(bridge[0]);
 
     void clear();
 
-    unsigned save(std::byte *buffer) const;
-    void load(std::byte const *buffer, unsigned size);
+    unsigned save(std::span<std::byte> buffer) const;
+    void load(std::span<std::byte const> buffer);
     bool isConfigured() const;
 
-    friend NvStrapsConfig &GetNvStrapsPciConfig();
+    friend NvStrapsConfig &GetNvStrapsPciConfig(bool reload);
     friend bool SaveNvStrapsPciConfig();
 
 public:
     static constexpr std::size_t bufferSize();
 
     UINT8 isGlobalEnable() const;
-    UINT8 setGloablEnable(UINT8 gloablEnable);
+    UINT8 setGlobalEnable(UINT8 gloablEnable);
+    bool isDirty() const;
+    bool isDirty(bool dirty);
 
-    bool setGPUSelector(UINT16 deviceID, UINT16 subsysVenID, UINT16 subsysDevID, UINT8 bus, UINT8 dev, UINT8 fn, UINT8 barSizeSelector);
-    bool clearGPUSelector(UINT16 deviceID, UINT16 subsysVenID, UINT16 subsysDevID, UINT8 bus, UINT8 dev, UINT8 fn);
+    bool setGPUSelector( UINT8 barSizeSelector, UINT16 deviceID, UINT16 subsysVenID = 0xFFFFu, UINT16 subsysDevID = 0xFFFFu, UINT8 bus = 0xFFu, UINT8 dev = 0xFFu, UINT8 fn = 0xFFu);
+    bool clearGPUSelector(UINT16 deviceID, UINT16 subsysVenID = 0xFFFFu, UINT16 subsysDevID = 0xFFFFu, UINT8 bus = 0xFFu, UINT8 dev = 0xFFu, UINT8 fn = 0xFFu);
     bool clearGPUSelectors();
 
     std::tuple<ConfigPriority, BarSizeSelector> lookupBarSize(UINT16 deviceID, UINT16 subsysVenID, UINT16 subsysDevID, UINT8 bus, UINT8 dev, UINT8 fn) const;
 };
 
-NvStrapsConfig &GetNvStrapsPciConfig();
+NvStrapsConfig &GetNvStrapsPciConfig(bool reload = false);
 bool SaveNvStrapsPciConfig();
 
 inline UINT8 NvStrapsConfig::isGlobalEnable() const
@@ -125,9 +138,21 @@ inline UINT8 NvStrapsConfig::isGlobalEnable() const
     return nGlobalEnable;
 }
 
-inline UINT8 NvStrapsConfig::setGloablEnable(UINT8 globalEnable)
+inline UINT8 NvStrapsConfig::setGlobalEnable(UINT8 globalEnable)
 {
+    dirty = globalEnable != nGlobalEnable;
+
     return std::exchange(nGlobalEnable, globalEnable);
+}
+
+inline bool NvStrapsConfig::isDirty() const
+{
+    return dirty;
+}
+
+inline bool NvStrapsConfig::isDirty(bool dirtyFlag)
+{
+    return std::exchange(dirty, dirtyFlag);
 }
 
 constexpr std::size_t NvStrapsConfig::bufferSize()

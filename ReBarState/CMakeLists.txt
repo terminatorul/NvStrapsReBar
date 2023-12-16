@@ -19,6 +19,8 @@ add_executable(NvStrapsReBar
         "DeviceList.cc"
         "TextWizardPage.hh"
         "TextWizardPage.cc"
+        "TextWizardMenu.hh"
+        "TextWizardMenu.cc"
         "ConfigurationWizard.hh"
         "ConfigurationWizard.cc"
         "${REBAR_DXE_DIRECTORY}/include/DeviceRegistry.hh"

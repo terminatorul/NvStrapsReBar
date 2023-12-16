@@ -10,7 +10,6 @@ struct DeviceInfo
     std::uint_least16_t vendorID, deviceID, subsystemVendorID, subsystemDeviceID;
     std::uint_least8_t  bus, device, function;
     bool                busLocationSelector;
-    std::uint_least8_t  barSizeSelector;
     std::uint_least64_t currentBARSize;
     std::uint_least64_t dedicatedVideoMemory;
     std::wstring        productName;

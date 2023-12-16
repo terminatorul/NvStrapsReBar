@@ -6,26 +6,16 @@
 #include <vector>
 
 #include "DeviceList.hh"
+#include "NvStrapsPciConfig.hh"
 
-enum class MenuCommand
-{
-    Quit,
-    SaveConfiguration,
-    DiscardConfiguration,
-    GlobalEnable,
-    GlobalFallbackEnable,
-    UEFIConfiguration,
-    UEFIBARSizeConfiguration,
-    PerGPUConfigClear,
-    PerGPUConfig,
-    GPUSelectorClear,
-    GPUSelectorByPCIID,
-    GPUSelectorByPCISubsystem,
-    GPUSelectorByPCILocation,
-    GPUVRAMSize,
-};
-
+void showInfo(std::wstring const &message);
+void showError(std::wstring const &message);
 void showStartupLogo();
-void showWizardPage(std::vector<DeviceInfo> const &devices, std::optional<std::uint_least8_t> reBarState);
+
+#if defined(NDEBUG)
+void showMotherboardReBarMenu();
+#endif
+
+void showConfiguration(std::vector<DeviceInfo> const &devices, NvStrapsConfig const &nvStrapsConfig, std::optional<std::uint_least8_t> reBarState);
 
 #endif  // !defined(NV_STRAPS_REBAR_WIZARD_PAGE_HH)

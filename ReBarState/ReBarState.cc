@@ -110,7 +110,7 @@ bool setReBarState(uint_least8_t rBarState)
 	DWORD dwAttributes = VARIABLE_ATTRIBUTE_NON_VOLATILE | VARIABLE_ATTRIBUTE_BOOTSERVICE_ACCESS | VARIABLE_ATTRIBUTE_RUNTIME_ACCESS;
 
 	return SetFirmwareEnvironmentVariableEx(NVAR_Name, NVAR_GUID, &rBarState, BYTE_SIZE, dwAttributes)
-                || (throw system_error(static_cast<int>(::GetLastError()), winapi_error_category()), FALSE);
+                || (throw system_error(static_cast<int>(::GetLastError()), winapi_error_category()), false);
 }
 
 #else   // Linux
@@ -189,7 +189,10 @@ try
 	if (!CheckPriviledge())
                 throw system_error(make_error_code(errc::permission_denied), "Failed to obtain EFI variable access try running as admin/root"s);
 
-        runConfigurationWizard();
+#if defined(NDEBUG)
+        std::vector<DeviceInfo> deviceList = getDeviceList();
+        showConfiguration(deviceList, GetNvStrapsPciConfig(), getReBarState());
+        showMotherboardReBarMenu();
 
 	string i;
 	getline(cin, i);
@@ -223,6 +226,9 @@ try
 	}
 	else
 		cout << "Failed to write NvStrapsReBar UEFI variable\n";
+#else
+        runConfigurationWizard();
+#endif          // #else defined(_NDEBUG)
 
 	return pause(), EXIT_SUCCESS;
 }

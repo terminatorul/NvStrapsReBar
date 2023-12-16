@@ -261,7 +261,7 @@ static void enumPciDisplayAdapters(vector<DeviceInfo> &deviceSet)
 
     while (::SetupDiEnumDeviceInfo(dev.hDeviceInfoSet, iDeviceIndex++, &devInfoData))
     {
-        DeviceInfo deviceInfo { .barSizeSelector = 0u, .dedicatedVideoMemory = 0ull };
+        DeviceInfo deviceInfo { .dedicatedVideoMemory = 0ull };
 
         if (!::SetupDiGetDevicePropertyW(dev.hDeviceInfoSet, &devInfoData, &DEVPKEY_Device_InstanceId, &devPropType, devPropBuffer, sizeof devPropBuffer, &devPropLength, 0u))
             throw system_error(static_cast<int>(::GetLastError()), winapi_error_category(), "Error listing display adapters"s);
