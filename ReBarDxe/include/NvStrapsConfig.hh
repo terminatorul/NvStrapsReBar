@@ -10,21 +10,12 @@
 # include <cstdint>
 #endif
 
-#include <limits>
 #include <span>
 #include <tuple>
 #include <utility>
 
+#include "LocalAppConfig.h"
 #include "DeviceRegistry.hh"
-
-// static_assert(std::numeric_limits<unsigned char>::radix == 2u, "Binary digits expected for std::numeric_limits<>.");
-
-constexpr std::size_t const
-        BYTE_BITSIZE = std::numeric_limits<unsigned char>::digits,
-        BYTE_SIZE = 1u,
-        WORD_SIZE = 2u,
-        DWORD_SIZE = 4u,
-        QWORD_SIZE = 8u;
 
 enum class ConfigPriority
 {
@@ -112,8 +103,8 @@ protected:
     void load(std::span<std::byte const> buffer);
     bool isConfigured() const;
 
-    friend NvStrapsConfig &GetNvStrapsPciConfig(bool reload);
-    friend bool SaveNvStrapsPciConfig();
+    friend NvStrapsConfig &GetNvStrapsConfig(bool reload);
+    friend bool SaveNvStrapsConfig();
 
 public:
     static constexpr std::size_t bufferSize();
@@ -130,8 +121,8 @@ public:
     std::tuple<ConfigPriority, BarSizeSelector> lookupBarSize(UINT16 deviceID, UINT16 subsysVenID, UINT16 subsysDevID, UINT8 bus, UINT8 dev, UINT8 fn) const;
 };
 
-NvStrapsConfig &GetNvStrapsPciConfig(bool reload = false);
-bool SaveNvStrapsPciConfig();
+NvStrapsConfig &GetNvStrapsConfig(bool reload = false);
+bool SaveNvStrapsConfig();
 
 inline UINT8 NvStrapsConfig::isGlobalEnable() const
 {

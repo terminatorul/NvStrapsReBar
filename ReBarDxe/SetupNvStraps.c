@@ -2,31 +2,39 @@
 #include <stdint.h>
 
 #include <Uefi.h>
-#include <IndustryStandard/Pci.h>
-#include <Library/BaseMemoryLib.h>
 #include <Library/BaseLib.h>
+#include <Library/BaseMemoryLib.h>
+#include <Library/UefiBootServicesTableLib.h>
+#include <Library/DxeServicesTableLib.h>
+#include <IndustryStandard/Pci.h>
 
-#include "include/pciRegs.h"
-#include "include/ReBar.h"
-#include "include/LocalPciGPU.h"
-#include "include/SetupNvStraps.h"
+#include "LocalPciGPU.h"
+#include "StatusVar.h"
+#include "PciConfig.h"
+#include "ReBar.h"
 
-#define TARGET_GPU_STRAPS_BASE_OFFSET UINT32_C(0x0010'1000)
-#define TARGET_GPU_STRAPS_SET0_OFFSET 0x0000u
-#define TARGET_GPU_STRAPS_SET1_OFFSET 0x000Cu
+#include "SetupNvStraps.h"
+
+static uint_least32_t const
+    TARGET_GPU_STRAPS_BASE_OFFSET = 0x0010'1000u,
+    TARGET_GPU_STRAPS_SET0_OFFSET = 0x0000'0000u,
+    TARGET_GPU_STRAPS_SET1_OFFSET = 0x0000'000Cu;
 
 static bool isBridgeEnumerated = false;
 
-void NvStraps_EnumDevice(UINT16 vendorId, UINT16 deviceId, EFI_PCI_ROOT_BRIDGE_IO_PROTOCOL_PCI_ADDRESS const *addrInfo, UINT8 reBarState)
+void NvStraps_EnumDevice(UINT16 vendorId, UINT16 deviceId, EFI_PCI_ROOT_BRIDGE_IO_PROTOCOL_PCI_ADDRESS const *addrInfo)
 {
-    if (reBarState && !isBridgeEnumerated)
+    if (!isBridgeEnumerated)
     {
         if (vendorId == TARGET_BRIDGE_PCI_VENDOR_ID && deviceId == TARGET_BRIDGE_PCI_DEVICE_ID)
         {
-            isBridgeEnumerated = 
+            isBridgeEnumerated =
                 addrInfo->Bus == TARGET_BRIDGE_PCI_BUS &&
                 addrInfo->Device == TARGET_BRIDGE_PCI_DEVICE &&
                 addrInfo->Function == TARGET_BRIDGE_PCI_FUNCTION;
+
+            if (isBridgeEnumerated)
+                SetStatusVar(StatusVar_BridgeFound);
         }
     }
 }
@@ -40,56 +48,10 @@ bool NvStraps_CheckDevice(UINT16 vendorId, UINT16 deviceId, EFI_PCI_ROOT_BRIDGE_
         && addrInfo->Function == TARGET_GPU_PCI_FUNCTION;
 }
 
-static void MapBridgeMemory(UINTN bridgePciAddress, UINT32 bridgeSaveArea[4u])
-{
-    pciReadConfigDword(bridgePciAddress, PCI_COMMAND,     bridgeSaveArea + 0u);
-    pciReadConfigDword(bridgePciAddress, PCI_PRIMARY_BUS, bridgeSaveArea + 1u);
-    pciReadConfigDword(bridgePciAddress, PCI_IO_BASE,     bridgeSaveArea + 2u);
-    pciReadConfigDword(bridgePciAddress, PCI_MEMORY_BASE, bridgeSaveArea + 3u);
-
-    UINT32
-        bridgeMemoryBaseLimit = TARGET_BRIDGE_MEM_BASE_LIMIT,
-        bridgeIoBaseLimit = bridgeSaveArea[2u] & UINT32_C(0xFFFF0000) | TARGET_BRIDGE_IO_BASE_LIMIT & UINT32_C(0x0000FFFF),
-        bridgePciBusNumber = bridgeSaveArea[1u] & UINT32_C(0xFF0000FF) | (TARGET_GPU_PCI_BUS & UINT8_C(0xFF)) << 8u | (TARGET_GPU_PCI_BUS & UINT8_C(0xFF)) << 16u,
-        bridgeCommand = bridgeSaveArea[0u] | PCI_COMMAND_IO | PCI_COMMAND_MEMORY | PCI_COMMAND_MASTER;
-
-    pciWriteConfigDword(bridgePciAddress, PCI_MEMORY_BASE, &bridgeMemoryBaseLimit);
-    pciWriteConfigDword(bridgePciAddress, PCI_IO_BASE,     &bridgeIoBaseLimit);
-    pciWriteConfigDword(bridgePciAddress, PCI_PRIMARY_BUS, &bridgePciBusNumber);
-    pciWriteConfigDword(bridgePciAddress, PCI_COMMAND,     &bridgeCommand);
-}
-
-static void RestoreBridgeConfig(UINTN bridgePciAddress, UINT32 bridgeSaveArea[4u])
-{
-    pciWriteConfigDword(bridgePciAddress, PCI_COMMAND,     bridgeSaveArea + 0u);
-    pciWriteConfigDword(bridgePciAddress, PCI_PRIMARY_BUS, bridgeSaveArea + 1u);
-    pciWriteConfigDword(bridgePciAddress, PCI_IO_BASE,     bridgeSaveArea + 2u);
-    pciWriteConfigDword(bridgePciAddress, PCI_MEMORY_BASE, bridgeSaveArea + 3u);
-}
-
-static void MapGpuBAR0(UINTN gpuPciAddress, UINT32 gpuSaveArea[2u])
-{
-     pciReadConfigDword(gpuPciAddress, PCI_COMMAND,        gpuSaveArea + 0u);
-     pciReadConfigDword(gpuPciAddress, PCI_BASE_ADDRESS_0, gpuSaveArea + 1u);
-
-     UINT32
-        gpuBaseAddress = TARGET_GPU_BAR0_ADDRESS,
-        gpuCommand = gpuSaveArea[0u] | PCI_COMMAND_IO | PCI_COMMAND_MEMORY | PCI_COMMAND_MASTER;
-
-    pciWriteConfigDword(gpuPciAddress, PCI_BASE_ADDRESS_0, &gpuBaseAddress);
-    pciWriteConfigDword(gpuPciAddress, PCI_COMMAND,        &gpuCommand);
-}
-
-static void RestoreGpuConfig(UINTN gpuPciAddress, UINT32 gpuSaveArea[2u])
-{
-    pciWriteConfigDword(gpuPciAddress, PCI_COMMAND,        gpuSaveArea + 0u);
-    pciWriteConfigDword(gpuPciAddress, PCI_BASE_ADDRESS_0, gpuSaveArea + 1u);
-}
-
-static void ConfigureNvStrapsBAR1Size(UINT32 baseAddress0)
+static void ConfigureNvStrapsBAR1Size(EFI_PHYSICAL_ADDRESS baseAddress0)
 {
     UINT32
-        *pSTRAPS = (UINT32 *)((UINTN)baseAddress0 + TARGET_GPU_STRAPS_BASE_OFFSET + TARGET_GPU_STRAPS_SET1_OFFSET),
+        *pSTRAPS = (UINT32 *)(baseAddress0 + TARGET_GPU_STRAPS_BASE_OFFSET + TARGET_GPU_STRAPS_SET1_OFFSET),
         STRAPS;
 
     CopyMem(&STRAPS, pSTRAPS, sizeof STRAPS);
@@ -99,7 +61,7 @@ static void ConfigureNvStrapsBAR1Size(UINT32 baseAddress0)
     CopyMem(pSTRAPS, &STRAPS, sizeof STRAPS);
 }
 
-void NvStraps_Setup(UINT16 vendorId, UINT16 deviceId, EFI_PCI_ROOT_BRIDGE_IO_PROTOCOL_PCI_ADDRESS const *addrInfo)
+void NvStraps_Setup(EFI_HANDLE pciBridgeHandle, UINT16 vendorId, UINT16 deviceId, EFI_PCI_ROOT_BRIDGE_IO_PROTOCOL_PCI_ADDRESS const *addrInfo, uint_fast8_t reBarState)
 {
     UINTN
         bridgePciAddress = EFI_PCI_ADDRESS(TARGET_BRIDGE_PCI_BUS, TARGET_BRIDGE_PCI_DEVICE, TARGET_BRIDGE_PCI_FUNCTION, 0u),
@@ -107,22 +69,92 @@ void NvStraps_Setup(UINT16 vendorId, UINT16 deviceId, EFI_PCI_ROOT_BRIDGE_IO_PRO
 
     UINT32 bridgeSaveArea[4u], gpuSaveArea[2u];
 
-    MapBridgeMemory(bridgePciAddress, bridgeSaveArea);
-    MapGpuBAR0(gpuPciAddress, gpuSaveArea);
+//    EFI_PHYSICAL_ADDRESS baseAddress0 = BASE_4GB - 1u, bridgeIoPortRangeBegin = BASE_64KB - 1u;
 
-    ConfigureNvStrapsBAR1Size(TARGET_GPU_BAR0_ADDRESS & PCI_BASE_ADDRESS_MEM_MASK);     // mask the flag bits from the address
+    // Pretend the allocated MMIO memory is for the PCI root bridge device
+//    if (EFI_SUCCESS == gDS->AllocateMemorySpace(EfiGcdAllocateMaxAddressSearchTopDown, EfiGcdMemoryTypeMemoryMappedIo, 25u, SIZE_32MB, &baseAddress0, reBarImageHandle, NULL))
+//    {
+//        if (EFI_SUCCESS == gDS->AllocateIoSpace(EfiGcdAllocateMaxAddressSearchTopDown, EfiGcdIoTypeIo, 12u, SIZE_1KB / 2, &bridgeIoPortRangeBegin, reBarImageHandle, NULL))
+//        {
+//                EFI_GCD_MEMORY_SPACE_DESCRIPTOR memoryDescriptor;
+//
+//                if (EFI_ERROR(gDS->GetMemorySpaceDescriptor(baseAddress0, &memoryDescriptor)))
+//                    SetStatusVar(StatusVar_EFIError);
+//                else
+//                    if (EFI_ERROR(gDS->SetMemorySpaceAttributes(baseAddress0, SIZE_16MB, memoryDescriptor.Attributes | EFI_MEMORY_UC)))
+//                        SetStatusVar(StatusVar_EFIError);
 
-    RestoreGpuConfig(gpuPciAddress, gpuSaveArea);
-    RestoreBridgeConfig(bridgePciAddress, bridgeSaveArea);
+                pciSaveAndRemapBridgeConfig(bridgePciAddress, bridgeSaveArea, TARGET_GPU_BAR0_ADDRESS, TARGET_BRIDGE_IO_BASE_LIMIT, TARGET_GPU_PCI_BUS);
+                pciSaveAndRemapDeviceBAR0(gpuPciAddress, gpuSaveArea, TARGET_GPU_BAR0_ADDRESS);
+
+                ConfigureNvStrapsBAR1Size(TARGET_GPU_BAR0_ADDRESS);     // mask the flag bits from the address
+
+                pciRestoreDeviceConfig(gpuPciAddress, gpuSaveArea);
+                pciRestoreBridgeConfig(bridgePciAddress, bridgeSaveArea);
+
+                SetStatusVar(StatusVar_GpuStrapsConfigured);
+
+                if (reBarState == REBAR_STATE_NV_GPU_ONLY)
+                {
+                    uint_least16_t capabilityOffset = pciFindExtCapability(gpuPciAddress, PCI_EXPRESS_EXTENDED_CAPABILITY_RESIZABLE_BAR_ID);
+
+                    if (capabilityOffset)
+                    {
+                        pciRebarSetSize(gpuPciAddress, capabilityOffset, PCI_BAR_IDX1, TARGET_GPU_BAR1_SIZE_SELECTOR + 8u);
+                        SetStatusVar(StatusVar_GpuReBarConfigured);
+                    }
+                    else
+                        SetStatusVar(StatusVar_GpuNoReBarCapability);
+                }
+                else
+                    if (reBarState == REBAR_STATE_NV_GPU_STRAPS_ONLY)
+                    {
+                        EFI_EVENT eventTimer = NULL;
+
+                        if (EFI_ERROR(gBS->CreateEvent(EVT_TIMER, TPL_APPLICATION, NULL, NULL, &eventTimer)))
+                            SetStatusVar(StatusVar_EFIError);
+                        else
+                        {
+                            if (EFI_ERROR(gBS->SetTimer(eventTimer, TimerRelative, 1'000'000u)))
+                                SetStatusVar(StatusVar_EFIError);
+                            else
+                            {
+                                UINTN eventIndex = 0u;
+
+                                if (EFI_ERROR(gBS->WaitForEvent(1, &eventTimer, &eventIndex)))
+                                    SetStatusVar(StatusVar_EFIError);
+                                else
+                                    SetStatusVar(StatusVar_GpuDelayElapsed);
+                            }
+
+                            if (EFI_ERROR(gBS->CloseEvent(eventTimer)))
+                                SetStatusVar(StatusVar_EFIError);
+                        }
+                    }
+
+//            gDS->FreeIoSpace(bridgeIoPortRangeBegin, SIZE_1KB / 2u);
+//        }
+//        else
+//            SetStatusVar(StatusVar_EFIAllocationError);
+//
+//        gDS->FreeMemorySpace(baseAddress0, SIZE_32MB);
+//    }
+//    else
+//        SetStatusVar(StatusVar_EFIAllocationError);
 }
 
-bool NvStraps_CheckBARSizeListAdjust(UINTN pciAddress, UINT16 vid, UINT16 did, UINT8 bar)
+bool NvStraps_CheckBARSizeListAdjust(UINTN pciAddress, UINT16 vid, UINT16 did, UINT8 barIndex)
 {
-    return isBridgeEnumerated && vid == TARGET_GPU_PCI_VENDOR_ID && did == TARGET_GPU_PCI_DEVICE_ID && bar == 0x01u
+    SetStatusVar(StatusVar_GpuFound);
+
+    return isBridgeEnumerated && vid == TARGET_GPU_PCI_VENDOR_ID && did == TARGET_GPU_PCI_DEVICE_ID && barIndex == PCI_BAR_IDX1
         && pciAddress == EFI_PCI_ADDRESS(TARGET_GPU_PCI_BUS, TARGET_GPU_PCI_DEVICE, TARGET_GPU_PCI_FUNCTION, 0x00u);
 }
 
-UINT32 NvStraps_AdjustBARSizeList(UINTN pciAddress, UINT16 vid, UINT16 did, UINT8 bar, UINT32 cap)
+UINT32 NvStraps_AdjustBARSizeList(UINTN pciAddress, UINT16 vid, UINT16 did, UINT8 barIndex, UINT32 barSizeMask)
 {
-    return cap | UINT32_C(0x00000001) << (12u + (unsigned)TARGET_GPU_BAR1_SIZE_SELECTOR);
+    if (barSizeMask)
+        SetStatusVar(StatusVar_GpuReBarConfigured);
+
+    return barSizeMask | UINT32_C(0x00000001) << (8u + (unsigned)TARGET_GPU_BAR1_SIZE_SELECTOR);
 }

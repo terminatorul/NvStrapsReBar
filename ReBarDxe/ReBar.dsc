@@ -7,10 +7,10 @@
 	SUPPORTED_ARCHITECTURES = X64
 	BUILD_TARGETS = DEBUG|RELEASE|NOOPT
 	SKUID_IDENTIFIER = DEFAULT
-	
+
 [Components]
 	NvStrapsReBar/ReBarDxe/ReBarDxe.inf
-	
+
 !include MdePkg/MdeLibs.dsc.inc
 [LibraryClasses]
 	UefiLib|MdePkg/Library/UefiLib/UefiLib.inf
@@ -30,3 +30,4 @@
 	HiiLib|MdeModulePkg/Library/UefiHiiLib/UefiHiiLib.inf
 	SortLib|MdeModulePkg/Library/BaseSortLib/BaseSortLib.inf
 	UefiHiiServicesLib|MdeModulePkg/Library/UefiHiiServicesLib/UefiHiiServicesLib.inf
+        DxeServicesTableLib|MdePkg/Library/DxeServicesTableLib/DxeServicesTableLib.inf

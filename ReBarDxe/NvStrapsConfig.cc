@@ -1,4 +1,9 @@
 #if defined(UEFI_SOURCE) || defined(EFIAPI)
+extern "C"
+{
+# include <Uefi.h>
+# include <Library/UefiRuntimeServicesTableLib.h>
+}
 #else
 # if defined(WINDOWS) || defined(_WINDOWS) || defined(_WIN32) || defined(_WIN64)
 #  if defined(_M_AMD64) && !defined(_AMD64_)
@@ -20,8 +25,9 @@
 #include <utility>
 #include <ranges>
 
+#include "LocalAppConfig.h"
 #include "DeviceRegistry.hh"
-#include "NvStrapsPciConfig.hh"
+#include "NvStrapsConfig.hh"
 
 using std::size_t;
 using std::byte;
@@ -46,14 +52,7 @@ namespace views = std::views;
 
 #if defined(UEFI_SOURCE) || defined(EFIAPI)
 
-extern "C"
-{
-# include <Uefi.h>
-# include <Library/UefiRuntimeServicesTableLib.h>
-}
-
-typedef UINT8 BYTE;
-static char16_t NvStrapsPciConfigName[] = u"NvStrapsPciConfig";
+static constexpr char16_t const NvStrapsPciConfigName[] = u"NvStrapsPciConfig";
 static EFI_GUID NvStrapsPciConfigGUID = { 0x25dd6022u, 0x6b3eu, 0x430bu, { 0xb7u, 0xf4u, 0x11u, 0xe2u, 0x30u, 0x93u, 0xbbu, 0xe4u } };
 #else
 # if defined(WINDOWS) || defined(_WINDOWS) || defined(_WIN32) || defined(_WIN64)
@@ -467,7 +466,7 @@ tuple<ConfigPriority, BarSizeSelector> NvStrapsConfig::lookupBarSize(UINT16 devi
     return tuple { configPriority, barSizeSelector };
 }
 
-NvStrapsConfig &GetNvStrapsPciConfig(bool reload)
+NvStrapsConfig &GetNvStrapsConfig(bool reload)
 {
     static bool isLoaded = false;
 
@@ -478,7 +477,12 @@ NvStrapsConfig &GetNvStrapsPciConfig(bool reload)
 #if defined(UEFI_SOURCE) || defined(EFIAPI)
         UINTN bufferSize = sizeof buffer;
         UINT32 attributes = 0u;
-        EFI_STATUS status = gRT->GetVariable(static_cast<CHAR16 *>(static_cast<void *>(NvStrapsPciConfigName)), &NvStrapsPciConfigGUID, &attributes, &bufferSize, buffer);
+        CHAR16 configVarName[size(NvStrapsPciConfigName)];
+
+        for (auto [i, ch]: NvStrapsPciConfigName | views::enumerate)
+            configVarName[i] = ch;
+
+        EFI_STATUS status = gRT->GetVariable(configVarName, &NvStrapsPciConfigGUID, &attributes, &bufferSize, buffer);
 
         if (status != EFI_SUCCESS)
             bufferSize = 0u;
@@ -494,17 +498,22 @@ NvStrapsConfig &GetNvStrapsPciConfig(bool reload)
     return strapsConfig;
 }
 
-bool SaveNvStrapsPciConfig()
+bool SaveNvStrapsConfig()
 {
     constexpr auto const attributes = EFI_VARIABLE_NON_VOLATILE | EFI_VARIABLE_BOOTSERVICE_ACCESS | EFI_VARIABLE_RUNTIME_ACCESS;
     byte buffer[strapsConfig.bufferSize()];
     bool done = false;
 
 #if defined(UEFI_SOURCE) || defined(EFIAPI)
+    CHAR16 configVarName[size(NvStrapsPciConfigName)];
+
+    for (auto [i, ch]: NvStrapsPciConfigName | views::enumerate)
+        configVarName[i] = ch;
+
     if (strapsConfig.isConfigured())
-        done = gRT->SetVariable(static_cast<CHAR16 *>(static_cast<void *>(NvStrapsPciConfigName)), &NvStrapsPciConfigGUID, attributes, sizeof buffer, buffer) == EFI_SUCCESS;
+        done = gRT->SetVariable(configVarName, &NvStrapsPciConfigGUID, attributes, sizeof buffer, buffer) == EFI_SUCCESS;
     else
-        done = gRT->SetVariable(static_cast<CHAR16 *>(static_cast<void *>(NvStrapsPciConfigName)), &NvStrapsPciConfigGUID, attributes, 0u, buffer) == EFI_SUCCESS;
+        done = gRT->SetVariable(configVarName, &NvStrapsPciConfigGUID, attributes, 0u, buffer) == EFI_SUCCESS;
 #else
     if (strapsConfig.isConfigured())
         done = !!SetFirmwareEnvironmentVariableEx(NvStrapsPciConfigName, NvStrapsPciConfigGUID, buffer, strapsConfig.save(buffer), attributes);

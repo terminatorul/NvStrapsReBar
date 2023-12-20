@@ -5,18 +5,22 @@
   MODULE_TYPE                    = DXE_DRIVER
   VERSION_STRING                 = 1.0
   ENTRY_POINT                    = rebarInit
- 
+
 [Sources]
-  include/PciHostBridgeResourceAllocation.h
   include/pciRegs.h
-  include/ReBar.h
-  include/DeviceRegistry.hh
+  include/LocalAppConfig.h
+  include/PciConfig.h
+#  include/DeviceRegistry.hh
   include/LocalPciGPU.h
   include/SetupNvStraps.h
-  include/NvStrapsPciConfig.hh
-  DeviceRegistry.cc
+#  include/NvStrapsConfig.hh
+  include/StatusVar.h
+  include/ReBar.h
+  PciConfig.c
+#  DeviceRegistry.cc
   SetupNvStraps.c
-  NvStrapsPciConfig.cc
+#  NvStrapsConfig.cc
+  StatusVar.c
   ReBar.c
 
 [Packages]
@@ -24,11 +28,12 @@
   MdeModulePkg/MdeModulePkg.dec
 
 [LibraryClasses]
+  DxeServicesTableLib
   UefiDriverEntryPoint
   UefiBootServicesTableLib
   UefiRuntimeServicesTableLib
   UefiLib
-   
+
 [Protocols]
   gEfiPciRootBridgeIoProtocolGuid ## SOMETIMES_CONSUMES
   gEfiPciHostBridgeResourceAllocationProtocolGuid ## SOMETIMES_CONSUMES

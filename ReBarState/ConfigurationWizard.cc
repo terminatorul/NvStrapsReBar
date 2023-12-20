@@ -11,8 +11,11 @@
 #include <tuple>
 #include <vector>
 #include <string>
+#include <system_error>
 
-#include "NvStrapsPciConfig.hh"
+#include "StatusVar.h"
+#include "WinApiError.hh"
+#include "NvStrapsConfig.hh"
 #include "DeviceList.hh"
 #include "ReBarState.hh"
 #include "TextWizardPage.hh"
@@ -20,11 +23,14 @@
 #include "ConfigurationWizard.hh"
 
 using std::uint_least8_t;
+using std::uint_least32_t;
+using std::uint_least64_t;
 using std::optional;
 using std::span;
 using std::tuple;
 using std::vector;
 using std::to_wstring;
+using std::system_error;
 using namespace std::literals::string_literals;
 
 MenuCommand
@@ -167,7 +173,7 @@ static void saveUEFIBarSize(uint_least8_t nReBarState)
         else
             showInfo(L"Writing value of "s + to_wstring(+nReBarState) + L" / "s + to_wstring(pow(2, nReBarState)) + L" MB to NvStrapsReBar\n\n"s);
     else
-            showInfo(L"Writing value to NvStrapsReBar\n\n"s);
+        showInfo(L"Writing value to NvStrapsReBar\n\n"s);
 
     if (setReBarState(nReBarState))
     {
@@ -181,19 +187,28 @@ static void saveUEFIBarSize(uint_least8_t nReBarState)
 void runConfigurationWizard()
 {
     MenuType menuType = MenuType::Main;
-    NvStrapsConfig &nvStrapsConfig = GetNvStrapsPciConfig();
+    uint_least32_t dwStatusVarLastError = 0u;
+    uint_least64_t driverStatus = ReadStatusVar(&dwStatusVarLastError);
+
+    if (dwStatusVarLastError)
+    {
+        showError(L"Status var last error: " + to_wstring(dwStatusVarLastError) + L' ');
+        showError(system_error(static_cast<int>(dwStatusVarLastError), winapi_error_category()).code().message());
+    }
+
+    NvStrapsConfig &nvStrapsConfig = GetNvStrapsConfig();
     optional<uint_least8_t> reBarState = getReBarState(), nReBarState;
     vector<DeviceInfo> deviceList = getDeviceList();
     unsigned selectedDevice = 0u;
     MenuCommand deviceSelector = MenuCommand::GPUSelectorByPCIID;
 
-    showConfiguration(deviceList, nvStrapsConfig, reBarState);
+    showConfiguration(deviceList, nvStrapsConfig, reBarState, driverStatus);
 
     bool runMenuLoop = true;
 
     auto showConfig = [&]()
     {
-        showConfiguration(deviceList, nvStrapsConfig, nReBarState ? nReBarState : reBarState);
+        showConfiguration(deviceList, nvStrapsConfig, nReBarState ? nReBarState : reBarState, driverStatus);
     };
 
     while (runMenuLoop)
@@ -283,12 +298,12 @@ void runConfigurationWizard()
         case MenuCommand::DiscardConfiguration:
             nReBarState.reset();
             if (nvStrapsConfig.isDirty())
-                GetNvStrapsPciConfig(true);
+                GetNvStrapsConfig(true);
             showConfig();
             break;
 
         case MenuCommand::SaveConfiguration:
-            if (nvStrapsConfig.isDirty() && !SaveNvStrapsPciConfig())
+            if (nvStrapsConfig.isDirty() && !SaveNvStrapsConfig())
                 showError(L"Could not save GPU configuration\n");
 
             if (nReBarState && nReBarState != reBarState)

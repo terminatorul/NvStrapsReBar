@@ -78,6 +78,8 @@ template <typename ...ArgsT>
     return std::regex_match(forward<ArgsT>(args)...);
 }
 
+static constexpr uint_least16_t const TARGET_GPU_VENDOR_ID_FILTER_VALUE = 0x10DEu;
+
 #if defined(WINDOWS) || defined(_WINDOWS) || defined(_WIN64) || defined(_WIN32)
 
 static bool fillDedicatedMemorySize(vector<DeviceInfo> &deviceSet)
@@ -269,6 +271,11 @@ static void enumPciDisplayAdapters(vector<DeviceInfo> &deviceSet)
         if (wcmatch matches; regexp_match(devProp, devProp + devPropLength / sizeof *devProp, matches, pciInstanceRegexp))
         {
             deviceInfo.vendorID = static_cast<uint_least16_t>(wcstoul(matches[1u].str().c_str(), nullptr, 16));
+
+#if defined(NDEBUG)
+            if (deviceInfo.vendorID != TARGET_GPU_VENDOR_ID_FILTER_VALUE)
+                continue;
+#endif
             deviceInfo.deviceID = static_cast<uint_least16_t>(wcstoul(matches[2u].str().c_str(), nullptr, 16));
             deviceInfo.subsystemDeviceID = static_cast<uint_least16_t>(wcstoul(matches[3u].str().c_str(), nullptr, 16));
             deviceInfo.subsystemVendorID = static_cast<uint_least16_t>(wcstoul(matches[4u].str().c_str(), nullptr, 16));

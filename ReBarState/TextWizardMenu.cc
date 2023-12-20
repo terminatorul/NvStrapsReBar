@@ -17,7 +17,8 @@
 #include <execution>
 #include <ranges>
 
-#include "NvStrapsPciConfig.hh"
+#include "LocalAppConfig.h"
+#include "NvStrapsConfig.hh"
 #include "ReBarState.hh"
 #include "TextWizardMenu.hh"
 
@@ -149,9 +150,13 @@ static wstring showUEFIReBarMenuEntry(MenuCommand menuCommand)
     {
     case MenuCommand::UEFIBARSizePrompt:
         wcout << L"      0: Disabled \n"s;
-        wcout << L"Above 0: Maximum BAR size set to 2^x MB \n"s;
-        wcout << L"     32: Unlimited BAR size\n\n"s;
-        wcout << L"Enter:   Leave unchanged\n";
+        wcout << L"   1-31: Maximum BAR size for each PCI device set to 2^x MB \n"s;
+        wcout << L"     32: Unlimited BAR for each PCI device size\n"s;
+        wcout << L'\n';
+        wcout << L"     64: Enable ReBAR for selected GPUs only\n"s;
+        wcout << L"     65: Configure internal ReBAR STRAPS bits only on the GPUs\n\n"s;
+        wcout << L"  Enter: Leave unchanged\n";
+
         return { };
     }
 
@@ -309,7 +314,7 @@ static tuple<optional<MenuCommand>, unsigned> translateInput(MenuType menuType, 
     switch (menuType)
     {
     case MenuType::MotherboradRBARSize:
-        if (isNumeric(inputValue) && stoul(inputValue) <= MAX_UEFI_BAR_SIZE_SELECTOR)
+        if (isNumeric(inputValue) && (stoul(inputValue) <= MAX_UEFI_BAR_SIZE_SELECTOR || stoul(inputValue) == NV_GPU_BAR_ONLY_SELECTOR || stoul(inputValue) == NV_GPU_BAR_STRAPS_ONLY_SELECTOR))
             return { MenuCommand::UEFIBARSizePrompt, stoul(inputValue) };
 
         return { nullopt, 0u };

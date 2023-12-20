@@ -23,7 +23,8 @@ SPDX-License-Identifier: MIT
 #include <sys/ioctl.h>
 #endif
 
-#include "NvStrapsPciConfig.hh"
+#include "StatusVar.h"
+#include "NvStrapsConfig.hh"
 #include "TextWizardPage.hh"
 #include "ConfigurationWizard.hh"
 
@@ -73,23 +74,23 @@ bool notExist = false;
 
 bool CheckPriviledge()
 {
-	DWORD len;
-	HANDLE hTok;
-	TOKEN_PRIVILEGES tokp;
+    DWORD len;
+    HANDLE hTok;
+    TOKEN_PRIVILEGES tokp;
 
-	if (!OpenProcessToken(GetCurrentProcess(), TOKEN_ADJUST_PRIVILEGES | TOKEN_QUERY, &hTok))
-            return false;
+    if (!OpenProcessToken(GetCurrentProcess(), TOKEN_ADJUST_PRIVILEGES | TOKEN_QUERY, &hTok))
+        return false;
 
-	LookupPrivilegeValue(NULL, SE_SYSTEM_ENVIRONMENT_NAME, &tokp.Privileges[0].Luid);
-	tokp.PrivilegeCount = 1;
-	tokp.Privileges[0].Attributes = SE_PRIVILEGE_ENABLED;
+    LookupPrivilegeValue(NULL, SE_SYSTEM_ENVIRONMENT_NAME, &tokp.Privileges[0].Luid);
+    tokp.PrivilegeCount = 1;
+    tokp.Privileges[0].Attributes = SE_PRIVILEGE_ENABLED;
 
-	AdjustTokenPrivileges(hTok, FALSE, &tokp, 0, NULL, &len);
+    AdjustTokenPrivileges(hTok, FALSE, &tokp, 0, NULL, &len);
 
-	if (GetLastError() != ERROR_SUCCESS)
-		return cout << "Failed to obtain SE_SYSTEM_ENVIRONMENT_NAME\n", false;
+    if (GetLastError() != ERROR_SUCCESS)
+	    return cout << "Failed to obtain SE_SYSTEM_ENVIRONMENT_NAME\n", false;
 
-	return cout << "Obtained SE_SYSTEM_ENVIRONMENT_NAME\n", true;
+    return cout << "Obtained SE_SYSTEM_ENVIRONMENT_NAME\n", true;
 }
 
 optional<uint_least8_t> getReBarState()
@@ -107,10 +108,10 @@ optional<uint_least8_t> getReBarState()
 
 bool setReBarState(uint_least8_t rBarState)
 {
-	DWORD dwAttributes = VARIABLE_ATTRIBUTE_NON_VOLATILE | VARIABLE_ATTRIBUTE_BOOTSERVICE_ACCESS | VARIABLE_ATTRIBUTE_RUNTIME_ACCESS;
+    DWORD dwAttributes = VARIABLE_ATTRIBUTE_NON_VOLATILE | VARIABLE_ATTRIBUTE_BOOTSERVICE_ACCESS | VARIABLE_ATTRIBUTE_RUNTIME_ACCESS;
 
-	return SetFirmwareEnvironmentVariableEx(NVAR_Name, NVAR_GUID, &rBarState, BYTE_SIZE, dwAttributes)
-                || (throw system_error(static_cast<int>(::GetLastError()), winapi_error_category()), false);
+    return SetFirmwareEnvironmentVariableEx(NVAR_Name, NVAR_GUID, &rBarState, BYTE_SIZE, dwAttributes)
+            || (throw system_error(static_cast<int>(::GetLastError()), winapi_error_category()), false);
 }
 
 #else   // Linux
@@ -191,7 +192,16 @@ try
 
 #if defined(NDEBUG)
         std::vector<DeviceInfo> deviceList = getDeviceList();
-        showConfiguration(deviceList, GetNvStrapsPciConfig(), getReBarState());
+
+        uint_least32_t dwStatusVarLastError = 0u;
+        showConfiguration(deviceList, GetNvStrapsConfig(), getReBarState(), ReadStatusVar(&dwStatusVarLastError));
+
+        if (dwStatusVarLastError)
+        {
+            cout << "Status var last error: " << dwStatusVarLastError << ' ';
+            cout << system_error(static_cast<int>(dwStatusVarLastError), winapi_error_category()).code().message();
+        }
+
         showMotherboardReBarMenu();
 
 	string i;
@@ -206,7 +216,7 @@ try
                 return pause(), EXIT_SUCCESS;
         }
 
-	if (stoi(i) < 0 || stoi(i) > 32)
+	if (stoi(i) < 0 || stoi(i) > 32 && stoi(i) != 64 && 32 && stoi(i) != 65)
                 throw out_of_range("Invalid BAR size selector value");
 
 	uint8_t reBarState = stoi(i);

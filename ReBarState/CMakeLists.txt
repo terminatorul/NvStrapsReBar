@@ -23,10 +23,13 @@ add_executable(NvStrapsReBar
         "TextWizardMenu.cc"
         "ConfigurationWizard.hh"
         "ConfigurationWizard.cc"
+        "${REBAR_DXE_DIRECTORY}/include/LocalAppConfig.h"
+        "${REBAR_DXE_DIRECTORY}/include/StatusVar.h"
         "${REBAR_DXE_DIRECTORY}/include/DeviceRegistry.hh"
         "${REBAR_DXE_DIRECTORY}/DeviceRegistry.cc"
-        "${REBAR_DXE_DIRECTORY}/include/NvStrapsPciConfig.hh"
-        "${REBAR_DXE_DIRECTORY}/NvStrapsPciConfig.cc"
+        "${REBAR_DXE_DIRECTORY}/include/NvStrapsConfig.hh"
+        "${REBAR_DXE_DIRECTORY}/NvStrapsConfig.cc"
+        "${REBAR_DXE_DIRECTORY}/StatusVar.c"
         "ReBarState.cc")
 target_include_directories(NvStrapsReBar PRIVATE "${REBAR_DXE_DIRECTORY}/include" "${NvStrapsReBar_SOURCE_DIR}")
 

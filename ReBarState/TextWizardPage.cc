@@ -16,7 +16,8 @@
 #include <iomanip>
 #include <ranges>
 
-#include "NvStrapsPciConfig.hh"
+#include "StatusVar.h"
+#include "NvStrapsConfig.hh"
 #include "TextWizardPage.hh"
 
 #undef min
@@ -25,6 +26,7 @@
 using std::uint_least8_t;
 using std::uint_least64_t;
 using std::optional;
+using std::string;
 using std::wstring;
 using std::tuple;
 using std::span;
@@ -60,6 +62,11 @@ void showInfo(wstring const &message)
 void showError(wstring const &message)
 {
     wcerr << L'\n' << message;
+}
+
+void showError(string const &message)
+{
+    cerr << '\n' << message;
 }
 
 void showStartupLogo()
@@ -199,6 +206,62 @@ static void showLocalGPUs(vector<DeviceInfo> const &deviceSet, NvStrapsConfig co
     wcout << L"+----+------------+------------+--"s << wstring(nMaxLocationSize, L'-') << L"-+-"s << wstring(nMaxTargetBarSize, L'-') << L"-+-"s << wstring(nMaxCurrentBarSize, L'-')  << L"-+-"s << wstring(nMaxVRAMSize, L'-') << L"-+-"s << wstring(nMaxNameSize, L'-') << L"-+\n\n";
 }
 
+static wchar_t const *statusString(uint_least64_t driverStatus)
+{
+    switch (driverStatus)
+    {
+    case StatusVar_NotLoaded:
+        return L"Not loaded";
+
+    case StatusVar_Unconfigured:
+        return L"Unconfigured";
+
+    case StatusVar_Cleared:
+        return L"Cleared";
+
+    case StatusVar_Configured:
+        return L"Configured";
+
+    case StatusVar_BridgeFound:
+        return L"Bridge Found";
+
+    case StatusVar_GpuFound:
+        return L"GPU Found";
+
+    case StatusVar_GpuStrapsConfigured:
+        return L"GPU STRAPS Configured";
+
+    case StatusVar_GpuDelayElapsed:
+        return L"GPU PCI delay posted";
+
+    case StatusVar_GpuReBarConfigured:
+        return L"GPU ReBAR Configured";
+
+    case StatusVar_GpuNoReBarCapability:
+        return L"ReBAR not advertised";
+
+    case StatusVar_EFIAllocationError:
+        return L"Allocation error";
+
+    case StatusVar_EFIError:
+        return L"EFI Error";
+
+    case StatusVar_NVAR_API_Error:
+        return L"NVAR access API error";
+
+    case StatusVar_ParseError:
+    default:
+        return L"Parse error";
+    }
+
+    return L"Parse error";
+}
+
+static void showDriverStatus(uint_least64_t driverStatus)
+{
+    wcout << "EFI DXE driver status: " << statusString(driverStatus & 0xFFFFFFFFuL) << L" (0x" << hex << right << setfill(L'0') << setw(QWORD_SIZE * 2u) << driverStatus << dec << setfill(L' ') << L")\n";
+}
+
 static void showMotherboardReBarState(optional<uint_least8_t> reBarState)
 {
     if (reBarState)
@@ -227,11 +290,15 @@ void showMotherboardReBarMenu()
     wcout << L"\nEnter NvStrapsReBar Value\n"s;
     wcout << L"      0: Disabled \n"s;
     wcout << L"Above 0: Maximum BAR size set to 2^x MB \n"s;
-    wcout << L"     32: Unlimited BAR size\n\n"s;
+    wcout << L"     32: Unlimited BAR size\n"s;
+    wcout << L"     64: Enable ReBAR for selected GPUs only\n"s;
+    wcout << L"     65: Configure ReBAR STRAPS bits only on the GPUs\n\n"s;
+    wcout << L"  Enter: Leave unchanged\n";
 }
 
-void showConfiguration(vector<DeviceInfo> const &devices, NvStrapsConfig const &nvStrapsConfig, optional<uint_least8_t> reBarState)
+void showConfiguration(vector<DeviceInfo> const &devices, NvStrapsConfig const &nvStrapsConfig, optional<uint_least8_t> reBarState, uint_least64_t driverStatus)
 {
     showLocalGPUs(devices, nvStrapsConfig);
+    showDriverStatus(driverStatus);
     showMotherboardReBarState(reBarState);
 }
