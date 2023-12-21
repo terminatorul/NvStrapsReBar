@@ -291,7 +291,7 @@ void showMotherboardReBarMenu()
     wcout << L"      0: Disabled \n"s;
     wcout << L"Above 0: Maximum BAR size set to 2^x MB \n"s;
     wcout << L"     32: Unlimited BAR size\n"s;
-    wcout << L"     64: Enable ReBAR for selected GPUs only\n"s;
+    wcout << L"     64: Enable ReBAR for selected GPUs only\n\n"s;
     wcout << L"     65: Configure ReBAR STRAPS bits only on the GPUs\n\n"s;
     wcout << L"  Enter: Leave unchanged\n";
 }
