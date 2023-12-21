@@ -48,7 +48,7 @@ Credits go to the bellow github users, as I integrated and coded their findings 
 * [envytools](https://github.com/envytools/envytools) project for the original effort on reverse-engineering the register interface for the GPUs, a very long time ago, for use by the [nouveau](https://nouveau.freedesktop.org/) open-source driver in Linux. Amazing how this documentation could still help us today !
 * [@mupuf](https://github.com/mupuf) from [envytools](https://github.com/envytools/envytools) project for bringing up the idea and the exact (low level) registers from the documentation that enable resizable BAR
 * [@Xelafic](https://github.com/Xelafic) for the first code samples (written in assembly!) and the first test for using the GPU STRAPS bits, documented by envytools, to select the BAR size during PCIe bring-up in UEFI code.
-* [@xCuri0](https://github.com/xCuri0/ReBARUEFI") for the ReBarUEFI DXE driver that enables ReBAR on the motherboard, and allows intercepting and hooking into the PCIe enumeration phases in UEFI code on the motherboard.
+* [@xCuri0](https://github.com/xCuri0/ReBARUEFI") for great support and for the ReBarUEFI DXE driver that enables ReBAR on the motherboard, and allows intercepting and hooking into the PCIe enumeration phases in UEFI code on the motherboard.
 
 ## Working GPUs
 Check issue https://github.com/terminatorul/NvStrapsReBar/issues/1 for a list of known working GPUs (and motherboards).
@@ -56,6 +56,7 @@ Check issue https://github.com/terminatorul/NvStrapsReBar/issues/1 for a list of
 If you get Resizable BAR working on your Turing (or earlier) GPU, please post your system information on issue https://github.com/terminatorul/NvStrapsReBar/issues/1 here on github,
 in the below format
 
+* CPU:
 * Motherboard model:
 * Motherboard chipset:
 * Graphics card model:
@@ -69,7 +70,7 @@ in the below format
 
 Use command `nvidia-smi -q -d memory` to check the new BAR size reported by the Windows/Linux driver.
 
-Also post GPU-Z screenshots with the main GPU page + ReBAR page, and the main CPU-X page screenshot. If you needed to apply more changes to make ReBAR work, please post about them as well.
+It maybe easier and more informative to post GPU-Z screenshots with the main GPU page + ReBAR page, and CPU-X with the CPU page and motherboard page screenshots. If you needed to apply more changes to make ReBAR work, please post about them as well.
 
 ## Building (Windows only)
 * Download and install [Visual Studio 2022 Community Edition](https://visualstudio.microsoft.com/vs/community/) from Microsoft. Be sure to select C/C++ Desktop Development option for installation.
