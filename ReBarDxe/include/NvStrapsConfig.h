@@ -169,8 +169,8 @@ extern "C"
 
 NvStraps_BarSize NvStrapsConfig_LookupBarSize(NvStrapsConfig const *config, UINT16 deviceID, UINT16 subsysVenID, UINT16 subsysDevID, UINT8 bus, UINT8 dev, UINT8 fn);
 
-NvStrapsConfig *GetNvStrapsConfig(bool reload);
-ERROR_CODE SaveNvStrapsConfig();
+NvStrapsConfig *GetNvStrapsConfig(bool reload, ERROR_CODE *errorCode);
+void SaveNvStrapsConfig(ERROR_CODE *errorCode);
 
 inline bool NvStrapsConfig_GPUSelector_DeviceMatch(NvStraps_GPUSelector const *selector, UINT16 devID)
 {
@@ -189,6 +189,9 @@ inline bool NvStrapsConfig_GPUSelector_BusLocationMatch(NvStraps_GPUSelector con
 
 #if defined(__cplusplus)
 }       // extern "C"
+
+NvStrapsConfig &GetNvStrapsConfig(bool reload = false);
+void SaveNvStrapsConfig();
 
 inline bool NvStrapsConfig::setGPUSelector(UINT8 barSizeSelector, UINT16 deviceID)
 {

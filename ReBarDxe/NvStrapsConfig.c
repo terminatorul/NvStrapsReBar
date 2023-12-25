@@ -8,6 +8,7 @@
 #  endif
 #  include <windef.h>
 #  include <winbase.h>
+#  include <winerror.h>
 #  include <errhandlingapi.h>
 # endif
 #endif
@@ -347,7 +348,7 @@ NvStraps_BarSize NvStrapsConfig_LookupBarSize(NvStrapsConfig const *config, UINT
     return sizeSelector;
 }
 
-NvStrapsConfig *GetNvStrapsConfig(bool reload)
+NvStrapsConfig *GetNvStrapsConfig(bool reload, ERROR_CODE *errorCode)
 {
     static bool isLoaded = false;
 
@@ -371,8 +372,14 @@ NvStrapsConfig *GetNvStrapsConfig(bool reload)
             SetStatusVar(status == EFI_NOT_FOUND ? StatusVar_GPU_Unconfigured : StatusVar_EFIError);
             bufferSize = 0u;
         }
+
+        if (errorCode)
+            *errorCode = status == EFI_NOT_FOUND ? EFI_SUCCESS : status;
 #else
         DWORD bufferSize = GetFirmwareEnvironmentVariable(NvStrapsPciConfigName, NvStrapsPciConfigGUID, buffer, sizeof buffer);
+
+        if (errorCode)
+            *errorCode = bufferSize ? ERROR_SUCCESS : GetLastError();
 #endif
 
         NvStrapsConfig_Load(buffer, (unsigned)bufferSize, &strapsConfig);
@@ -380,16 +387,19 @@ NvStrapsConfig *GetNvStrapsConfig(bool reload)
         isLoaded = true;
     };
 
+    if (errorCode)
+        *errorCode = 0u;
+
     return &strapsConfig;
 }
 
-ERROR_CODE SaveNvStrapsConfig()
+void SaveNvStrapsConfig(ERROR_CODE *errorCode)
 {
     if (NvStrapsConfig_IsDirty(&strapsConfig))
     {
         UINT32 const attributes = EFI_VARIABLE_NON_VOLATILE | EFI_VARIABLE_BOOTSERVICE_ACCESS | EFI_VARIABLE_RUNTIME_ACCESS;
         BYTE buffer[NVSTRAPSCONFIG_BUFFERSIZE(strapsConfig)];
-        ERROR_CODE errorCode;
+        ERROR_CODE errorStatus;
 
 #if defined(UEFI_SOURCE) || defined(EFIAPI)
         CHAR16 configVarName[ARRAY_SIZE(NvStrapsPciConfigName)];
@@ -398,21 +408,23 @@ ERROR_CODE SaveNvStrapsConfig()
         for (unsigned i = 0u; i < ARRAY_SIZE(NvStrapsPciConfigName); i++)
             configVarName[i] = NvStrapsPciConfigName[i];
 
-        errorCode = gRT->SetVariable(configVarName, &configVarGUID, attributes, NvStrapsConfig_Save(buffer, ARRAY_SIZE(buffer), &strapsConfig), buffer);
+        errorStatus = gRT->SetVariable(configVarName, &configVarGUID, attributes, NvStrapsConfig_Save(buffer, ARRAY_SIZE(buffer), &strapsConfig), buffer);
 
-        if (errorCode)
+        if (errorStatus)
             SetStatusVar(StatusVar_EFIError);
 #else
-        errorCode = SetFirmwareEnvironmentVariableEx(NvStrapsPciConfigName, NvStrapsPciConfigGUID, buffer, NvStrapsConfig_Save(buffer, ARRAY_SIZE(buffer), &strapsConfig), attributes)
+        errorStatus = SetFirmwareEnvironmentVariableEx(NvStrapsPciConfigName, NvStrapsPciConfigGUID, buffer, NvStrapsConfig_Save(buffer, ARRAY_SIZE(buffer), &strapsConfig), attributes)
                  ? ERROR_SUCCESS
                  : GetLastError();
 #endif
 
-        if (!errorCode)
+        if (!errorStatus)
             NvStrapsConfig_SetIsDirty(&strapsConfig, false);
 
-        return errorCode;
+        if (errorCode)
+            *errorCode = errorStatus;
     }
 
-    return 0u;
+    if (errorCode)
+        *errorCode = 0u;
 }

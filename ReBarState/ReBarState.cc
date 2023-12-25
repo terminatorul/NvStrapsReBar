@@ -194,7 +194,7 @@ try
         std::vector<DeviceInfo> deviceList = getDeviceList();
 
         uint_least32_t dwStatusVarLastError = 0u;
-        showConfiguration(deviceList, *GetNvStrapsConfig(false), getReBarState(), ReadStatusVar(&dwStatusVarLastError));
+        showConfiguration(deviceList, GetNvStrapsConfig(), getReBarState(), ReadStatusVar(&dwStatusVarLastError));
 
         if (dwStatusVarLastError)
         {

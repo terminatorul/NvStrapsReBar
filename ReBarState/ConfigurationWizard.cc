@@ -196,7 +196,7 @@ void runConfigurationWizard()
         showError(system_error(static_cast<int>(dwStatusVarLastError), winapi_error_category()).code().message());
     }
 
-    NvStrapsConfig &nvStrapsConfig = *GetNvStrapsConfig(false);
+    NvStrapsConfig &nvStrapsConfig = GetNvStrapsConfig();
     optional<uint_least8_t> reBarState = getReBarState(), nReBarState;
     vector<DeviceInfo> deviceList = getDeviceList();
     unsigned selectedDevice = 0u;
@@ -303,9 +303,7 @@ void runConfigurationWizard()
             break;
 
         case MenuCommand::SaveConfiguration:
-            if (nvStrapsConfig.isDirty())
-                if (auto dwLastError = SaveNvStrapsConfig())
-                    showError(winapi_error_category().message(static_cast<int>(dwLastError)));
+            SaveNvStrapsConfig();
 
             if (nReBarState && nReBarState != reBarState)
             {

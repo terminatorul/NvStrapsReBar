@@ -4,11 +4,17 @@
 # endif
 #endif
 
+#include <windef.h>
+#include <winerror.h>
+
 #include <iterator>
+#include <system_error>
+#include <string>
 #include <algorithm>
 #include <execution>
 #include <ranges>
 
+#include "WinApiError.hh"
 #include "NvStrapsConfig.h"
 
 using std::begin;
@@ -16,8 +22,10 @@ using std::end;
 using std::size;
 using std::find_if;
 using std::copy;
+using std::system_error;
 
 namespace execution = std::execution;
+using namespace std::literals::string_literals;
 
 bool NvStrapsConfig::setGPUSelector(UINT8 barSizeSelector, UINT16 deviceID, UINT16 subsysVenID, UINT16 subsysDevID, UINT8 bus, UINT8 dev, UINT8 fn)
 {
@@ -86,4 +94,23 @@ bool NvStrapsConfig::clearGPUSelector(UINT16 deviceID, UINT16 subsysVenID, UINT1
     nGPUSelector--;
 
     return true;
+}
+
+NvStrapsConfig &GetNvStrapsConfig(bool reload)
+{
+    auto dwLastError = DWORD { ERROR_SUCCESS };
+    auto strapsConfig = GetNvStrapsConfig(reload, &dwLastError);
+
+    return dwLastError == ERROR_SUCCESS ? *strapsConfig :
+        throw system_error { static_cast<int>(dwLastError), winapi_error_category(), "Error loading configuration from EFI variable"s };
+}
+
+void SaveNvStrapsConfig()
+{
+    auto dwLastError = DWORD { ERROR_SUCCESS };
+
+    SaveNvStrapsConfig(&dwLastError);
+
+    if (dwLastError != ERROR_SUCCESS)
+        throw system_error { static_cast<int>(dwLastError), winapi_error_category(), "Error saving configuration to EFI variable"s };
 }

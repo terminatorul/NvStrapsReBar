@@ -53,6 +53,7 @@ using std::find;
 using std::views::all;
 
 namespace views = std::ranges::views;
+using namespace std::literals::string_literals;
 using namespace std::literals::string_view_literals;
 
 void showInfo(wstring const &message)
@@ -75,10 +76,10 @@ void showStartupLogo()
     wcout << L"NvStrapsReBar, based on ReBarState (c) 2023 xCuri0\n\n"sv;
 }
 
-static wstring_view formatDirectMemorySize(uint_least64_t memorySize)
+static wstring formatDirectMemorySize(uint_least64_t memorySize)
 {
     if (!memorySize)
-        return L"    "sv;
+        return L"    "s;
 
     return formatMemorySize(memorySize);
 }
@@ -216,6 +217,9 @@ static wstring_view statusString(uint_least64_t driverStatus)
 
     case StatusVar_Unconfigured:
         return L"Unconfigured"sv;
+
+    case StatusVar_GPU_Unconfigured:
+        return L"GPU Unconfigured"sv;
 
     case StatusVar_Cleared:
         return L"Cleared"sv;
