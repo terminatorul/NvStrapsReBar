@@ -4,34 +4,36 @@
 #   define _AMD64_
 #  endif
 # endif
+#else
+# include <Uefi.h>
 #endif
 
-#include <cstdint>
-#include <tuple>
-#include <utility>
-#include <span>
+#include <stdbool.h>
+#include <stdint.h>
 
-#include "DeviceRegistry.hh"
+#include "DeviceRegistry.h"
 
-using std::tuple;
-using std::get;
-using std::span;
-namespace ranges = std::ranges;
+typedef struct IDRange
+{
+    UINT16 first;
+    UINT16 last;
+}
+    IDRange;
 
 // See envytools documentation at:
 // https://envytools.readthedocs.io/en/latest/hw/pciid.html#introduction
-static constexpr tuple<UINT16, UINT16> const
-    PCI_ID_RANGE_TU102 { UINT16 { 0x1E00u }, UINT16 { 0x1E7Fu } },
-    PCI_ID_RANGE_TU104 { UINT16 { 0x1E80u }, UINT16 { 0x1EFFu } },
-    PCI_ID_RANGE_TU106 { UINT16 { 0x1F00u }, UINT16 { 0x1F7Fu } },
-    PCI_ID_RANGE_TU116 { UINT16 { 0x2180u }, UINT16 { 0x21FFu } },
-    PCI_ID_RANGE_TU117 { UINT16 { 0x1F80u }, UINT16 { 0x1FFFu } };
+static IDRange const
+    PCI_ID_RANGE_TU102 = { .first = 0x1E00u, .last = 0x1E7Fu },
+    PCI_ID_RANGE_TU104 = { .first = 0x1E80u, .last = 0x1EFFu },
+    PCI_ID_RANGE_TU106 = { .first = 0x1F00u, .last = 0x1F7Fu },
+    PCI_ID_RANGE_TU116 = { .first = 0x2180u, .last = 0x21FFu },
+    PCI_ID_RANGE_TU117 = { .first = 0x1F80u, .last = 0x1FFFu };
 
 // See:
 //      - https://admin.pci-ids.ucw.cz/read/PC/10de
 //      - https://www.techpowerup.com/gpu-specs/?architecture=Turing&sort=name
 //
-static UINT16 Turing_Device_List_Skip[]
+static UINT16 Turing_Device_List_Skip[] =
 {
         // Tesla GPUs have some virtual memory with large BARs
         // Some Quadro GPUs already have resizable BAR
@@ -177,34 +179,34 @@ static UINT16 Turing_Device_List_Skip[]
         UINT16_C(0x1E02),               // TU102 [Titan RTX] 24GB
 };
 
-static inline bool inRange(UINT16 value, tuple<UINT16, UINT16> const &range)
+static inline bool inRange(UINT16 value, IDRange const *range)
 {
-    return get<0u>(range) <= value && value <= get<1u>(range);
+    return range->first <= value && value <= range->last;
 }
 
 static inline bool isTU102(UINT16 deviceID)
 {
-    return inRange(deviceID, PCI_ID_RANGE_TU102);
+    return inRange(deviceID, &PCI_ID_RANGE_TU102);
 }
 
 static inline bool isTU104(UINT16 deviceID)
 {
-    return inRange(deviceID, PCI_ID_RANGE_TU104);
+    return inRange(deviceID, &PCI_ID_RANGE_TU104);
 }
 
 static inline bool isTU106(UINT16 deviceID)
 {
-    return inRange(deviceID, PCI_ID_RANGE_TU106);
+    return inRange(deviceID, &PCI_ID_RANGE_TU106);
 }
 
 static inline bool isTU116(UINT16 deviceID)
 {
-    return inRange(deviceID, PCI_ID_RANGE_TU116);
+    return inRange(deviceID, &PCI_ID_RANGE_TU116);
 }
 
 static inline bool isTU117(UINT16 deviceID)
 {
-    return inRange(deviceID, PCI_ID_RANGE_TU117);
+    return inRange(deviceID, &PCI_ID_RANGE_TU117);
 }
 
 bool isTuringGPU(UINT16 deviceID)
@@ -212,27 +214,32 @@ bool isTuringGPU(UINT16 deviceID)
     return isTU102(deviceID) || isTU104(deviceID) || isTU106(deviceID) || isTU116(deviceID) || isTU117(deviceID);
 }
 
-static constexpr struct
+typedef struct RegistryRange
+{
+    UINT16 const *first, *last;
+}
+    RegistryRange;
+static struct RegistryGroup
 {
     BarSizeSelector barSize;
-    span<UINT16>    values;
+    RegistryRange    values;
 }
     const DeviceRegistry[] =
 {
-    BarSizeSelector::Excluded, span { Turing_Device_List_Skip },
-    BarSizeSelector:: _2G,     span { Turing_Device_List_2GB  },
-    BarSizeSelector:: _4G,     span { Turing_Device_List_4GB  },
-    BarSizeSelector:: _8G,     span { Turing_Device_List_8GB  },
-    BarSizeSelector::_16G,     span { Turing_Device_List_16GB },
-    BarSizeSelector::_32G,     span { Turing_Device_List_32GB }
+    { .barSize = BarSizeSelector_Excluded, .values = { .first = Turing_Device_List_Skip, .last = Turing_Device_List_Skip + ARRAY_SIZE(Turing_Device_List_Skip) } },
+    { .barSize = BarSizeSelector_2G,       .values = { .first = Turing_Device_List_2GB,  .last = Turing_Device_List_2GB  + ARRAY_SIZE(Turing_Device_List_2GB)  } },
+    { .barSize = BarSizeSelector_4G,       .values = { .first = Turing_Device_List_4GB,  .last = Turing_Device_List_4GB  + ARRAY_SIZE(Turing_Device_List_4GB)  } },
+    { .barSize = BarSizeSelector_8G,       .values = { .first = Turing_Device_List_8GB,  .last = Turing_Device_List_8GB  + ARRAY_SIZE(Turing_Device_List_8GB)  } },
+    { .barSize = BarSizeSelector_16G,      .values = { .first = Turing_Device_List_16GB, .last = Turing_Device_List_16GB + ARRAY_SIZE(Turing_Device_List_16GB) } },
+    { .barSize = BarSizeSelector_32G,      .values = { .first = Turing_Device_List_32GB, .last = Turing_Device_List_32GB + ARRAY_SIZE(Turing_Device_List_32GB) } }
 };
 
 BarSizeSelector lookupBarSizeInRegistry(UINT16 deviceID)
 {
-    for (auto const &group: DeviceRegistry)
-        for (auto value: group.values)
-            if (value == deviceID)
-                return group.barSize;
+    for (struct RegistryGroup const *group = DeviceRegistry; group < DeviceRegistry + ARRAY_SIZE(DeviceRegistry); group++)
+        for (UINT16 const *devID = group->values.first; devID < group->values.last; devID++)
+            if (*devID == deviceID)
+                return group->barSize;
 
-    return BarSizeSelector::None;
+    return BarSizeSelector_None;
 }

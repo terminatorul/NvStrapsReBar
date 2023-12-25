@@ -15,7 +15,7 @@
 
 #include "StatusVar.h"
 #include "WinApiError.hh"
-#include "NvStrapsConfig.hh"
+#include "NvStrapsConfig.h"
 #include "DeviceList.hh"
 #include "ReBarState.hh"
 #include "TextWizardPage.hh"
@@ -196,7 +196,7 @@ void runConfigurationWizard()
         showError(system_error(static_cast<int>(dwStatusVarLastError), winapi_error_category()).code().message());
     }
 
-    NvStrapsConfig &nvStrapsConfig = GetNvStrapsConfig();
+    NvStrapsConfig &nvStrapsConfig = *GetNvStrapsConfig(false);
     optional<uint_least8_t> reBarState = getReBarState(), nReBarState;
     vector<DeviceInfo> deviceList = getDeviceList();
     unsigned selectedDevice = 0u;
@@ -264,11 +264,11 @@ void runConfigurationWizard()
             break;
 
         case MenuCommand::GPUSelectorExclude:
-            value = BarSizeSelector::Excluded;
+            value = BarSizeSelector_Excluded;
             [[fallthrough]];
 
         case MenuCommand::GPUVRAMSize:
-            if (value <= MAX_BAR_SIZE_SELECTOR || value == BarSizeSelector::Excluded)
+            if (value <= MAX_BAR_SIZE_SELECTOR || value == BarSizeSelector_Excluded)
             {
                 setGPUBarSize(nvStrapsConfig, value, selectedDevice, deviceSelector, deviceList);
                 menuType = MenuType::Main;
@@ -303,8 +303,9 @@ void runConfigurationWizard()
             break;
 
         case MenuCommand::SaveConfiguration:
-            if (nvStrapsConfig.isDirty() && !SaveNvStrapsConfig())
-                showError(L"Could not save GPU configuration\n");
+            if (nvStrapsConfig.isDirty())
+                if (auto dwLastError = SaveNvStrapsConfig())
+                    showError(winapi_error_category().message(static_cast<int>(dwLastError)));
 
             if (nReBarState && nReBarState != reBarState)
             {

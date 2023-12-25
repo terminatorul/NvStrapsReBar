@@ -24,7 +24,7 @@ SPDX-License-Identifier: MIT
 #endif
 
 #include "StatusVar.h"
-#include "NvStrapsConfig.hh"
+#include "NvStrapsConfig.h"
 #include "TextWizardPage.hh"
 #include "ConfigurationWizard.hh"
 
@@ -194,7 +194,7 @@ try
         std::vector<DeviceInfo> deviceList = getDeviceList();
 
         uint_least32_t dwStatusVarLastError = 0u;
-        showConfiguration(deviceList, GetNvStrapsConfig(), getReBarState(), ReadStatusVar(&dwStatusVarLastError));
+        showConfiguration(deviceList, *GetNvStrapsConfig(false), getReBarState(), ReadStatusVar(&dwStatusVarLastError));
 
         if (dwStatusVarLastError)
         {

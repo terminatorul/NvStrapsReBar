@@ -10,16 +10,16 @@
   include/pciRegs.h
   include/LocalAppConfig.h
   include/PciConfig.h
-#  include/DeviceRegistry.hh
+  include/DeviceRegistry.h
   include/LocalPciGPU.h
   include/SetupNvStraps.h
-#  include/NvStrapsConfig.hh
+  include/NvStrapsConfig.h
   include/StatusVar.h
   include/ReBar.h
   PciConfig.c
-#  DeviceRegistry.cc
+  DeviceRegistry.c
   SetupNvStraps.c
-#  NvStrapsConfig.cc
+  NvStrapsConfig.c
   StatusVar.c
   ReBar.c
 

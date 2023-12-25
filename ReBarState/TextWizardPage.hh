@@ -6,7 +6,7 @@
 #include <vector>
 
 #include "DeviceList.hh"
-#include "NvStrapsConfig.hh"
+#include "NvStrapsConfig.h"
 
 void showInfo(std::wstring const &message);
 void showError(std::wstring const &message);
