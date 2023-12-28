@@ -11,6 +11,16 @@ if(NOT REBAR_DXE_DIRECTORY)
 endif()
 
 add_executable(NvStrapsReBar
+        "${REBAR_DXE_DIRECTORY}/include/LocalAppConfig.h"
+        "${REBAR_DXE_DIRECTORY}/include/DeviceRegistry.h"
+        "${REBAR_DXE_DIRECTORY}/DeviceRegistry.c"
+        "${REBAR_DXE_DIRECTORY}/include/EfiVariable.h"
+        "${REBAR_DXE_DIRECTORY}/EfiVariable.c"
+        "${REBAR_DXE_DIRECTORY}/include/NvStrapsConfig.h"
+        "${REBAR_DXE_DIRECTORY}/NvStrapsConfig.c"
+        "${REBAR_DXE_DIRECTORY}/include/StatusVar.h"
+        "${REBAR_DXE_DIRECTORY}/StatusVar.c"
+
         "WinApiError.hh"
         "WinApiError.cc"
         "ConfigManagerError.hh"
@@ -24,13 +34,6 @@ add_executable(NvStrapsReBar
         "ConfigurationWizard.hh"
         "ConfigurationWizard.cc"
         "NvStrapsConfig.cc"
-        "${REBAR_DXE_DIRECTORY}/include/LocalAppConfig.h"
-        "${REBAR_DXE_DIRECTORY}/include/StatusVar.h"
-        "${REBAR_DXE_DIRECTORY}/include/DeviceRegistry.h"
-        "${REBAR_DXE_DIRECTORY}/DeviceRegistry.c"
-        "${REBAR_DXE_DIRECTORY}/include/NvStrapsConfig.h"
-        "${REBAR_DXE_DIRECTORY}/NvStrapsConfig.c"
-        "${REBAR_DXE_DIRECTORY}/StatusVar.c"
         "ReBarState.cc")
 target_include_directories(NvStrapsReBar PRIVATE "${REBAR_DXE_DIRECTORY}/include" "${NvStrapsReBar_SOURCE_DIR}")
 

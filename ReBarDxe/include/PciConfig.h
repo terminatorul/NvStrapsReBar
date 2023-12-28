@@ -11,6 +11,8 @@ UINTN pciLocatedDevice(EFI_HANDLE RootBridgeHandle, EFI_PCI_ROOT_BRIDGE_IO_PROTO
 uint_least16_t pciFindExtCapability(UINTN pciAddress, uint_least32_t cap);
 uint_least32_t pciRebarGetPossibleSizes(UINTN pciAddress, uint_least16_t capabilityOffset, UINT16 vid, UINT16 did, uint_least8_t barIndex);
 uint_least32_t pciRebarPollPossibleSizes(UINTN pciAddress, uint_least16_t capabilityOffset, uint_least8_t barIndex, uint_least32_t barSizeMask);
+
+EFI_STATUS pciReadDeviceSubsystem(UINTN pciAddress, uint_least16_t *subsysVenID, uint_least16_t *subsysDevID);
 bool pciRebarSetSize(UINTN pciAddress, uint_least16_t capabilityOffset, uint_least8_t barIndex, uint_least8_t barSizeBitIndex);
 
 void pciSaveAndRemapBridgeConfig(UINTN bridgePciAddress, UINT32 bridgeSaveArea[4u], EFI_PHYSICAL_ADDRESS baseAddress0, EFI_PHYSICAL_ADDRESS bridgeBaseIo, UINT8 busNo);

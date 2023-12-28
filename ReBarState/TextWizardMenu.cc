@@ -55,26 +55,26 @@ namespace execution = std::execution;
 namespace views = std::ranges::views;
 using namespace std::literals::string_view_literals;
 
-static map<wchar_t, MenuCommand> const mainMenuShortcuts
+static auto const mainMenuShortcuts = map<wchar_t, MenuCommand>
 {
     { L'E', MenuCommand::GlobalEnable },
     { L'D', MenuCommand::GlobalEnable },
  // { L'G', MenuCommand::PerGPUConfig },
     { L'C', MenuCommand::PerGPUConfigClear },
-    { L'U', MenuCommand::UEFIConfiguration },
+    { L'P', MenuCommand::UEFIConfiguration },
     { L'S', MenuCommand::SaveConfiguration },
     { L'I', MenuCommand::DiscardConfiguration },
     { L'Q', MenuCommand::Quit }
 };
 
-static map<wchar_t, MenuCommand> const gpuMenuShortcuts
+static auto const gpuMenuShortcuts = map<wchar_t, MenuCommand>
 {
     { L'P', MenuCommand::GPUSelectorByPCIID },
     { L'S', MenuCommand::GPUSelectorByPCISubsystem },
     { L'L', MenuCommand::GPUSelectorByPCILocation }
 };
 
-static map<wchar_t, MenuCommand> const barSizeMenuShortcuts
+static auto const barSizeMenuShortcuts = map<wchar_t, MenuCommand>
 {
     { L'C', MenuCommand::GPUSelectorClear },
     { L'X', MenuCommand::GPUSelectorExclude }
@@ -94,7 +94,7 @@ static constexpr wchar_t const WCHAR_T_HIGH_BIT_MASK = L'\001' << (sizeof(L'\0')
 
 static wstring showMainMenuEntry(MenuCommand menuCommand, bool isGlobalEnable, vector<DeviceInfo> const &devices)
 {
-    wchar_t chShortcut = FindMenuShortcut(mainMenuShortcuts, menuCommand);
+    auto chShortcut = FindMenuShortcut(mainMenuShortcuts, menuCommand);
 
     switch (menuCommand)
     {
@@ -133,7 +133,7 @@ static wstring showMainMenuEntry(MenuCommand menuCommand, bool isGlobalEnable, v
             return { };
 
     case MenuCommand::UEFIConfiguration:
-        wcout << L"\t("sv << chShortcut << L") Configure motherboard UEFI BAR size support\n"sv;
+        wcout << L"\t("sv << chShortcut << L") Select target PCI BAR size, for all supported PCI devices.\n"sv;
         return wstring(1u, chShortcut);
 
     case MenuCommand::SaveConfiguration:
@@ -162,12 +162,21 @@ static wstring showUEFIReBarMenuEntry(MenuCommand menuCommand)
     switch (menuCommand)
     {
     case MenuCommand::UEFIBARSizePrompt:
-        wcout << L"      0: Disabled \n"sv;
-        wcout << L"   1-31: Maximum BAR size for each PCI device set to 2^x MB \n"sv;
-        wcout << L"     32: Unlimited BAR for each PCI device size\n"sv;
-        wcout << L'\n';
-        wcout << L"     64: Enable ReBAR for selected GPUs only\n"sv;
-        wcout << L"     65: Configure internal ReBAR STRAPS bits only on the GPUs\n\n"sv;
+        wcout << L"      0: System default\n"sv;
+        wcout << L"   1-31: Set maximum BAR size to 2^x MiB for all PCI devices:\n"sv;
+        wcout << L"      1:   2 MiB\n"sv;
+        wcout << L"   ...8: 256 MiB\n"sv;
+        wcout << L"   ..10:   1 GiB\n"sv;
+        wcout << L"     11:   2 GiB\n"sv;
+        wcout << L"     12:   4 GiB\n"sv;
+        wcout << L"     13:   8 GiB\n"sv;
+        wcout << L"     14:  16 GiB\n"sv;
+        wcout << L"     15:  32 GiB\n"sv;
+        wcout << L"     16:  64 GiB\n"sv;
+        wcout << L"  ...20:   1 TiB\n"sv;
+        wcout << L"  ...31:   2 PiB\n"sv;
+        wcout << L"     32: No BAR size limit for PCI devices\n\n"sv;
+        wcout << L"     64: Configure BAR size for selected GPUs only\n\n"sv;
         wcout << L"  Enter: Leave unchanged\n"sv;
 
         return { };
@@ -178,7 +187,7 @@ static wstring showUEFIReBarMenuEntry(MenuCommand menuCommand)
 
 static wstring showBarSizeMenuEntry(MenuCommand menuCommand)
 {
-    wchar_t chShortcut = FindMenuShortcut(barSizeMenuShortcuts, menuCommand);
+    auto chShortcut = FindMenuShortcut(barSizeMenuShortcuts, menuCommand);
 
     switch (menuCommand)
     {
@@ -191,17 +200,17 @@ static wstring showBarSizeMenuEntry(MenuCommand menuCommand)
         return wstring(1u, chShortcut);
 
     case MenuCommand::GPUVRAMSize:
-        wcout << L"\t 0):  64 MB\n"sv;
-        wcout << L"\t 1): 128 MB\n"sv;
-        wcout << L"\t 2): 256 MB\n"sv;
-        wcout << L"\t 3): 512 MB\n"sv;
-        wcout << L"\t 4):   1 GB\n"sv;
-        wcout << L"\t 5):   2 GB\n"sv;
-        wcout << L"\t 6):   4 GB\n"sv;
-        wcout << L"\t 7):   8 GB\n"sv;
-        wcout << L"\t 8):  16 GB\n"sv;
-        wcout << L"\t 9):  32 GB\n"sv;
-        wcout << L"\t10):  64 GB\n"sv;
+        wcout << L"\t 0):  64 MiB\n"sv;
+        wcout << L"\t 1): 128 MiB\n"sv;
+        wcout << L"\t 2): 256 MiB\n"sv;
+        wcout << L"\t 3): 512 MiB\n"sv;
+        wcout << L"\t 4):   1 GiB\n"sv;
+        wcout << L"\t 5):   2 GiB\n"sv;
+        wcout << L"\t 6):   4 GiB\n"sv;
+        wcout << L"\t 7):   8 GiB\n"sv;
+        wcout << L"\t 8):  16 GiB\n"sv;
+        wcout << L"\t 9):  32 GiB\n"sv;
+        wcout << L"\t10):  64 GiB\n"sv;
         wcout << L"    [Enter]: Leave unchanged\n"sv;
 
         {
@@ -219,13 +228,13 @@ static wstring showBarSizeMenuEntry(MenuCommand menuCommand)
 
 static wstring showGPUConfigurationMenuEntry(MenuCommand menuCommand, unsigned short device, vector<DeviceInfo> const &devices)
 {
-    wchar_t chShortcut = FindMenuShortcut(gpuMenuShortcuts, menuCommand);
+    auto chShortcut = FindMenuShortcut(gpuMenuShortcuts, menuCommand);
 
     switch (menuCommand)
     {
     case MenuCommand::GPUSelectorByPCIID:
         wcout << L"\t("sv << chShortcut << L"): Select the GPU by PCI ID: "sv;
-        wcout << right << hex << setw(WORD_SIZE * 2u) << setfill(L'0') << devices[device].vendorID << L':' << hex << setw(WORD_SIZE * 2u) << setfill(L'0') << devices[device].deviceID << L'\n';
+        wcout << right << hex << setw(WORD_SIZE * 2u) << setfill(L'0') << devices[device].vendorID << L':' << hex << setw(WORD_SIZE * 2u) << setfill(L'0') << devices[device].deviceID << L" (default)\n";
         wcout << dec << setfill(L' ') << left;
         return wstring(1u, chShortcut);
 
@@ -262,7 +271,7 @@ static wstring showMenuEntry(MenuType menuType, MenuCommand menuCommand, bool is
     case MenuType::GPUBARSize:
         return showBarSizeMenuEntry(menuCommand);
 
-    case MenuType::MotherboradRBARSize:
+    case MenuType::PCIBARSize:
         return showUEFIReBarMenuEntry(menuCommand);
     }
 
@@ -299,7 +308,7 @@ static wstring_view getPromptLine(MenuType menuType)
     case MenuType::Main:
         return L"Choose configuration command"sv;
 
-    case MenuType::MotherboradRBARSize:
+    case MenuType::PCIBARSize:
         return L"Enter NvStrapsReBar Value"sv;
 
     case MenuType::GPUConfig:
@@ -330,8 +339,8 @@ static tuple<optional<MenuCommand>, unsigned> translateInput(MenuType menuType, 
 {
     switch (menuType)
     {
-    case MenuType::MotherboradRBARSize:
-        if (isNumeric(inputValue) && (stoul(inputValue) <= MAX_UEFI_BAR_SIZE_SELECTOR || stoul(inputValue) == NV_GPU_BAR_ONLY_SELECTOR || stoul(inputValue) == NV_GPU_BAR_STRAPS_ONLY_SELECTOR))
+    case MenuType::PCIBARSize:
+        if (isNumeric(inputValue) && (stoul(inputValue) <= TARGET_PCI_BAR_SIZE_MAX || stoul(inputValue) == TARGET_PCI_BAR_SIZE_GPU_ONLY))
             return { MenuCommand::UEFIBARSizePrompt, stoul(inputValue) };
 
         return { nullopt, 0u };
@@ -371,7 +380,7 @@ static tuple<optional<MenuCommand>, unsigned> translateInput(MenuType menuType, 
 
 static tuple<optional<MenuCommand>, unsigned> runInputPrompt(MenuType menuType, wstring const &commands, optional<MenuCommand> defaultCommand, unsigned short defaultValue, std::vector<DeviceInfo> const& devices)
 {
-    wstring_view promptLine = getPromptLine(menuType);
+    auto promptLine = getPromptLine(menuType);
 
     wcout << promptLine << L" ("sv;
 
@@ -400,7 +409,7 @@ static tuple<optional<MenuCommand>, unsigned> runInputPrompt(MenuType menuType, 
 
     wcout << L"): "sv;
 
-    wstring inputValue;
+    auto inputValue = wstring { };
     getline(wcin, inputValue);
 
     while (inputValue | all && std::isspace(*inputValue.cbegin()))
@@ -426,7 +435,7 @@ static tuple<MenuCommand, unsigned> showMenu
         std::vector<DeviceInfo> const &devices
     )
 {
-    wstring commands;
+    auto commands = wstring { };
 
     for (auto menuCommand: menu)
         commands += showMenuEntry(menuType, menuCommand, isGlobalEnable, device, devices);
@@ -450,7 +459,7 @@ static MenuType getMenuType(span<MenuCommand> menu)
         return MenuType::GPUBARSize;
 
     if (find(execution::par_unseq, menu.cbegin(), menu.cend(), MenuCommand::UEFIBARSizePrompt) != menu.cend())
-        return MenuType::MotherboradRBARSize;
+        return MenuType::PCIBARSize;
 
     if (!menu.empty() && *menu.crbegin() != MenuCommand::Quit && *menu.crbegin() != MenuCommand::DiscardQuit)
         return MenuType::GPUConfig;
@@ -463,28 +472,26 @@ static void showMenuHeader(MenuType menuType, unsigned device, vector<DeviceInfo
     switch (menuType)
     {
     case MenuType::Main:
-        std::wcerr << L"Warning: Setting GPU BAR size NOT IMPLEMENTED. GPU BAR size configuration is HARD-CODED.\n"sv;
-        std::wcerr << L"Please see README page on github, project terminatorul/NvStrapsReBar\n\n"sv;
-        std::wcerr << L"You should still set UEFI BAR size to non-zero, in order to enable resizable BAR support\n"sv;
-        std::wcerr << L"(for both GPU + motherboard), using the below menu (choose option 'U')\n\n"sv;
+        wcout << L"\nWARNING: GPU location on the PCI bus MUST be hard-coded.\n"sv;
+        wcout << L"See README page on the project repository at https://github.com/terminatorul/NvStrapsReBar\n\n"sv;
 
         wcout << L"BAR size configuration menu:\n"sv;
         break;
 
-    case MenuType::MotherboradRBARSize:
+    case MenuType::PCIBARSize:
         wcout << L"\nFirst verify Above 4G Decoding is enabled and CSM is disabled in UEFI setup, otherwise system will not POST with GPU.\n"sv;
         wcout << L"If your NvStrapsReBar value keeps getting reset then check your system time.\n"sv;
 
-        wcout << L"\nIt is recommended to first try smaller sizes above 256MB in case an old BIOS doesn't support large BARs.\n"sv;
-        wcout << L"\nEnter NvStrapsReBar Value\n"sv;
+        wcout << L"\nIt is recommended to first try smaller sizes above 256 MiB in case an old BIOS doesn't support large BARs.\n"sv;
+        wcout << L"\nSelect target BAR size for supported PCI devices:\n"sv;
         break;
 
     case MenuType::GPUConfig:
-        wcout << L"Configure " << devices[device].productName << L":\n";
+        wcout << L"Configure "sv << devices[device].productName << L":\n"sv;
         break;
 
     case MenuType::GPUBARSize:
-        wcout << L"Input GPU BAR size:\n";
+        wcout << L"Input GPU BAR size:\n"sv;
         break;
     }
 }
@@ -499,7 +506,7 @@ tuple<MenuCommand, unsigned> showMenuPrompt
         vector<DeviceInfo> const &devices
     )
 {
-    MenuType menuType = getMenuType(menu);
+    auto menuType = getMenuType(menu);
 
     showMenuHeader(menuType, device, devices);
     return showMenu(menuType, menu, defaultCommand, defaultValue, isGlobalEnable, device, devices);

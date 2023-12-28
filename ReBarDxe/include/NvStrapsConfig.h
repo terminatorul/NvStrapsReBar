@@ -4,8 +4,6 @@
 // Some test to check if compiling UEFI code
 #if defined(UEFI_SOURCE) || defined(EFIAPI)
 # include <Uefi.h>
-typedef EFI_STATUS ERROR_CODE;
-typedef UINT8 BYTE;
 #else
 # include <windef.h>
 
@@ -14,8 +12,6 @@ typedef UINT8 BYTE;
 #  include <cstdint>
 #  include <utility>
 # endif
-
-typedef DWORD ERROR_CODE;
 
 #define MAX_UINT16 UINT16_MAX
 #define MAX_UINT8  UINT8_MAX
@@ -45,43 +41,58 @@ enum
     NvStraps_GPU_MAX_COUNT = 8u
 };
 
+enum
+{
+    TARGET_GPU_VENDOR_ID = 0x10DEu
+};
+
+// Special values for desired PCI BAR size in  NVAR variable
+enum
+{
+    TARGET_PCI_BAR_SIZE_DISABLED = 0u,
+    TARGET_PCI_BAR_SIZE_MIN = 1u,
+    TARGET_PCI_BAR_SIZE_MAX = 32u,
+    TARGET_PCI_BAR_SIZE_GPU_ONLY = 64u,
+    TARGET_PCI_BAR_SIZE_GPU_STRAPS_ONLY = 65u
+};
+
 typedef struct NvStraps_GPUSelector
 {
-    UINT16 deviceID, subsysVendorID, subsysDeviceID;
-    UINT8  bus;
-    UINT8  device;
-    UINT8  function;
-    UINT8  barSizeSelector;
+    uint_least16_t deviceID, subsysVendorID, subsysDeviceID;
+    uint_least8_t  bus;
+    uint_least8_t  device;
+    uint_least8_t  function;
+    uint_least8_t  barSizeSelector;
 
 #if defined(__cplusplus)
     bool operator ==(NvStraps_GPUSelector const &other) const = default;
 
-    bool deviceMatch(UINT16 deviceID) const;
-    bool subsystemMatch(UINT16 subsysVenID, UINT16 subsysDevID) const;
-    bool busLocationMatch(UINT8 busNr, UINT8 dev, UINT8 fn) const;
+    bool deviceMatch(uint_least16_t deviceID) const;
+    bool subsystemMatch(uint_least16_t subsysVenID, uint_least16_t subsysDevID) const;
+    bool busLocationMatch(uint_least8_t busNr, uint_least8_t dev, uint_least8_t fn) const;
 #endif
 }
     NvStraps_GPUSelector;
 
 typedef struct NvStraps_GPUConfig
 {
-    UINT16 deviceID, subsysVendorID, subsysDeviceID;
-    UINT8  bus, device, function;
-    UINT32 baseAddressSelector;
+    uint_least16_t deviceID, subsysVendorID, subsysDeviceID;
+    uint_least8_t  bus, device, function;
+    uint_least32_t baseAddressSelector;
 }
     NvStraps_GPUConfig;
 
 typedef struct NvStraps_BridgeConfig
 {
-    UINT16 vendorID;
-    UINT16 deviceID;
-    UINT8  bridgeBus;
-    UINT8  bridgeDevice;
-    UINT8  bridgeFunction;
-    UINT8  bridgeSecondaryBus;
-    UINT8  bridgeSubsidiaryBus;
-    UINT16 bridgeIOBaseLimit;
-    UINT32 bridgeMemBaseLimit;
+    uint_least16_t vendorID;
+    uint_least16_t deviceID;
+    uint_least8_t  bridgeBus;
+    uint_least8_t  bridgeDevice;
+    uint_least8_t  bridgeFunction;
+    uint_least8_t  bridgeSecondaryBus;
+    uint_least8_t  bridgeSubsidiaryBus;
+    uint_least16_t bridgeIOBaseLimit;
+    uint_least32_t bridgeMemBaseLimit;
 }
     NvStraps_BridgeConfig;
 
@@ -96,54 +107,100 @@ typedef struct NvStrapsConfig
 {
 
     bool dirty;
-    UINT8 nGlobalEnable;
+    uint_least8_t nPciBarSize;
+    uint_least8_t nGlobalEnable;
 
-    UINT8 nGPUSelector;
+    uint_least8_t nGPUSelector;
     NvStraps_GPUSelector GPUs[NvStraps_GPU_MAX_COUNT];
 
-    UINT8 nGPUConfig;
+    uint_least8_t nGPUConfig;
     NvStraps_GPUConfig gpuConfig[NvStraps_GPU_MAX_COUNT];
 
-    UINT8 nBridgeConfig;
+    uint_least8_t nBridgeConfig;
     NvStraps_BridgeConfig bridge[NvStraps_GPU_MAX_COUNT + 2u];
 
 #if defined(__cplusplus)
     bool isDirty() const;
-    UINT8 isGlobalEnable() const;
-    bool setGPUSelector(UINT8 barSizeSelector, UINT16 deviceID);
-    bool setGPUSelector(UINT8 barSizeSelector, UINT16 deviceID, UINT16 subsysVenID, UINT16 subsysDevID);
-    bool setGPUSelector(UINT8 barSizeSelector, UINT16 deviceID, UINT16 subsysVenID, UINT16 subsysDevID, UINT8 bus, UINT8 dev, UINT8 fn);
+    uint_least8_t isGlobalEnable() const;
+    uint_least8_t setGlobalEnable(uint_least8_t val);
 
-    bool clearGPUSelector(UINT16 deviceID);
-    bool clearGPUSelector(UINT16 deviceID, UINT16 subsysVenID, UINT16 subsysDevID);
-    bool clearGPUSelector(UINT16 deviceID, UINT16 subsysVenID, UINT16 subsysDevID, UINT8 bus, UINT8 dev, UINT8 fn);
+    uint_least8_t targetPciBarSizeSelector() const;
+    uint_least8_t targetPciBarSizeSelector(uint_least8_t barSizeSelector);
+
+    bool setGPUSelector(uint_least8_t barSizeSelector, uint_least16_t deviceID);
+    bool setGPUSelector(uint_least8_t barSizeSelector, uint_least16_t deviceID, uint_least16_t subsysVenID, uint_least16_t subsysDevID);
+    bool setGPUSelector(uint_least8_t barSizeSelector, uint_least16_t deviceID, uint_least16_t subsysVenID, uint_least16_t subsysDevID, uint_least8_t bus, uint_least8_t dev, uint_least8_t fn);
+
+    bool clearGPUSelector(uint_least16_t deviceID);
+    bool clearGPUSelector(uint_least16_t deviceID, uint_least16_t subsysVenID, uint_least16_t subsysDevID);
+    bool clearGPUSelector(uint_least16_t deviceID, uint_least16_t subsysVenID, uint_least16_t subsysDevID, uint_least8_t bus, uint_least8_t dev, uint_least8_t fn);
 
     bool clearGPUSelectors();
-    UINT8 setGlobalEnable(UINT8 val);
 
-    NvStraps_BarSize lookupBarSize(UINT16 deviceID, UINT16 subsysVenID, UINT16 subsysDevID, UINT8 bus, UINT8 dev, UINT8 fn) const;
+    NvStraps_BarSize lookupBarSize(uint_least16_t deviceID, uint_least16_t subsysVenID, uint_least16_t subsysDevID, uint_least8_t bus, uint_least8_t dev, uint_least8_t fn) const;
 #endif
 }
     NvStrapsConfig;
 
 enum
 {
+    NV_STRAPS_HEADER_SIZE = 2u,
     GPU_SELECTOR_SIZE = WORD_SIZE * 3u + BYTE_SIZE * 3u,
     GPU_CONFIG_SIZE = 3u * WORD_SIZE + 3u * BYTE_SIZE + DWORD_SIZE,
     BRIDGE_CONFIG_SIZE = 2u * WORD_SIZE + 4u * BYTE_SIZE + WORD_SIZE + DWORD_SIZE,
-    NV_STRAPS_CONFIG_SIZE = 2u * BYTE_SIZE + GPU_SELECTOR_SIZE * NvStraps_GPU_MAX_COUNT
-                                + BYTE_SIZE + GPU_CONFIG_SIZE * NvStraps_GPU_MAX_COUNT
-                                + BYTE_SIZE + BRIDGE_CONFIG_SIZE * (NvStraps_GPU_MAX_COUNT + 2u)
+    NV_STRAPS_CONFIG_SIZE = NV_STRAPS_HEADER_SIZE
+        + BYTE_SIZE + GPU_SELECTOR_SIZE * NvStraps_GPU_MAX_COUNT
+        + BYTE_SIZE + GPU_CONFIG_SIZE * NvStraps_GPU_MAX_COUNT
+        + BYTE_SIZE + BRIDGE_CONFIG_SIZE * (NvStraps_GPU_MAX_COUNT + 2u)
 };
 
-inline UINT8 NvStrapsConfig_IsGlobalEnable(NvStrapsConfig const *config)
+#define NVSTRAPSCONFIG_BUFFERSIZE(config)       NV_STRAPS_CONFIG_SIZE
+
+#if defined(__cplusplus)
+extern "C"
+{
+#endif
+
+extern char const NvStrapsConfig_VarName[];
+
+bool NvStrapsConfig_GPUSelector_DeviceMatch(NvStraps_GPUSelector const *selector, uint_least16_t devID);
+bool NvStrapsConfig_GPUSelector_SubsystemMatch(NvStraps_GPUSelector const *selector, uint_least16_t subsysVenID, uint_least16_t subsysDevID);
+bool NvStrapsConfig_GPUSelector_BusLocationMatch(NvStraps_GPUSelector const *selector, uint_least8_t busNr, uint_least8_t dev, uint_least8_t func);
+uint_least8_t NvStrapsConfig_TargetPciBarSizeSelector(NvStrapsConfig const *config);
+uint_least8_t NvStrapsConfig_SetTargetPciBarSizeSelector(NvStrapsConfig *config, uint_least8_t barSizeSelector);
+uint_least8_t NvStrapsConfig_IsGlobalEnable(NvStrapsConfig const *config);
+uint_least8_t NvStrapsConfig_SetGlobalEnable(NvStrapsConfig *config, uint_least8_t globalEnable);
+bool NvStrapsConfig_IsDirty(NvStrapsConfig const *config);
+bool NvStrapsConfig_SetIsDirty(NvStrapsConfig *config, bool dirtyFlag);
+bool NvStrapsConfig_IsGpuConfigured(NvStrapsConfig const *config);
+bool NvStrapsConfig_IsDriverConfigured(NvStrapsConfig const *config);
+void NvStrapsConfig_Clear(NvStrapsConfig *config);
+
+NvStraps_BarSize NvStrapsConfig_LookupBarSize(NvStrapsConfig const *config, uint_least16_t deviceID, uint_least16_t subsysVenID, uint_least16_t subsysDevID, uint_least8_t bus, uint_least8_t dev, uint_least8_t fn);
+NvStrapsConfig *GetNvStrapsConfig(bool reload, ERROR_CODE *errorCode);
+void SaveNvStrapsConfig(ERROR_CODE *errorCode);
+
+inline uint_least8_t NvStrapsConfig_TargetPciBarSizeSelector(NvStrapsConfig const *config)
+{
+    return config->nPciBarSize;
+}
+
+inline uint_least8_t NvStrapsConfig_SetTargetPciBarSizeSelector(NvStrapsConfig *config, uint_least8_t barSizeSelector)
+{
+    uint_least8_t pciBarSize = config->nPciBarSize;
+    config->dirty = barSizeSelector != config->nPciBarSize;
+
+    return config->nPciBarSize = barSizeSelector, pciBarSize;
+}
+
+inline uint_least8_t NvStrapsConfig_IsGlobalEnable(NvStrapsConfig const *config)
 {
     return config->nGlobalEnable;
 }
 
-inline UINT8 NvStrapsConfig_SetGlobalEnable(NvStrapsConfig *config, UINT8 globalEnable)
+inline uint_least8_t NvStrapsConfig_SetGlobalEnable(NvStrapsConfig *config, uint_least8_t globalEnable)
 {
-    UINT8 oldGlobalEnable = config->nGlobalEnable;
+    uint_least8_t oldGlobalEnable = config->nGlobalEnable;
     config->dirty = globalEnable != config->nGlobalEnable;
 
     return config->nGlobalEnable = globalEnable, oldGlobalEnable;
@@ -160,29 +217,27 @@ inline bool NvStrapsConfig_SetIsDirty(NvStrapsConfig *config, bool dirtyFlag)
     return config->dirty = dirtyFlag, oldFlag;
 }
 
-#define NVSTRAPSCONFIG_BUFFERSIZE(config)       NV_STRAPS_CONFIG_SIZE
-
-#if defined(__cplusplus)
-extern "C"
+inline bool NvStrapsConfig_IsGpuConfigured(NvStrapsConfig const *config)
 {
-#endif
+    return config->nGlobalEnable || config->nGPUSelector;
+}
 
-NvStraps_BarSize NvStrapsConfig_LookupBarSize(NvStrapsConfig const *config, UINT16 deviceID, UINT16 subsysVenID, UINT16 subsysDevID, UINT8 bus, UINT8 dev, UINT8 fn);
+inline bool NvStrapsConfig_IsDriverConfigured(NvStrapsConfig const *config)
+{
+    return NvStrapsConfig_TargetPciBarSizeSelector(config) || NvStrapsConfig_IsGpuConfigured(config);
+}
 
-NvStrapsConfig *GetNvStrapsConfig(bool reload, ERROR_CODE *errorCode);
-void SaveNvStrapsConfig(ERROR_CODE *errorCode);
-
-inline bool NvStrapsConfig_GPUSelector_DeviceMatch(NvStraps_GPUSelector const *selector, UINT16 devID)
+inline bool NvStrapsConfig_GPUSelector_DeviceMatch(NvStraps_GPUSelector const *selector, uint_least16_t devID)
 {
     return selector->deviceID == devID;
 }
 
-inline bool NvStrapsConfig_GPUSelector_SubsystemMatch(NvStraps_GPUSelector const *selector, UINT16 subsysVenID, UINT16 subsysDevID)
+inline bool NvStrapsConfig_GPUSelector_SubsystemMatch(NvStraps_GPUSelector const *selector, uint_least16_t subsysVenID, uint_least16_t subsysDevID)
 {
     return selector->subsysVendorID == subsysVenID && selector->subsysDeviceID == subsysDevID;
 }
 
-inline bool NvStrapsConfig_GPUSelector_BusLocationMatch(NvStraps_GPUSelector const *selector, UINT8 busNr, UINT8 dev, UINT8 func)
+inline bool NvStrapsConfig_GPUSelector_BusLocationMatch(NvStraps_GPUSelector const *selector, uint_least8_t busNr, uint_least8_t dev, uint_least8_t func)
 {
     return selector->bus == busNr && selector->device == dev && selector->function == func;
 }
@@ -193,37 +248,37 @@ inline bool NvStrapsConfig_GPUSelector_BusLocationMatch(NvStraps_GPUSelector con
 NvStrapsConfig &GetNvStrapsConfig(bool reload = false);
 void SaveNvStrapsConfig();
 
-inline bool NvStrapsConfig::setGPUSelector(UINT8 barSizeSelector, UINT16 deviceID)
+inline bool NvStrapsConfig::setGPUSelector(uint_least8_t barSizeSelector, uint_least16_t deviceID)
 {
      return setGPUSelector(barSizeSelector, deviceID, MAX_UINT16, MAX_UINT16);
 }
 
-inline bool NvStrapsConfig::setGPUSelector(UINT8 barSizeSelector, UINT16 deviceID, UINT16 subsysVenID, UINT16 subsysDevID)
+inline bool NvStrapsConfig::setGPUSelector(uint_least8_t barSizeSelector, uint_least16_t deviceID, uint_least16_t subsysVenID, uint_least16_t subsysDevID)
 {
     return setGPUSelector(barSizeSelector, deviceID, subsysVenID, subsysDevID, MAX_UINT8, MAX_UINT8, MAX_UINT8);
 }
 
-inline bool NvStrapsConfig::clearGPUSelector(UINT16 deviceID)
+inline bool NvStrapsConfig::clearGPUSelector(uint_least16_t deviceID)
 {
     return clearGPUSelector(deviceID, MAX_UINT16, MAX_UINT16);
 }
 
-inline bool NvStrapsConfig::clearGPUSelector(UINT16 deviceID, UINT16 subsysVenID, UINT16 subsysDevID)
+inline bool NvStrapsConfig::clearGPUSelector(uint_least16_t deviceID, uint_least16_t subsysVenID, uint_least16_t subsysDevID)
 {
     return clearGPUSelector(deviceID, subsysVenID, subsysDevID, MAX_UINT8, MAX_UINT8, MAX_UINT8);
 }
 
-inline bool NvStraps_GPUSelector::deviceMatch(UINT16 devID) const
+inline bool NvStraps_GPUSelector::deviceMatch(uint_least16_t devID) const
 {
     return NvStrapsConfig_GPUSelector_DeviceMatch(this, devID);
 }
 
-inline bool NvStraps_GPUSelector::subsystemMatch(UINT16 subsysVenID, UINT16 subsysDevID) const
+inline bool NvStraps_GPUSelector::subsystemMatch(uint_least16_t subsysVenID, uint_least16_t subsysDevID) const
 {
     return NvStrapsConfig_GPUSelector_SubsystemMatch(this, subsysVenID, subsysDevID);
 }
 
-inline bool NvStraps_GPUSelector::busLocationMatch(UINT8 busNr, UINT8 dev, UINT8 fn) const
+inline bool NvStraps_GPUSelector::busLocationMatch(uint_least8_t busNr, uint_least8_t dev, uint_least8_t fn) const
 {
     return NvStrapsConfig_GPUSelector_BusLocationMatch(this, busNr, dev, fn);
 }
@@ -238,17 +293,27 @@ inline bool NvStrapsConfig::isDirty() const
     return NvStrapsConfig_IsDirty(this);
 }
 
-inline UINT8 NvStrapsConfig::isGlobalEnable() const
+inline uint_least8_t NvStrapsConfig::isGlobalEnable() const
 {
     return NvStrapsConfig_IsGlobalEnable(this);
 }
 
-inline UINT8 NvStrapsConfig::setGlobalEnable(UINT8 val)
+inline uint_least8_t NvStrapsConfig::setGlobalEnable(uint_least8_t val)
 {
     return NvStrapsConfig_SetGlobalEnable(this, val);
 }
 
-inline NvStraps_BarSize NvStrapsConfig::lookupBarSize(UINT16 deviceID, UINT16 subsysVenID, UINT16 subsysDevID, UINT8 bus, UINT8 dev, UINT8 fn) const
+inline uint_least8_t NvStrapsConfig::targetPciBarSizeSelector() const
+{
+    return NvStrapsConfig_TargetPciBarSizeSelector(this);
+}
+
+inline uint_least8_t NvStrapsConfig::targetPciBarSizeSelector(uint_least8_t barSizeSelector)
+{
+    return NvStrapsConfig_SetTargetPciBarSizeSelector(this, barSizeSelector);
+}
+
+inline NvStraps_BarSize NvStrapsConfig::lookupBarSize(uint_least16_t deviceID, uint_least16_t subsysVenID, uint_least16_t subsysDevID, uint_least8_t bus, uint_least8_t dev, uint_least8_t fn) const
 {
     return NvStrapsConfig_LookupBarSize(this, deviceID, subsysVenID, subsysDevID, bus, dev, fn);
 }

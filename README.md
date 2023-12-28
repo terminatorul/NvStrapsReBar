@@ -97,7 +97,7 @@ It maybe easier and more informative to post GPU-Z screenshots with the main GPU
   git submodule update --init
   ```
 * Build edk2. Open x86 Native Tools Command Prompt from the start menu (like in the image)
-  
+
   ![image](https://github.com/terminatorul/NvStrapsReBar/assets/378924/3e10ca0a-5544-45d3-b2f9-f81a7f7e2510)
 
   and type the following commands in the resulting console window:
@@ -142,6 +142,20 @@ You can now build the UEFI DXE driver `NvStrapsReBar.ffs`, and the Windows execu
 The resulting `NvStrapsReBar.ffs` file needs to be included in the motherboard UEFI image (downloaded from the montherboard manufacturer), and the resulting image should be flashed onto the motherboard as if it were a new UEFI version for that board.
 See the original project [ReBarUEFI](https://github.com/xCuri0/ReBarUEFI/) for the instructions to update motherboard UEFI. Replace "ReBarUEFI.ffs" with "NvStrapsReBar.ffs" where appropriate.
 
-After flashing the motherboard with the new UEFI image, you need to enable "Above 4G decoding" and disable CSM in UEFI setup, and then run `NvStrapsReBar.exe` as Administrator, and input a non-zero value when prompted. For newer motherboards that support ReBAR already you should probably try value 65 first, then 64 if that doesn't work. For older boards without ReBAR support from the manufacturer input value 64 first. Depending on the motherboard UEFI, for some boards you may need to use lower values, to limit BAR size to 4 GB for example.
-
 <p>So you will still have to check the README page from the original project: <ul><li><a href="https://github.com/xCuri0/ReBarUEFI">https://github.com/xCuri0/ReBarUEFI</a></li></ul> for all the details and instructions on working with the UEFI image, and patching it if necessary (for older motherboards and chipsets). </p>
+
+## Enable ReBAR and choose BAR size
+After flashing the motherboard with the new UEFI image, you need to enable "Above 4G decoding" and disable CSM in UEFI setup, and then run `NvStrapsReBar.exe` as Administrator.
+
+`NvStrapsReBar.exe` prompts you with a small text-based menu. You can configure 2 value for the BAR size with this tool:
+* GPU-side BAR size
+* PCI BAR size
+
+Both sizes must be right for Resizable BAR to work, but maybe some newer boards can already configure PCI BAR size as expected, so maybe there is a small chance you only need to set the GPU-side value for the BAR size. But you should try and experiment with both of them, as needed.
+
+Most people should choose the first menu option and press `E` to Enable auto-settings BAR size for Turing GPUs. Depending on your board, you may need to also input `P` at the menu prompt, to choose Target PCI BAR size, and select value 64 (for the option to configure PCI BAR for selected GPUs only). Befor quitting the menu, input `S` to save the changes you made to the EFI variable store, for the UEFI DXE driver to read them.
+
+If you choose a GPU BAR size of 8 GiB for example, and a Target PCI BAR size of 4 GiB, you will get a 4 GiB BAR.
+
+For older boards without ReBAR support from the manufacturer, you can select other values for Target PCI BAR size, to also configure other GPUs for example. Or to limit the BAR size to smaller values even if the GPU supports higher values. Depending on the motherboard UEFI, for some boards you may need to use lower values, to limit BAR size to 4 GB or 2GB for example.
+

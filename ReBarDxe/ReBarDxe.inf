@@ -13,12 +13,14 @@
   include/DeviceRegistry.h
   include/LocalPciGPU.h
   include/SetupNvStraps.h
+  include/EfiVariable.h
   include/NvStrapsConfig.h
   include/StatusVar.h
   include/ReBar.h
   PciConfig.c
   DeviceRegistry.c
   SetupNvStraps.c
+  EfiVariable.c
   NvStrapsConfig.c
   StatusVar.c
   ReBar.c

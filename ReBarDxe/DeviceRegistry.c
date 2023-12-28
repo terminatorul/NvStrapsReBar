@@ -11,6 +11,7 @@
 #include <stdbool.h>
 #include <stdint.h>
 
+#include "LocalAppConfig.h"
 #include "DeviceRegistry.h"
 
 typedef struct IDRange

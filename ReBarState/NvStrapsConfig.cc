@@ -24,6 +24,7 @@ using std::find_if;
 using std::copy;
 using std::system_error;
 
+namespace views = std::views;
 namespace execution = std::execution;
 using namespace std::literals::string_literals;
 
@@ -102,7 +103,7 @@ NvStrapsConfig &GetNvStrapsConfig(bool reload)
     auto strapsConfig = GetNvStrapsConfig(reload, &dwLastError);
 
     return dwLastError == ERROR_SUCCESS ? *strapsConfig :
-        throw system_error { static_cast<int>(dwLastError), winapi_error_category(), "Error loading configuration from EFI variable"s };
+        throw system_error { static_cast<int>(dwLastError), winapi_error_category(), "Error loading configuration from "s + NvStrapsConfig_VarName + " EFI variable"s };
 }
 
 void SaveNvStrapsConfig()
@@ -112,5 +113,5 @@ void SaveNvStrapsConfig()
     SaveNvStrapsConfig(&dwLastError);
 
     if (dwLastError != ERROR_SUCCESS)
-        throw system_error { static_cast<int>(dwLastError), winapi_error_category(), "Error saving configuration to EFI variable"s };
+        throw system_error { static_cast<int>(dwLastError), winapi_error_category(), "Error saving configuration to "s + NvStrapsConfig_VarName + " EFI variable"s };
 }

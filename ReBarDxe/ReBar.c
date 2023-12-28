@@ -23,32 +23,30 @@ SPDX-License-Identifier: MIT
 #include "LocalAppConfig.h"
 #include "StatusVar.h"
 #include "PciConfig.h"
+#include "NvStrapsConfig.h"
 #include "SetupNvStraps.h"
 
 #include "ReBar.h"
 
 // if system time is before this year then CMOS reset will be detected and rebar will be disabled.
 static unsigned const BUILD_YEAR = 2023u;
-CHAR16 reBarStateVarName[] = u"NvStrapsReBar";
-
-// 481893f5-2436-4fd5-9d5a-69b121c3f0ba
-static GUID reBarStateGuid = { 0x481893f5, 0x2436, 0x4fd5, { 0x9d, 0x5a, 0x69, 0xb1, 0x21, 0xc3, 0xf0, 0xba } };
 
 // for quirk
-static UINT16 const PCI_VENDOR_ID_ATI = 0x1002u;
+static uint_least16_t const PCI_VENDOR_ID_ATI = 0x1002u;
 
 // 0: disabled
 // >0: maximum BAR size (2^x) set to value. 32 for unlimited, 64 for selected GPU only
-static UINT8 reBarState = 0;
+static uint_least8_t nPciBarSizeSelector = TARGET_PCI_BAR_SIZE_DISABLED;
 
 static EFI_PCI_HOST_BRIDGE_RESOURCE_ALLOCATION_PROTOCOL *pciResAlloc;
 
 static EFI_PCI_HOST_BRIDGE_RESOURCE_ALLOCATION_PROTOCOL_PREPROCESS_CONTROLLER o_PreprocessController;
 
 EFI_HANDLE reBarImageHandle = NULL;
+NvStrapsConfig *config = NULL;
 
 // find last set bit and return the index of it
-uint_least8_t highestBitIndex(uint_least32_t val)
+static inline uint_least8_t highestBitIndex(uint_least32_t val)
 {
     uint_least8_t bitIndex = (uint_least8_t)(sizeof val * BYTE_BITSIZE - 1u);
     uint_least32_t checkBit = (uint_least32_t)1u  << bitIndex;
@@ -64,59 +62,63 @@ static inline uint_least8_t min(uint_least8_t val1, uint_least8_t val2)
     return val1 < val2 ? val1 : val2;
 }
 
-static uint_least32_t getReBarSizeMask(UINTN pciAddress, uint_least16_t capabilityOffset, UINT16 vid, UINT16 did, uint_least8_t barIndex)
+uint_least32_t getReBarSizeMask(UINTN pciAddress, uint_least16_t capabilityOffset, uint_least16_t vid, uint_least16_t did, uint_least16_t subsysVenID, uint_least16_t subsysDevID, uint_least8_t barIndex)
 {
     uint_least32_t barSizeMask = pciRebarGetPossibleSizes(pciAddress, capabilityOffset, vid, did, barIndex);
 
     /* Sapphire RX 5600 XT Pulse has an invalid cap dword for BAR 0 */
     if (vid == PCI_VENDOR_ID_ATI && did == 0x731fu && barIndex == PCI_BAR_IDX0 && barSizeMask == 0x7000u)
         barSizeMask = 0x3f000u;
-    else
-        if (NvStraps_CheckBARSizeListAdjust(pciAddress, vid, did, barIndex))
-            barSizeMask = NvStraps_AdjustBARSizeList(pciAddress, vid, did, barIndex, barSizeMask);
+//  else
+//      if (NvStraps_CheckBARSizeListAdjust(pciAddress, vid, did, subsysVenID, subsysDevID, barIndex))
+//          barSizeMask = NvStraps_AdjustBARSizeList(pciAddress, vid, did, subsysVenID, subsysDevID, barIndex, barSizeMask);
 
     return barSizeMask;
 }
 
-void reBarSetupDevice(EFI_HANDLE handle, EFI_PCI_ROOT_BRIDGE_IO_PROTOCOL_PCI_ADDRESS addrInfo)
+static void reBarSetupDevice(EFI_HANDLE handle, EFI_PCI_ROOT_BRIDGE_IO_PROTOCOL_PCI_ADDRESS addrInfo)
 {
-    UINT16 vid, did;
+    uint_least16_t vid, did;
     UINTN pciAddress = pciLocatedDevice(handle, addrInfo, &vid, &did);
 
-    if (vid == MAX_UINT16)
+    if (vid == WORD_BITMASK)
         return;
 
     DEBUG((DEBUG_INFO, "ReBarDXE: Device vid:%x did:%x\n", vid, did));
 
-    NvStraps_EnumDevice(vid, did, &addrInfo);
+    NvStraps_EnumDevice(pciAddress, vid, did);
 
-    if (NvStraps_CheckDevice(vid, did, &addrInfo))
-    {
-        SetStatusVar(StatusVar_GpuFound);
-        NvStraps_Setup(handle, vid, did, &addrInfo, reBarState);
-    }
+    uint_least16_t subsysVenID = WORD_BITMASK, subsysDevID = WORD_BITMASK;
+    bool isSelectedGpu = NvStraps_CheckDevice(pciAddress, vid, did, &subsysVenID, &subsysDevID);
 
-    if (1u <= reBarState && reBarState <= 32u)
+    if (isSelectedGpu)
+        NvStraps_Setup(pciAddress, vid, did, subsysVenID, subsysDevID, nPciBarSizeSelector);
+
+    if (TARGET_PCI_BAR_SIZE_MIN <= nPciBarSizeSelector && nPciBarSizeSelector <= TARGET_PCI_BAR_SIZE_MAX)
     {
-        uint_least16_t capOffset = pciFindExtCapability(pciAddress, PCI_EXPRESS_EXTENDED_CAPABILITY_RESIZABLE_BAR_ID);
+        uint_least16_t const capOffset = pciFindExtCapability(pciAddress, PCI_EXPRESS_EXTENDED_CAPABILITY_RESIZABLE_BAR_ID);
 
         if (capOffset)
             for (uint_least8_t barIndex = 0u; barIndex < PCI_MAX_BAR; barIndex++)
             {
-                uint_least32_t nBarSizeMask = getReBarSizeMask(pciAddress, capOffset, vid, did, barIndex);
+                uint_least32_t nBarSizeMask = getReBarSizeMask(pciAddress, capOffset, vid, did, subsysVenID, subsysDevID, barIndex);
 
                 if (nBarSizeMask)
-                    for (uint_least8_t barSizeBitIndex = min(highestBitIndex(nBarSizeMask), reBarState); barSizeBitIndex > 0u; barSizeBitIndex--)
+                    for (uint_least8_t barSizeBitIndex = min(highestBitIndex(nBarSizeMask), nPciBarSizeSelector); barSizeBitIndex > 0u; barSizeBitIndex--)
                         if (nBarSizeMask & 1u << barSizeBitIndex)
                         {
-                            pciRebarSetSize(pciAddress, capOffset, barIndex, barSizeBitIndex);
+                            bool resized = pciRebarSetSize(pciAddress, capOffset, barIndex, barSizeBitIndex);
+
+                            if (isSelectedGpu && resized)
+                                SetStatusVar(StatusVar_GpuReBarConfigured);
+
                             break;
                         }
             }
     }
 }
 
-EFI_STATUS EFIAPI PreprocessControllerOverride
+static EFI_STATUS EFIAPI PreprocessControllerOverride
     (
         IN  EFI_PCI_HOST_BRIDGE_RESOURCE_ALLOCATION_PROTOCOL  *This,
         IN  EFI_HANDLE                                        RootBridgeHandle,
@@ -136,7 +138,7 @@ EFI_STATUS EFIAPI PreprocessControllerOverride
     return status;
 }
 
-void pciHostBridgeResourceAllocationProtocolHook()
+static void pciHostBridgeResourceAllocationProtocolHook()
 {
     EFI_STATUS status;
     UINTN handleCount;
@@ -151,7 +153,7 @@ void pciHostBridgeResourceAllocationProtocolHook()
 
     if (EFI_ERROR(status))
     {
-        SetStatusVar(StatusVar_EFIError);
+        SetEFIError(EFIError_LocateBridgeProtocol, status);
         goto free;
     }
 
@@ -165,7 +167,7 @@ void pciHostBridgeResourceAllocationProtocolHook()
 
     if (EFI_ERROR(status))
     {
-        SetStatusVar(StatusVar_EFIError);
+        SetEFIError(EFIError_LoadBridgeProtocol, status);
         goto free;
     }
 
@@ -180,47 +182,47 @@ free:
         FreePool(handleBuffer), handleBuffer = NULL;
 }
 
+static bool IsCMOSClear()
+{
+    // Detect CMOS reset by checking if year before BUILD_YEAR
+    EFI_STATUS status;
+    EFI_TIME time = { .Year = 0u };
+
+    if (EFI_ERROR((status = gRT->GetTime(&time, NULL))))
+        SetEFIError(EFIError_CMOSTime, status);
+
+    return time.Year < BUILD_YEAR;
+}
+
 EFI_STATUS EFIAPI rebarInit(IN EFI_HANDLE imageHandle, IN EFI_SYSTEM_TABLE *systemTable)
 {
-    UINTN bufferSize = 1u;
-    EFI_STATUS status;
-    UINT32 attributes;
-    EFI_TIME time;
-
     DEBUG((DEBUG_INFO, "ReBarDXE: Loaded\n"));
 
     reBarImageHandle = imageHandle;
-    status = gRT->GetVariable(reBarStateVarName, &reBarStateGuid, &attributes, &bufferSize, &reBarState);
+    config = GetNvStrapsConfig(false, NULL);    // attempts to overflow EFI variable data should result in EFI_BUFFER_TOO_SMALL
+    nPciBarSizeSelector = NvStrapsConfig_TargetPciBarSizeSelector(config);
 
-    // any attempts to overflow reBarState should result in EFI_BUFFER_TOO_SMALL
-    if (status != EFI_SUCCESS)
-    {
-        SetStatusVar(status == EFI_NOT_FOUND ? StatusVar_Unconfigured : StatusVar_EFIError);
-        reBarState = 0u;
-    }
+    if (nPciBarSizeSelector == TARGET_PCI_BAR_SIZE_DISABLED && NvStrapsConfig_IsGpuConfigured(config))
+        nPciBarSizeSelector = TARGET_PCI_BAR_SIZE_GPU_STRAPS_ONLY;
+    else
+        if (NvStrapsConfig_IsDriverConfigured(config) && !NvStrapsConfig_IsGpuConfigured(config))
+            SetStatusVar(StatusVar_GPU_Unconfigured);
 
-    if (reBarState)
+    if (nPciBarSizeSelector != TARGET_PCI_BAR_SIZE_DISABLED)
     {
         DEBUG((DEBUG_INFO, "ReBarDXE: Enabled, maximum BAR size 2^%u MB\n", reBarState));
 
-        // Detect CMOS reset by checking if year before BUILD_YEAR
-        status = gRT->GetTime (&time, NULL);
-
-        if (time.Year < BUILD_YEAR)
+        if (IsCMOSClear())
         {
-            reBarState = 0u;
-            bufferSize = 1u;
-            attributes = EFI_VARIABLE_NON_VOLATILE | EFI_VARIABLE_BOOTSERVICE_ACCESS | EFI_VARIABLE_RUNTIME_ACCESS;
-
-            status = gRT->SetVariable(reBarStateVarName, &reBarStateGuid, attributes, bufferSize, &reBarState);
-
+            NvStrapsConfig_Clear(config);
+            SaveNvStrapsConfig(NULL);
             SetStatusVar(StatusVar_Cleared);
+
             return EFI_SUCCESS;
         }
 
         SetStatusVar(StatusVar_Configured);
-        // For overriding PciHostBridgeResourceAllocationProtocol
-        pciHostBridgeResourceAllocationProtocolHook();
+        pciHostBridgeResourceAllocationProtocolHook();          // For overriding PciHostBridgeResourceAllocationProtocol
     }
     else
         SetStatusVar(StatusVar_Unconfigured);

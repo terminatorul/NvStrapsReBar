@@ -3,9 +3,9 @@
 
 #include <Uefi.h>
 
-extern EFI_HANDLE reBarImageHandle;
+#include "NvStrapsConfig.h"
 
-EFI_STATUS pciReadConfigDword(UINTN pciAddress, INTN pos, UINT32 *buf);
-EFI_STATUS pciWriteConfigDword(UINTN pciAddress, INTN pos, UINT32 *buf);
+extern EFI_HANDLE reBarImageHandle;
+extern NvStrapsConfig *config;
 
 #endif          // !defined(REBAR_UEFI_REBAR_H)

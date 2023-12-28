@@ -33,6 +33,7 @@
 
 #include "WinAPIError.hh"
 #include "ConfigManagerError.hh"
+#include "NvStrapsConfig.h"
 #include "DeviceList.hh"
 
 using std::max;
@@ -71,14 +72,13 @@ namespace ranges = std::ranges;
 namespace views = std::ranges::views;
 namespace regexp_constants = std::regex_constants;
 using namespace std::literals::string_literals;
+using namespace std::literals::string_view_literals;
 
 template <typename ...ArgsT>
     static inline auto regexp_match(ArgsT && ...args) ->decltype(std::regex_match(forward<ArgsT>(args)...))
 {
     return std::regex_match(forward<ArgsT>(args)...);
 }
-
-static constexpr uint_least16_t const TARGET_GPU_VENDOR_ID_FILTER_VALUE = 0x10DEu;
 
 #if defined(WINDOWS) || defined(_WINDOWS) || defined(_WIN64) || defined(_WIN32)
 
@@ -133,8 +133,8 @@ static bool fillDedicatedMemorySize(vector<DeviceInfo> &deviceSet)
 
 wstring formatMemorySize(uint_least64_t size)
 {
-    wchar_t const * const suffixes[] = { L"Bytes", L"KB", L"MB", L"GB", L"TB", L"PB" };
-    wchar_t const *unit = L"EB"; // UINT64 can hold values up to 2 EBytes - 1
+    wstring_view const suffixes[] = { L"Bytes"sv, L"KiB"sv, L"MiB"sv, L"GiB"sv, L"TiB"sv, L"PiB"sv };
+    wstring_view unit = L"EiB"sv; // UINT64 can hold values up to 2 EBytes - 1
 
     for (auto suffix: suffixes)
         if (size >= 1024u)
@@ -145,7 +145,7 @@ wstring formatMemorySize(uint_least64_t size)
             break;
         }
 
-    return to_wstring(size) + L' ' + unit;
+    return to_wstring(size) + L' ' + wstring { unit };
 }
 
 static bool nextResourceDescriptor(RES_DES &descriptor, RESOURCEID forResource)
@@ -273,7 +273,7 @@ static void enumPciDisplayAdapters(vector<DeviceInfo> &deviceSet)
             deviceInfo.vendorID = static_cast<uint_least16_t>(wcstoul(matches[1u].str().c_str(), nullptr, 16));
 
 #if defined(NDEBUG)
-            if (deviceInfo.vendorID != TARGET_GPU_VENDOR_ID_FILTER_VALUE)
+            if (deviceInfo.vendorID != TARGET_GPU_VENDOR_ID)
                 continue;
 #endif
             deviceInfo.deviceID = static_cast<uint_least16_t>(wcstoul(matches[2u].str().c_str(), nullptr, 16));
@@ -321,10 +321,9 @@ static void enumPciDisplayAdapters(vector<DeviceInfo> &deviceSet)
 
 static vector<DeviceInfo> emptyDeviceSet;
 
-vector<DeviceInfo> &getDeviceList()
+vector<DeviceInfo> const &getDeviceList()
 try
 {
-        UINT16 var = 8u;
     static vector<DeviceInfo> deviceSet;
 
     if (deviceSet.empty())

@@ -6,7 +6,6 @@
 # include <Uefi.h>
 #else
 # include <windef.h>
-# define ARRAY_SIZE(Container) (sizeof(Container) / sizeof((Container)[0u]))
 #endif
 
 #include <stdbool.h>

@@ -36,7 +36,7 @@ enum class MenuType
     Main,
     GPUConfig,
     GPUBARSize,
-    MotherboradRBARSize
+    PCIBARSize
 };
 
 std::tuple<MenuCommand, unsigned> showMenuPrompt

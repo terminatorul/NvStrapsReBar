@@ -3,8 +3,12 @@
 
 #if defined(WINDOWS) || defined(_WINDOWS) || defined(_WIN64) || defined(_WIN32)
 
-#include <string>
+#include <windef.h>
+#include <errhandlingapi.h>
+
+#include <exception>
 #include <system_error>
+#include <string>
 
 class WinAPIErrorCategory: public std::error_category
 {
@@ -30,5 +34,35 @@ inline std::error_category const &winapi_error_category()
     return errorCategory;
 }
 
-#endif          // defined(WINDOWS) || defined(_WINDOWS) || defined(_WIN64) || defined(_WIN32)
+inline void check_last_error(DWORD dwLastError = ::GetLastError())
+{
+    if (dwLastError && !std::uncaught_exceptions())
+        throw std::system_error(static_cast<int>(dwLastError), winapi_error_category());
+}
+
+inline void check_last_error(DWORD dwLastError, char const *msg)
+{
+    if (dwLastError && !std::uncaught_exceptions())
+        throw std::system_error(static_cast<int>(dwLastError), winapi_error_category(), msg);
+}
+
+inline void check_last_error(DWORD dwLastError, std::string const &msg)
+{
+    if (dwLastError && !std::uncaught_exceptions())
+        throw std::system_error(static_cast<int>(dwLastError), winapi_error_category(), msg);
+}
+
+inline void check_last_error(char const *msg, DWORD dwLastError = ::GetLastError())
+{
+    if (dwLastError && !std::uncaught_exceptions())
+        throw std::system_error(static_cast<int>(dwLastError), winapi_error_category(), msg);
+}
+
+inline void check_last_error(std::string const &msg, DWORD dwLastError = ::GetLastError())
+{
+    if (dwLastError && !std::uncaught_exceptions())
+        throw std::system_error(static_cast<int>(dwLastError), winapi_error_category(), msg);
+}
+
+#endif          // defined(WINDOWS_SOURCE)
 #endif          // !defined(NV_STRAPS_REBAR_STATE_WINAPI_ERROR_HH)

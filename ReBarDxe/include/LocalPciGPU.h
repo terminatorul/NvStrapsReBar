@@ -5,18 +5,6 @@
 
 #include <stdint.h>
 
-enum BARSizeSelect
-{
-    _256M = 0u,
-    _512M = 1u,
-      _1G = 2u,
-      _2G = 3u,
-      _4G = 4u,
-      _8G = 5u,
-     _16G = 6u,
-     _32G = 7u
-};
-
 // Update these values to match the output from CPU-Z .txt report
 // for your GPU and for the associated PCI-to-PCI bridge
 
@@ -28,9 +16,7 @@ enum BARSizeSelect
 #define TARGET_GPU_PCI_FUNCTION         0x00u
 
 // PCIe config register offset 0x10
-#define TARGET_GPU_BAR0_ADDRESS         UINT32_C(0x8200'0000)               // Should fall within memory range mapped by the bridge
-
-#define TARGET_GPU_BAR1_SIZE_SELECTOR   _16G                                // Desired size for GPU BAR1, should cover the VRAM size
+#define TARGET_GPU_BAR0_ADDRESS         UINT32_C(0x9200'0000)               // Should fall within memory range mapped by the bridge
 
 // Secondary bus of the bridge must match the GPU bus
 // Check the output form CPU-Z .txt report
@@ -46,7 +32,7 @@ enum BARSizeSelect
 // from CPU-Z .txt report of the bridge and GPU
 
 // PCIe config register offset 0x20
-#define TARGET_BRIDGE_MEM_BASE_LIMIT  UINT32_C(0x8300'8200)                 // Should cover the GPU BAR0
+#define TARGET_BRIDGE_MEM_BASE_LIMIT  UINT32_C(0x9300'9200)                 // Should cover the GPU BAR0
 
 // PCIe config register offset 0x1C
 #define TARGET_BRIDGE_IO_BASE_LIMIT   0x8181u

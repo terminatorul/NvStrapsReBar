@@ -13,6 +13,7 @@
 #include <string>
 #include <system_error>
 
+#include "LocalAppConfig.h"
 #include "StatusVar.h"
 #include "WinApiError.hh"
 #include "NvStrapsConfig.h"
@@ -58,7 +59,7 @@ MenuCommand
 
 static vector<MenuCommand> buildConfigurationMenu(NvStrapsConfig &nvStrapsConfig, bool isDirty)
 {
-    vector<MenuCommand> configMenu { MenuCommand::GlobalEnable, MenuCommand::PerGPUConfig, MenuCommand::PerGPUConfigClear, MenuCommand::UEFIConfiguration };
+    auto configMenu = vector<MenuCommand> { MenuCommand::GlobalEnable, MenuCommand::PerGPUConfig, MenuCommand::PerGPUConfigClear, MenuCommand::UEFIConfiguration };
 
     if (isDirty)
     {
@@ -74,14 +75,14 @@ static vector<MenuCommand> buildConfigurationMenu(NvStrapsConfig &nvStrapsConfig
     return configMenu;
 }
 
-static span<MenuCommand> selectCurrentMenu(MenuType menuType, NvStrapsConfig &nvStrapsConfig, bool isDirty)
+static span<MenuCommand> selectCurrentMenu(MenuType menuType, NvStrapsConfig &nvStrapsConfig)
 {
-    static vector<MenuCommand> mainMenu;
+    static auto mainMenu = vector<MenuCommand> { };
 
     switch (menuType)
     {
     case MenuType::Main:
-        mainMenu = buildConfigurationMenu(nvStrapsConfig, nvStrapsConfig.isDirty() || isDirty);
+        mainMenu = buildConfigurationMenu(nvStrapsConfig, nvStrapsConfig.isDirty());
         return mainMenu;
 
     case MenuType::GPUConfig:
@@ -90,23 +91,23 @@ static span<MenuCommand> selectCurrentMenu(MenuType menuType, NvStrapsConfig &nv
     case MenuType::GPUBARSize:
         return GPUBarSizePrompt;
 
-    case MenuType::MotherboradRBARSize:
+    case MenuType::PCIBARSize:
         return ReBarUEFIMenu;
     }
 
     return mainMenu;
 }
 
-tuple<MenuCommand, unsigned> getDefaultCommand(MenuType menuType, bool isDirty, NvStrapsConfig const &nvStrapsConfig, vector<DeviceInfo> const &deviceList)
+static tuple<MenuCommand, unsigned> getDefaultCommand(MenuType menuType, NvStrapsConfig const &nvStrapsConfig, vector<DeviceInfo> const &deviceList)
 {
     switch (menuType)
     {
     case MenuType::Main:
-        return { nvStrapsConfig.isDirty() || isDirty ? MenuCommand::DiscardQuit : MenuCommand::Quit, 0u };
+        return { nvStrapsConfig.isDirty() ? MenuCommand::DiscardQuit : MenuCommand::Quit, 0u };
 
     case MenuType::GPUConfig:
     case MenuType::GPUBARSize:
-    case MenuType::MotherboradRBARSize:
+    case MenuType::PCIBARSize:
         return { MenuCommand::DefaultChoice, 0u };
     }
 
@@ -115,7 +116,7 @@ tuple<MenuCommand, unsigned> getDefaultCommand(MenuType menuType, bool isDirty, 
 
 static bool setGPUBarSize(NvStrapsConfig &nvStrapsConfig, UINT8 barSizeSelector, unsigned selectedDevice, MenuCommand deviceSelector, vector<DeviceInfo> const &deviceList)
 {
-    bool configured = false;
+    auto configured = false;
     auto const &device = deviceList[selectedDevice];
 
     switch (deviceSelector)
@@ -141,7 +142,7 @@ static bool setGPUBarSize(NvStrapsConfig &nvStrapsConfig, UINT8 barSizeSelector,
 
 static bool clearGPUBarSize(NvStrapsConfig &nvStrapsConfig, unsigned selectedDevice, MenuCommand deviceSelector, vector<DeviceInfo> const &deviceList)
 {
-    bool configured = false;
+    auto configured = false;
     auto const &device = deviceList[selectedDevice];
 
     switch (deviceSelector)
@@ -165,30 +166,11 @@ static bool clearGPUBarSize(NvStrapsConfig &nvStrapsConfig, unsigned selectedDev
     return configured;
 }
 
-static void saveUEFIBarSize(uint_least8_t nReBarState)
-{
-    if (nReBarState < 20u)
-        if (nReBarState == 0)
-            showInfo(L"Writing value of 0 / Disabled to NvStrapsReBar\n"s);
-        else
-            showInfo(L"Writing value of "s + to_wstring(+nReBarState) + L" / "s + to_wstring(pow(2, nReBarState)) + L" MB to NvStrapsReBar\n\n"s);
-    else
-        showInfo(L"Writing value to NvStrapsReBar\n\n"s);
-
-    if (setReBarState(nReBarState))
-    {
-        showInfo(L"Successfully wrote NvStrapsReBar UEFI variable\n"s);
-        showInfo(L"\nReboot for changes to take effect\n"s);
-    }
-    else
-        showError(L"Failed to write NvStrapsReBar UEFI variable\n");
-}
-
 void runConfigurationWizard()
 {
-    MenuType menuType = MenuType::Main;
-    uint_least32_t dwStatusVarLastError = 0u;
-    uint_least64_t driverStatus = ReadStatusVar(&dwStatusVarLastError);
+    auto menuType = MenuType::Main;
+    auto dwStatusVarLastError = ERROR_CODE { ERROR_CODE_SUCCESS };
+    auto driverStatus = ReadStatusVar(&dwStatusVarLastError);
 
     if (dwStatusVarLastError)
     {
@@ -196,28 +178,27 @@ void runConfigurationWizard()
         showError(system_error(static_cast<int>(dwStatusVarLastError), winapi_error_category()).code().message());
     }
 
-    NvStrapsConfig &nvStrapsConfig = GetNvStrapsConfig();
-    optional<uint_least8_t> reBarState = getReBarState(), nReBarState;
-    vector<DeviceInfo> deviceList = getDeviceList();
-    unsigned selectedDevice = 0u;
-    MenuCommand deviceSelector = MenuCommand::GPUSelectorByPCIID;
+    auto &&nvStrapsConfig = GetNvStrapsConfig();
+    auto &deviceList = getDeviceList();
+    auto selectedDevice = 0u;
+    auto deviceSelector = MenuCommand::GPUSelectorByPCIID;
 
-    showConfiguration(deviceList, nvStrapsConfig, reBarState, driverStatus);
+    showConfiguration(deviceList, nvStrapsConfig, driverStatus);
 
     bool runMenuLoop = true;
 
     auto showConfig = [&]()
     {
-        showConfiguration(deviceList, nvStrapsConfig, nReBarState ? nReBarState : reBarState, driverStatus);
+        showConfiguration(deviceList, nvStrapsConfig, driverStatus);
     };
 
     while (runMenuLoop)
     {
-        auto [defaultCommand, defaultValue] = getDefaultCommand(menuType, nReBarState && reBarState != nReBarState, nvStrapsConfig, deviceList);
+        auto [defaultCommand, defaultValue] = getDefaultCommand(menuType, nvStrapsConfig, deviceList);
 
         auto [menuCommand, value] = showMenuPrompt
             (
-                selectCurrentMenu(menuType, nvStrapsConfig, nReBarState && reBarState != nReBarState),
+                selectCurrentMenu(menuType, nvStrapsConfig),
                 defaultCommand,
                 defaultValue,
                 nvStrapsConfig.isGlobalEnable(),
@@ -279,38 +260,35 @@ void runConfigurationWizard()
             break;
 
         case MenuCommand::DefaultChoice:
-            if (menuType == MenuType::MotherboradRBARSize)
-                showInfo(L"No BAR size changes to apply for motherboard UEFI\n");
+            if (menuType == MenuType::PCIBARSize)
+                showInfo(L"No BAR size changes to apply.\n");
 
             menuType = MenuType::Main;
+            showConfig();
             break;
 
         case MenuCommand::UEFIConfiguration:
-            menuType = MenuType::MotherboradRBARSize;
+            menuType = MenuType::PCIBARSize;
             break;
 
         case MenuCommand::UEFIBARSizePrompt:
-            nReBarState = value;
+            nvStrapsConfig.targetPciBarSizeSelector(value);
             menuType = MenuType::Main;
             showConfig();
             break;
 
         case MenuCommand::DiscardConfiguration:
-            nReBarState.reset();
             if (nvStrapsConfig.isDirty())
                 GetNvStrapsConfig(true);
+
             showConfig();
             break;
 
         case MenuCommand::SaveConfiguration:
             SaveNvStrapsConfig();
 
-            if (nReBarState && nReBarState != reBarState)
-            {
-                saveUEFIBarSize(*nReBarState);
-                reBarState = nReBarState;
-                nReBarState.reset();
-            }
+            showInfo(L"Successfully saved configuration to NvStrapsReBar UEFI variable\n"s);
+            showInfo(L"\nReboot for changes to take effect\n\n"s);
 
             showConfig();
             break;

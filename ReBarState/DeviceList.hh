@@ -16,6 +16,6 @@ struct DeviceInfo
 };
 
 std::wstring formatMemorySize(uint_least64_t size);
-std::vector<DeviceInfo> &getDeviceList();
+std::vector<DeviceInfo> const &getDeviceList();
 
 #endif          // !defined(NVSTRAPS_REBAR_STATE_DEVICE_LIST_HH)

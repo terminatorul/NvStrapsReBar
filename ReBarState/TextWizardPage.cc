@@ -29,6 +29,7 @@ using std::optional;
 using std::string;
 using std::wstring;
 using std::wstring_view;
+using std::to_wstring;
 using std::tuple;
 using std::span;
 using std::tuple;
@@ -73,7 +74,7 @@ void showError(string const &message)
 
 void showStartupLogo()
 {
-    wcout << L"NvStrapsReBar, based on ReBarState (c) 2023 xCuri0\n\n"sv;
+    wcout << L"NvStrapsReBar, based on:\nReBarState (c) 2023 xCuri0\n\n"sv;
 }
 
 static wstring formatDirectMemorySize(uint_least64_t memorySize)
@@ -107,27 +108,27 @@ static wstring_view formatBarSizeSelector(uint_least8_t barSizeSelector)
     switch (barSizeSelector)
     {
     case 0:
-        return L"64 MB"sv;
+        return L"64 MiB"sv;
     case 1:
-        return L"128 MB"sv;
+        return L"128 MiB"sv;
     case 2:
-        return L"256 MB"sv;
+        return L"256 MiB"sv;
     case 3:
-        return L"512 MB"sv;
+        return L"512 MiB"sv;
     case 4:
-        return L"1 GB"sv;
+        return L"1 GiB"sv;
     case 5:
-        return L"2 GB"sv;
+        return L"2 GiB"sv;
     case 6:
-        return L"4 GB"sv;
+        return L"4 GiB"sv;
     case 7:
-        return L"8 GB"sv;
+        return L"8 GiB"sv;
     case 8:
-        return L"16 GB"sv;
+        return L"16 GiB"sv;
     case 9:
-        return L"32 GB"sv;
+        return L"32 GiB"sv;
     case 10:
-        return L"64 GB"sv;
+        return L"64 GiB"sv;
     default:
         return L" "sv;
     }
@@ -208,24 +209,24 @@ static void showLocalGPUs(vector<DeviceInfo> const &deviceSet, NvStrapsConfig co
     wcout << L"+----+------------+------------+--"sv << wstring(nMaxLocationSize, L'-') << L"-+-"sv << wstring(nMaxTargetBarSize, L'-') << L"-+-"sv << wstring(nMaxCurrentBarSize, L'-')  << L"-+-"sv << wstring(nMaxVRAMSize, L'-') << L"-+-"sv << wstring(nMaxNameSize, L'-') << L"-+\n\n"sv;
 }
 
-static wstring_view statusString(uint_least64_t driverStatus)
+static wstring_view driverStatusString(uint_least64_t driverStatus)
 {
     switch (driverStatus)
     {
     case StatusVar_NotLoaded:
         return L"Not loaded"sv;
 
-    case StatusVar_Unconfigured:
-        return L"Unconfigured"sv;
+    case StatusVar_Configured:
+        return L"Configured"sv;
 
     case StatusVar_GPU_Unconfigured:
         return L"GPU Unconfigured"sv;
 
+    case StatusVar_Unconfigured:
+        return L"Unconfigured"sv;
+
     case StatusVar_Cleared:
         return L"Cleared"sv;
-
-    case StatusVar_Configured:
-        return L"Configured"sv;
 
     case StatusVar_BridgeFound:
         return L"Bridge Found"sv;
@@ -234,21 +235,33 @@ static wstring_view statusString(uint_least64_t driverStatus)
         return L"GPU Found"sv;
 
     case StatusVar_GpuStrapsConfigured:
-        return L"GPU STRAPS Configured"sv;
+        return L"GPU-side ReBAR Configured"sv;
+
+    case StatusVar_GpuStrapsPreConfigured:
+        return L"GPU side Already Configured"sv;
+
+    case StatusVar_GpuStrapsConfirm:
+        return L"GPU-side ReBAR Configured with PCI confirm"sv;
 
     case StatusVar_GpuDelayElapsed:
         return L"GPU PCI delay posted"sv;
 
     case StatusVar_GpuReBarConfigured:
-        return L"GPU ReBAR Configured"sv;
+        return L"GPU PCI ReBAR Configured"sv;
+
+    case StatusVar_GpuStrapsNoConfirm:
+        return L"GPU-side ReBAR Configured without PCI confirm"sv;
 
     case StatusVar_GpuNoReBarCapability:
-        return L"ReBAR not advertised"sv;
+        return L"ReBAR capability not advertised"sv;
+
+    case StatusVar_GpuExcluded:
+        return L"GPU excluded"sv;
 
     case StatusVar_EFIAllocationError:
-        return L"Allocation error"sv;
+        return L"EFI Allocation error"sv;
 
-    case StatusVar_EFIError:
+    case StatusVar_Internal_EFIError:
         return L"EFI Error"sv;
 
     case StatusVar_NVAR_API_Error:
@@ -262,48 +275,112 @@ static wstring_view statusString(uint_least64_t driverStatus)
     return L"Parse error"sv;
 }
 
+wstring_view driverErrorString(EFIErrorLocation errLocation)
+{
+    switch (errLocation)
+    {
+    case EFIError_None:
+        return L""sv;
+
+    case EFIError_ReadConfigVar:
+        return L" (at Read config var)"sv;
+
+    case EFIError_WriteConfigVar:
+        return L" (at Write config var)"sv;
+
+    case EFIError_PCI_StartFindCap:
+        return L" (at start PCI find capability)"sv;
+
+    case EFIError_PCI_FindCap:
+        return L" (at PCI find capability)"sv;
+
+    case EFIError_PCI_BridgeConfig:
+        return L" (at PCI bridge configuration)"sv;
+
+    case EFIError_PCI_BridgeRestore:
+        return L" (at PCI bridge restore)"sv;
+
+    case EFIError_PCI_DeviceBARConfig:
+        return L" (at PCI device BAR config)"sv;
+
+    case EFIError_PCI_DeviceBARRestore:
+        return L" (at PCI device BAR restor)"sv;
+
+    case EFIError_PCI_DeviceSubsystem:
+        return L" (at PCI read device subsystem"sv;
+
+    case EFIError_LocateBridgeProtocol:
+        return L" (at Locate bridge protocol)"sv;
+
+    case EFIError_LoadBridgeProtocol:
+        return L" (at Load bridge protocol)"sv;
+
+    case EFIError_CMOSTime:
+        return L" (at CMOS Time)"sv;
+
+    case EFIError_CreateTimer:
+        return L" (at Create Timer)"sv;
+
+    case EFIError_CloseTimer:
+        return L" (at Close Timer)"sv;
+
+    case EFIError_SetupTimer:
+        return L" (at Setup Timer)"sv;
+
+    case EFIError_WaitTimer:
+        return L" (at Wait Timer)"sv;
+
+    default:
+        return L""sv;
+    }
+
+    return L""sv;
+}
+
 static void showDriverStatus(uint_least64_t driverStatus)
 {
-    wcout << L"EFI DXE driver status: "sv << statusString(driverStatus & 0xFFFFFFFFuL) << L" (0x" << hex << right << setfill(L'0') << setw(QWORD_SIZE * 2u) << driverStatus << dec << setfill(L' ') << L")\n";
+    uint_least32_t status = driverStatus & DWORD_BITMASK;
+
+    wcout << L"UEFI DXE driver status: "sv << driverStatusString(status)
+        << (status == StatusVar_Internal_EFIError ? driverErrorString(static_cast<EFIErrorLocation>(driverStatus >> (DWORD_BITSIZE + BYTE_BITSIZE) & BYTE_BITMASK)) : L""sv)
+        <<  L" (0x"sv << hex << right << setfill(L'0') << setw(QWORD_SIZE * 2u) << driverStatus << dec << setfill(L' ') << L")\n"sv;
 }
 
-static void showMotherboardReBarState(optional<uint_least8_t> reBarState)
+static wstring formatPciBarSize(unsigned sizeSelector)
 {
-    if (reBarState)
+    auto suffix = sizeSelector < 10u ? L" MiB"s : sizeSelector < 20u ? L" GiB"s : sizeSelector < 30u ? L" TiB"s : L" PiB"s;
+
+    return to_wstring(1u << sizeSelector % 10) + suffix;
+}
+
+static void showPciReBarState(uint_least8_t reBarState)
+{
+    switch (reBarState)
     {
-        if (reBarState == 0)
-                wcout << L"Current NvStrapsReBar "sv << +*reBarState << L" / Disabled\n"sv;
+    case TARGET_PCI_BAR_SIZE_DISABLED:
+        wcout << L"Target PCI BAR size: "sv << +reBarState << L" / System default\n"sv;
+        break;
+    case TARGET_PCI_BAR_SIZE_MAX:
+        wcout << L"Target PCI BAR size: "sv << +reBarState << L" / Any BAR size supported by PCI devices.\n"sv;
+        break;
+    case TARGET_PCI_BAR_SIZE_GPU_ONLY:
+        wcout << L"Target PCI BAR size: "sv << +reBarState << L" / Selected GPUs only\n"sv;
+        break;
+    case TARGET_PCI_BAR_SIZE_GPU_STRAPS_ONLY:
+        wcout << L"Target PCI BAR size: "sv << +reBarState << L" / GPU-side only for selected GPUs, without PCI BAR configuration\n"sv;
+        break;
+    default:
+        if (TARGET_PCI_BAR_SIZE_MIN <= reBarState && reBarState < TARGET_PCI_BAR_SIZE_MAX)
+            wcout << L"Target PCI BAR size: "sv << +reBarState << L" / Maximum "sv << formatPciBarSize(reBarState) << L" BAR size for PCI devices\n"sv;
         else
-                if (reBarState == 32)
-                        wcout << L"Current NvStrapsReBar "sv << +*reBarState << L" / Unlimited\n"sv;
-                else
-                        wcout << L"Current NvStrapsReBar "sv << +*reBarState << L" / "sv << pow(2, *reBarState) << L" MB\n"sv;
-        }
-    else
-        wcout << L"NvStrapsReBar variable doesn't exist" L" / Disabled. Enter a value to create it\n"sv;
+            wcout << L"Target PCI BAR size value not unsupported\n"sv;
+        break;
+    }
 }
 
-#if !defined(NDEBUG)
-static
-#endif
-void showMotherboardReBarMenu()
-{
-    wcout << L"\nFirst verify Above 4G Decoding is enabled and CSM is disabled in UEFI setup, otherwise system will not POST with GPU.\n"sv;
-    wcout << L"If your NvStrapsReBar value keeps getting reset then check your system time.\n"sv;
-
-    wcout << L"\nIt is recommended to first try smaller sizes above 256MB in case an old BIOS doesn't support large BARs.\n"sv;
-    wcout << L"\nEnter NvStrapsReBar Value\n"sv;
-    wcout << L"      0: Disabled \n"sv;
-    wcout << L"Above 0: Maximum BAR size set to 2^x MB \n"sv;
-    wcout << L"     32: Unlimited BAR size\n\n"sv;
-    wcout << L"     64: Enable ReBAR for selected GPUs only\n"sv;
-    wcout << L"     65: Configure ReBAR STRAPS bits only on the GPUs\n\n"sv;
-    wcout << L"  Enter: Leave unchanged\n"sv;
-}
-
-void showConfiguration(vector<DeviceInfo> const &devices, NvStrapsConfig const &nvStrapsConfig, optional<uint_least8_t> reBarState, uint_least64_t driverStatus)
+void showConfiguration(vector<DeviceInfo> const &devices, NvStrapsConfig const &nvStrapsConfig, uint_least64_t driverStatus)
 {
     showLocalGPUs(devices, nvStrapsConfig);
     showDriverStatus(driverStatus);
-    showMotherboardReBarState(reBarState);
+    showPciReBarState(nvStrapsConfig.targetPciBarSizeSelector());
 }

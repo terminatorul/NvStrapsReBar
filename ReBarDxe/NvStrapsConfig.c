@@ -15,93 +15,19 @@
 
 #include <stdbool.h>
 #include <stddef.h>
+#include <stdint.h>
 #include <uchar.h>
 #include <stdint.h>
 
 #include "LocalAppConfig.h"
+#include "EfiVariable.h"
 #include "DeviceRegistry.h"
 #include "StatusVar.h"
 
 #include "NvStrapsConfig.h"
 
-#if defined(UEFI_SOURCE) || defined(EFIAPI)
-
-static char16_t const NvStrapsPciConfigName[] = u"NvStrapsPciConfig";
-static EFI_GUID const NvStrapsPciConfigGUID = { 0x25dd6022u, 0x6b3eu, 0x430bu, { 0xb7u, 0xf4u, 0x11u, 0xe2u, 0x30u, 0x93u, 0xbbu, 0xe4u } };
-#else
-# if defined(WINDOWS) || defined(_WINDOWS) || defined(_WIN32) || defined(_WIN64)
-
-static TCHAR const NvStrapsPciConfigName[] = TEXT("NvStrapsPciConfig");
-static TCHAR const NvStrapsPciConfigGUID[] = TEXT("{25dd6022-6b3e-430b-b7f4-11e23093bbe4}");
-
-# endif
-
-static UINT32 const EFI_VARIABLE_NON_VOLATILE        = UINT32_C(0x00000001);
-static UINT32 const EFI_VARIABLE_BOOTSERVICE_ACCESS  = UINT32_C(0x00000002);
-static UINT32 const EFI_VARIABLE_RUNTIME_ACCESS      = UINT32_C(0x00000004);
-
-#endif          // #elseif defined(UEFI_SOURCE) || defined(EFIAPI)
-
+char const NvStrapsConfig_VarName[] = "NvStrapsReBar";
 static NvStrapsConfig strapsConfig;
-
-static inline UINT8 unpack_BYTE(BYTE const *buffer)
-{
-    return *buffer;
-}
-
-static inline UINT16 unpack_WORD(BYTE const *buffer)
-{
-    return *buffer | (UINT16)buffer[1u] << BYTE_BITSIZE;
-}
-
-static inline UINT32 unpack_DWORD(BYTE const *buffer)
-{
-    return *buffer | (UINT16)buffer[1u] << BYTE_SIZE | (UINT32)buffer[2u] << 2u * BYTE_BITSIZE | (UINT32)buffer[3u] << 3u * BYTE_BITSIZE;
-}
-
-static inline UINT64 unpack_QWORD(BYTE const *buffer)
-{
-    return
-        *buffer | (UINT16)buffer[1u] << BYTE_SIZE | (UINT32)buffer[2u] << 2u * BYTE_BITSIZE | (UINT32)buffer[3u] << 3u * BYTE_BITSIZE
-        | (UINT64)buffer[4u] << 4u * BYTE_BITSIZE | (UINT64)buffer[5u] << 5u * BYTE_BITSIZE | (UINT64)buffer[6u] << 6u * BYTE_BITSIZE | (UINT64)buffer[7u] << 7u * BYTE_BITSIZE;
-}
-
-static inline UINT8 *pack_BYTE(BYTE *buffer, UINT8 value)
-{
-    return *buffer++ = value, buffer;
-}
-
-static inline UINT8 *pack_WORD(BYTE *buffer, UINT16 value)
-{
-    *buffer++ = value & BYTE_BITMASK, value >>= BYTE_BITSIZE;
-    *buffer++ = value & BYTE_BITMASK;
-
-    return buffer;
-}
-
-static inline UINT8 *pack_DWORD(BYTE *buffer, UINT32 value)
-{
-    *buffer++ = value & BYTE_BITMASK, value >>= BYTE_BITSIZE;
-    *buffer++ = value & BYTE_BITMASK, value >>= BYTE_BITSIZE;
-    *buffer++ = value & BYTE_BITMASK, value >>= BYTE_BITSIZE;
-    *buffer++ = value & BYTE_BITMASK;
-
-    return buffer;
-}
-
-static inline UINT8 *pack_QWORD(BYTE *buffer, UINT64 value)
-{
-    *buffer++ = value & BYTE_BITMASK, value >>= BYTE_BITSIZE;
-    *buffer++ = value & BYTE_BITMASK, value >>= BYTE_BITSIZE;
-    *buffer++ = value & BYTE_BITMASK, value >>= BYTE_BITSIZE;
-    *buffer++ = value & BYTE_BITMASK, value >>= BYTE_BITSIZE;
-    *buffer++ = value & BYTE_BITMASK, value >>= BYTE_BITSIZE;
-    *buffer++ = value & BYTE_BITMASK, value >>= BYTE_BITSIZE;
-    *buffer++ = value & BYTE_BITMASK, value >>= BYTE_BITSIZE;
-    *buffer++ = value & BYTE_BITMASK;
-
-    return buffer;
-}
 
 static void GPUSelector_unpack(BYTE const *buffer, NvStraps_GPUSelector *selector)
 {
@@ -111,20 +37,20 @@ static void GPUSelector_unpack(BYTE const *buffer, NvStraps_GPUSelector *selecto
     selector->subsysDeviceID   = unpack_WORD(buffer), buffer += WORD_SIZE;
     selector->bus              = unpack_BYTE(buffer), buffer += BYTE_SIZE;
 
-    UINT8 busPos = unpack_BYTE(buffer); buffer += BYTE_SIZE;
+    uint_least8_t busPos = unpack_BYTE(buffer); buffer += BYTE_SIZE;
 
     selector->device           = selector->bus == 0xFFu && busPos == 0xFFu ? 0xFFu : busPos >> 3u & 0b0001'1111u;
     selector->function         = selector->bus == 0xFFu && busPos == 0xFFu ? 0xFFu : busPos & 0b0111u;
     selector->barSizeSelector  = unpack_BYTE(buffer), buffer += BYTE_SIZE;
 }
 
-static UINT8 *GPUSelector_pack(BYTE *buffer, NvStraps_GPUSelector const *selector)
+static BYTE *GPUSelector_pack(BYTE *buffer, NvStraps_GPUSelector const *selector)
 {
     buffer = pack_WORD(buffer, selector->deviceID);
     buffer = pack_WORD(buffer, selector->subsysVendorID);
     buffer = pack_WORD(buffer, selector->subsysDeviceID);
     buffer = pack_BYTE(buffer, selector->bus);
-    buffer = pack_BYTE(buffer, (UINT8)((unsigned)selector->device << 3u & 0b1111'1000u | (unsigned)selector->function & 0b0111u));
+    buffer = pack_BYTE(buffer, (uint_least8_t)((unsigned)selector->device << 3u & 0b1111'1000u | (unsigned)selector->function & 0b0111u));
     buffer = pack_BYTE(buffer, selector->barSizeSelector);
 
     return buffer;
@@ -137,14 +63,14 @@ static void GPUConfig_unpack(BYTE const *buffer, NvStraps_GPUConfig *config)
     config->subsysDeviceID      = unpack_WORD(buffer),  buffer += WORD_SIZE;
     config->bus                 = unpack_BYTE(buffer),  buffer += BYTE_SIZE;
 
-    UINT8 busPosition = unpack_BYTE(buffer); buffer += BYTE_SIZE;
+    uint_least8_t busPosition = unpack_BYTE(buffer); buffer += BYTE_SIZE;
     config->device = busPosition >> 3u & 0b0001'1111u;
     config->function = busPosition & 0b0111u;
 
     config->baseAddressSelector = unpack_DWORD(buffer), buffer += DWORD_SIZE;
 }
 
-static UINT8 *GPUConfig_pack(BYTE *buffer, NvStraps_GPUConfig const *config)
+static BYTE *GPUConfig_pack(BYTE *buffer, NvStraps_GPUConfig const *config)
 {
     buffer = pack_WORD(buffer, config->deviceID);
     buffer = pack_WORD(buffer, config->subsysVendorID);
@@ -158,13 +84,12 @@ static UINT8 *GPUConfig_pack(BYTE *buffer, NvStraps_GPUConfig const *config)
 
 static void BridgeConfig_unpack(BYTE const *buffer, NvStraps_BridgeConfig *config)
 {
-    UINT8 busPos;
-
     config->vendorID            = unpack_WORD(buffer), buffer += WORD_SIZE;
     config->deviceID            = unpack_WORD(buffer), buffer += WORD_SIZE;
     config->bridgeBus           = unpack_BYTE(buffer), buffer += BYTE_SIZE;
 
-    busPos = unpack_BYTE(buffer), buffer += BYTE_SIZE;
+    uint_least8_t busPos = unpack_BYTE(buffer); buffer += BYTE_SIZE;
+
     config->bridgeDevice        = busPos == 0xFFu ? 0xFFu : busPos >> 3u & 0b0001'1111u;
     config->bridgeFunction      = busPos == 0xFFu ? 0xFFu : busPos & 0b0111u;
 
@@ -188,9 +113,10 @@ static UINT8 *BridgeConfig_pack(BYTE *buffer, NvStraps_BridgeConfig  const *conf
     return buffer;
 }
 
-static void NvStrapsConfig_Clear(NvStrapsConfig *config)
+void NvStrapsConfig_Clear(NvStrapsConfig *config)
 {
     config->dirty = false;
+    config->nPciBarSize = 0u;
     config->nGlobalEnable = 0u;
     config->nGPUSelector = 0u;
     config->nGPUConfig = 0u;
@@ -199,7 +125,8 @@ static void NvStrapsConfig_Clear(NvStrapsConfig *config)
 
 static unsigned NvStrapsConfig_BufferSize(NvStrapsConfig const *config)
 {
-    return 2u * BYTE_SIZE + config->nGPUSelector * GPU_SELECTOR_SIZE
+    return NV_STRAPS_HEADER_SIZE
+        + BYTE_SIZE + config->nGPUSelector * GPU_SELECTOR_SIZE
         + BYTE_SIZE + config->nGPUConfig * GPU_CONFIG_SIZE
         + BYTE_SIZE + config->nBridgeConfig * BRIDGE_CONFIG_SIZE;
 }
@@ -208,13 +135,14 @@ static void NvStrapsConfig_Load(BYTE const *buffer, unsigned size, NvStrapsConfi
 {
     do
     {
-        if (size < 4u)
+        if (size < NV_STRAPS_HEADER_SIZE + 3u * BYTE_SIZE)
             break;
 
+        config->nPciBarSize = unpack_BYTE(buffer), buffer += BYTE_SIZE;
         config->nGlobalEnable = unpack_BYTE(buffer), buffer += BYTE_SIZE;
         config->nGPUSelector = unpack_BYTE(buffer), buffer += BYTE_SIZE;
 
-        if (config->nGPUSelector > ARRAY_SIZE(config->GPUs) || size < 2u * BYTE_SIZE + config->nGPUSelector * GPU_SELECTOR_SIZE + BYTE_SIZE)
+        if (config->nGPUSelector > ARRAY_SIZE(config->GPUs) || size < (unsigned)NV_STRAPS_HEADER_SIZE + BYTE_SIZE + config->nGPUSelector * GPU_SELECTOR_SIZE + BYTE_SIZE)
             break;
 
         for (unsigned i = 0u; i < config->nGPUSelector; i++)
@@ -223,7 +151,7 @@ static void NvStrapsConfig_Load(BYTE const *buffer, unsigned size, NvStrapsConfi
         config->nGPUConfig = unpack_BYTE(buffer), buffer += BYTE_SIZE;
 
         if (config->nGPUConfig > ARRAY_SIZE(config->gpuConfig)
-                || size < 2u * BYTE_SIZE + config->nGPUSelector * GPU_SELECTOR_SIZE + BYTE_SIZE + config->nGPUConfig * GPU_CONFIG_SIZE + BYTE_SIZE)
+                || size < (unsigned)NV_STRAPS_HEADER_SIZE + BYTE_SIZE + config->nGPUSelector * GPU_SELECTOR_SIZE + BYTE_SIZE + config->nGPUConfig * GPU_CONFIG_SIZE + BYTE_SIZE)
         {
             break;
         }
@@ -255,12 +183,13 @@ static unsigned NvStrapsConfig_Save(BYTE *buffer, unsigned size, NvStrapsConfig 
 {
     unsigned const BUFFER_SIZE = NvStrapsConfig_BufferSize(config);
 
-    if ((config->nGlobalEnable || config->nGPUSelector)
+    if (NvStrapsConfig_IsDriverConfigured(config)
          && config->nGPUSelector <= ARRAY_SIZE(config->GPUs)
          && config->nGPUConfig <= ARRAY_SIZE(config->gpuConfig)
          && config->nBridgeConfig <= ARRAY_SIZE(config->bridge)
          && size >= BUFFER_SIZE)
     {
+        buffer = pack_BYTE(buffer, config->nPciBarSize);
         buffer = pack_BYTE(buffer, config->nGlobalEnable);
         buffer = pack_BYTE(buffer, config->nGPUSelector);
 
@@ -283,22 +212,17 @@ static unsigned NvStrapsConfig_Save(BYTE *buffer, unsigned size, NvStrapsConfig 
     return 0u;
 }
 
-static inline  bool NvStrapsConfig_IsConfigured(NvStrapsConfig const *config)
-{
-    return config->nGlobalEnable || config->nGPUSelector;
-};
-
 static inline bool NvStrapsConfig_GPUSelector_HasSubsystem(NvStraps_GPUSelector const *selector)
 {
-    return selector->subsysVendorID != MAX_UINT16 && selector->subsysDeviceID != MAX_UINT16;
+    return selector->subsysVendorID != WORD_BITMASK && selector->subsysDeviceID != WORD_BITMASK;
 }
 
 static inline bool NvStrapsConfig_GPUSelector_HasBusLocation(NvStraps_GPUSelector const *selector)
 {
-    return selector->bus != MAX_UINT8 || selector->device != MAX_UINT8 || selector->function != MAX_UINT8;
+    return selector->bus != BYTE_BITMASK || selector->device != BYTE_BITMASK || selector->function != BYTE_BITMASK;
 }
 
-NvStraps_BarSize NvStrapsConfig_LookupBarSize(NvStrapsConfig const *config, UINT16 deviceID, UINT16 subsysVenID, UINT16 subsysDevID, UINT8 bus, UINT8 dev, UINT8 fn)
+NvStraps_BarSize NvStrapsConfig_LookupBarSize(NvStrapsConfig const *config, uint_least16_t deviceID, uint_least16_t subsysVenID, uint_least16_t subsysDevID, uint_least8_t bus, uint_least8_t dev, uint_least8_t fn)
 {
     ConfigPriority configPriority = UNCONFIGURED;
     BarSizeSelector barSizeSelector = BarSizeSelector_None;
@@ -355,40 +279,27 @@ NvStrapsConfig *GetNvStrapsConfig(bool reload, ERROR_CODE *errorCode)
     if (!isLoaded || reload)
     {
         BYTE buffer[NVSTRAPSCONFIG_BUFFERSIZE(strapsConfig)];
+        uint_least32_t size = sizeof buffer;
+        ERROR_CODE status = ReadEfiVariable(NvStrapsConfig_VarName, buffer, &size);
 
 #if defined(UEFI_SOURCE) || defined(EFIAPI)
-        UINTN bufferSize = sizeof buffer;
-        UINT32 attributes = 0u;
-        CHAR16 configVarName[ARRAY_SIZE(NvStrapsPciConfigName)];
-        EFI_GUID configVarGUID = NvStrapsPciConfigGUID;
-
-        for (unsigned i = 0u; i < ARRAY_SIZE(NvStrapsPciConfigName); i++)
-            configVarName[i] = NvStrapsPciConfigName[i];
-
-        EFI_STATUS status = gRT->GetVariable(configVarName, &configVarGUID, &attributes, &bufferSize, buffer);
-
-        if (status != EFI_SUCCESS)
-        {
-            SetStatusVar(status == EFI_NOT_FOUND ? StatusVar_GPU_Unconfigured : StatusVar_EFIError);
-            bufferSize = 0u;
-        }
-
-        if (errorCode)
-            *errorCode = status == EFI_NOT_FOUND ? EFI_SUCCESS : status;
-#else
-        DWORD bufferSize = GetFirmwareEnvironmentVariable(NvStrapsPciConfigName, NvStrapsPciConfigGUID, buffer, sizeof buffer);
-
-        if (errorCode)
-            *errorCode = bufferSize ? ERROR_SUCCESS : GetLastError();
+        if (EFI_ERROR(status))
+            SetEFIError(EFIError_ReadConfigVar, status);
+        else
+            if (size == 0u)
+                SetStatusVar(StatusVar_Unconfigured);
 #endif
 
-        NvStrapsConfig_Load(buffer, (unsigned)bufferSize, &strapsConfig);
+        if (errorCode)
+            *errorCode = status;
+
+        NvStrapsConfig_Load(buffer, size, &strapsConfig);
 
         isLoaded = true;
-    };
-
-    if (errorCode)
-        *errorCode = 0u;
+    }
+    else
+        if (errorCode)
+            *errorCode = 0u;
 
     return &strapsConfig;
 }
@@ -397,25 +308,18 @@ void SaveNvStrapsConfig(ERROR_CODE *errorCode)
 {
     if (NvStrapsConfig_IsDirty(&strapsConfig))
     {
-        UINT32 const attributes = EFI_VARIABLE_NON_VOLATILE | EFI_VARIABLE_BOOTSERVICE_ACCESS | EFI_VARIABLE_RUNTIME_ACCESS;
         BYTE buffer[NVSTRAPSCONFIG_BUFFERSIZE(strapsConfig)];
-        ERROR_CODE errorStatus;
+        ERROR_CODE errorStatus = WriteEfiVariable
+            (
+                NvStrapsConfig_VarName,
+                buffer,
+                NvStrapsConfig_Save(buffer, ARRAY_SIZE(buffer), &strapsConfig),
+                EFI_VARIABLE_NON_VOLATILE | EFI_VARIABLE_BOOTSERVICE_ACCESS | EFI_VARIABLE_RUNTIME_ACCESS
+            );
 
 #if defined(UEFI_SOURCE) || defined(EFIAPI)
-        CHAR16 configVarName[ARRAY_SIZE(NvStrapsPciConfigName)];
-        EFI_GUID configVarGUID = NvStrapsPciConfigGUID;
-
-        for (unsigned i = 0u; i < ARRAY_SIZE(NvStrapsPciConfigName); i++)
-            configVarName[i] = NvStrapsPciConfigName[i];
-
-        errorStatus = gRT->SetVariable(configVarName, &configVarGUID, attributes, NvStrapsConfig_Save(buffer, ARRAY_SIZE(buffer), &strapsConfig), buffer);
-
         if (errorStatus)
-            SetStatusVar(StatusVar_EFIError);
-#else
-        errorStatus = SetFirmwareEnvironmentVariableEx(NvStrapsPciConfigName, NvStrapsPciConfigGUID, buffer, NvStrapsConfig_Save(buffer, ARRAY_SIZE(buffer), &strapsConfig), attributes)
-                 ? ERROR_SUCCESS
-                 : GetLastError();
+            SetEFIError(EFIError_WriteConfigVar, errorStatus);
 #endif
 
         if (!errorStatus)
@@ -424,7 +328,7 @@ void SaveNvStrapsConfig(ERROR_CODE *errorCode)
         if (errorCode)
             *errorCode = errorStatus;
     }
-
-    if (errorCode)
-        *errorCode = 0u;
+    else
+        if (errorCode)
+            *errorCode = 0u;
 }
