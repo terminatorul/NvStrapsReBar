@@ -18,8 +18,6 @@ Currently the location of the GPU on the PCI bus has to be hard-coded right into
 // PCIe config register offset 0x10
 #define TARGET_GPU_BAR0_ADDRESS         UINT32_C(0x8200'0000)               // Should fall within memory range mapped by the bridge
 
-#define TARGET_GPU_BAR1_SIZE_SELECTOR   _16G                                // Desired size for GPU BAR1, should cover the VRAM size
-
 // Secondary bus of the bridge must match the GPU bus
 // Check the output form CPU-Z .txt report
 
