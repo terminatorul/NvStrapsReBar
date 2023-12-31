@@ -89,10 +89,8 @@ It maybe easier and more informative to post GPU-Z screenshots with the main GPU
    - Use Win+R to open a cmd window and run `pip install pefile`
 * Get `edk2` framework from github. In a cmd window run:
   ```
-  ChDir "%UserProfile%
-  git clone https://github.com/tianocore/edk2.git
-  ChDir edk2
-  git submodule update --init
+  git -C "%UserProfile%" clone https://github.com/tianocore/edk2.git
+  git -C "%UserProfile%\edk2" submodule update --init --jobs "%Number_Of_Processors%"
   ```
 * Build edk2. Open x86 Native Tools Command Prompt from the start menu (like in the image)
 
