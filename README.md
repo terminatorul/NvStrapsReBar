@@ -86,7 +86,7 @@ It maybe easier and more informative to post GPU-Z screenshots with the main GPU
   ```
   If the output from any of the above commands says `'cmd-name' is not recognized as an internal or external command...` you need to check PATH environment variable again. Also make sure `python --version` outputs version 3 and not version 2.
 * Install pefile module for python:
-   - Use Win+R to open a cmd window and run `pip install pefile`
+   - Use Win+R to open a `cmd` window and run `pip install pefile`
 * Get `edk2` framework from github. In a cmd window run:
   ```
   git -C "%UserProfile%" clone https://github.com/tianocore/edk2.git
