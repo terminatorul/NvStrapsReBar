@@ -5,7 +5,7 @@
 ### Do I need to flash a new UEFI image on the motherboard, to enable ReBAR on the GPU ?
 Yes, this is how it works for Turing GPUs (GTX 1600 / RTX 2000). It's ususally the video BIOS (vBIOS) that should enable ReBAR, but the vBIOS is digitally signed and can not be modified by end-users (is locked-down). The motherboard UEFI image can also be signed or have integrity checks, but in general it is thankfully not as locked down, and users and UEFI modders still have a way to modify it.
 
-Currently the location of the GPU on the PCI bus has to be hard-coded right into the motherboard UEFI, and so does the associated PCI-to-PCI bridge. All hard-coded values are in the header file [`ReBarDxe/include/LocalPciGPU.h`](https://github.com/terminatorul/NvStrapsReBar/blob/master/ReBarDxe/include/LocalPciGPU.h), and all the values can be read from the CPU-Z .txt report file, so you can manually change them to match your system. Currently these settings are listed below, where all numeric values are examples only (for my computer):
+Currently the location of the GPU on the PCI bus has to be hard-coded right into the motherboard UEFI, and so does the associated PCI-to-PCI bridge. All hard-coded values are in the header file [`ReBarDxe/include/LocalPciGPU.h`](https://github.com/terminatorul/NvStrapsReBar/blob/master/ReBarDxe/include/LocalPciGPU.h), and all the neccesary values can be read from the CPU-Z .txt report file, so you can manually change them to match your system. Currently these settings are listed below, where all numeric values are examples only (for my computer):
 
 ```C++
 #define TARGET_GPU_PCI_VENDOR_ID        0x10DEu
@@ -81,8 +81,8 @@ It maybe easier and more informative to post GPU-Z screenshots with the main GPU
   python --version
   pip --version
   git --version
-  cmake --version
   nasm --version
+  cmake --version
   ```
   If the output from any of the above commands says `'cmd-name' is not recognized as an internal or external command...` you need to check PATH environment variable again. Also make sure `python --version` outputs version 3 and not version 2.
 * Install pefile module for python:
@@ -129,8 +129,7 @@ You can now build the UEFI DXE driver `NvStrapsReBar.ffs`, and the Windows execu
   ChDir NvStrapsRebar\ReBarState
   If Not Exist build MkDir build
   ChDir build
-  cmake ..
-  cmake --build . --config Release
+  cmake .. && cmake --build . --config Release
   ```
   The NvStrapsRebar.exe file will be found under the `%UserProfile%\edk2\NvStrapsRebar\ReBarState\build\Release\` subdirectory
 
@@ -155,7 +154,7 @@ Most people should choose the first menu option and press `E` to Enable auto-set
 
 If you choose a GPU BAR size of 8 GiB for example, and a Target PCI BAR size of 4 GiB, you will get a 4 GiB BAR.
 
-For older boards without ReBAR support from the manufacturer, you can select other values for Target PCI BAR size, to also configure other GPUs for example. Or to limit the BAR size to smaller values even if the GPU supports higher values. Depending on the motherboard UEFI, for some boards you may need to use lower values, to limit BAR size to 4 GB or 2GB for example.
+For older boards without ReBAR support from the manufacturer, you can select other values for Target PCI BAR size, to also configure other GPUs for example. Or to limit the BAR size to smaller values even if the GPU supports higher values. Depending on the motherboard UEFI, for some boards you may need to use lower values, to limit BAR size to 4 GB or 2GB for example. Even a 2 GB BAR size still gives you the benefits of Resizable BAR in most titles, and NVIDIA tends to use 1.5 GB as the default size in the Profile Inspector. There are exceptions to this 'though (for some titles that can still see improvements with the higher BAR sizes).
 
 ## Using large BAR sizes
 Remember you need to use the [Profile Inspector](https://github.com/Orbmu2k/nvidiaProfileInspector) to enable ReBAR per-application, and if neeeded also globally. There appears to be a fake site for the Profile Inspector, so always downloaded it from github, or use the link above.
