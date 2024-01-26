@@ -210,7 +210,7 @@ EFI_STATUS EFIAPI rebarInit(IN EFI_HANDLE imageHandle, IN EFI_SYSTEM_TABLE *syst
 
     if (nPciBarSizeSelector != TARGET_PCI_BAR_SIZE_DISABLED)
     {
-        DEBUG((DEBUG_INFO, "ReBarDXE: Enabled, maximum BAR size 2^%u MB\n", reBarState));
+        DEBUG((DEBUG_INFO, "ReBarDXE: Enabled, maximum BAR size 2^%u MB\n", nPciBarSizeSelector));
 
         if (IsCMOSClear())
         {

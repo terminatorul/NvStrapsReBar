@@ -233,7 +233,7 @@ static constexpr GUID const DisplayAdapterClass { 0x4d36e968, 0xe325, 0x11ce, 0x
 // Identifiers from the PCI bus driver, see:
 // https://learn.microsoft.com/en-us/windows-hardware/drivers/install/identifiers-for-pci-devices
 static wregexp const pciInstanceRegexp { L"^PCI\\\\VEN_([0-9a-fA-F]{4})&DEV_([0-9a-fA-F]{4})&SUBSYS_([0-9a-fA-F]{4})([0-9a-fA-F]{4}).*$"s, regexp_constants::extended },
-        pciLocationRegexp { L"^PCI bus ([0-9]+), device ([0-9]+), function ([0-9]+).*$"s, regexp_constants::extended };
+        pciLocationRegexp { L"^PCI[ -][0-9a-zA-Z]+ ([0-9]+), .+ ([0-9]+), .+ ([0-9]+).*$"s, regexp_constants::extended };
 
 static void enumPciDisplayAdapters(vector<DeviceInfo> &deviceSet)
 {
@@ -342,7 +342,7 @@ catch (system_error const &ex)
 }
 catch (exception const &ex)
 {
-    cerr << "Applicaion error while listing display adapters: " << ex.what() << endl;
+    cerr << "Application error while listing display adapters: " << ex.what() << endl;
 
     return emptyDeviceSet;
 }
