@@ -149,9 +149,7 @@ static void showLocalGPUs(vector<DeviceInfo> const &deviceSet, NvStrapsConfig co
     wcout << L"|    |  VID:DID   |   VID:DID  |  "sv << setw(nMaxLocationSize) << left << "bus:dev.fn" << L" | "sv << setw(nMaxTargetBarSize) << L"BAR size"sv << L" | "sv << setw(nMaxCurrentBarSize) << L"BAR size"sv << L" | "sv << setw(nMaxVRAMSize) << L"size"sv << L" | "sv << wstring(nMaxNameSize, L' ') << L" |\n"sv;
     wcout << L"+----+------------+------------+--"sv << wstring(nMaxLocationSize, L'-') << L"-+-"sv << wstring(nMaxTargetBarSize, L'-') << L"-+-"sv << wstring(nMaxCurrentBarSize, L'-') << L"-+-"sv << wstring(nMaxVRAMSize, L'-') << L"-+-"sv << wstring(nMaxNameSize, L'-') << L"-+\n"sv;
 
-    unsigned i = 1u;
-
-    for (auto const &deviceInfo: deviceSet)
+    for (auto const &&[deviceIndex, deviceInfo]: deviceSet | views::enumerate)
     {
         auto [configPriority, barSizeSelector] = nvStrapsConfig.lookupBarSize
             (
@@ -164,7 +162,7 @@ static void showLocalGPUs(vector<DeviceInfo> const &deviceSet, NvStrapsConfig co
             );
 
         // GPU number
-        wcout << L"| "sv << dec << right << setw(2u) << setfill(L' ') << i++;
+        wcout << L"| "sv << dec << right << setw(2u) << setfill(L' ') << deviceIndex + 1u;
 
         // PCI ID
         wcout << L" | "sv << (configPriority < ConfigPriority::EXPLICIT_PCI_ID ? L' ' : L'*') << hex << setw(WORD_SIZE * 2u) << setfill(L'0') << uppercase << deviceInfo.vendorID << L':' << hex << setw(WORD_SIZE * 2u) << setfill(L'0') << deviceInfo.deviceID;
@@ -291,7 +289,7 @@ wstring_view driverErrorString(EFIErrorLocation errLocation)
         return L" (at PCI device BAR config)"sv;
 
     case EFIError_PCI_DeviceBARRestore:
-        return L" (at PCI device BAR restor)"sv;
+        return L" (at PCI device BAR restore)"sv;
 
     case EFIError_PCI_DeviceSubsystem:
         return L" (at PCI read device subsystem"sv;

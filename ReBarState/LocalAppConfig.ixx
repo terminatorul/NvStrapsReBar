@@ -4,6 +4,11 @@ module;
 
 export module LocalAppConfig;
 
+import std;
+
+using std::uint_least32_t;
+using std::uint_least64_t;
+
 static constexpr bool const local_UEFI_SOURCE =
 #if defined(UEFI_SOURCE)
     true;
@@ -35,7 +40,7 @@ export using ::WORD_BITMASK;
 
 export using ::DWORD_SIZE;
 export using ::DWORD_BITSIZE;
-export using ::DWORD_BITMASK;
+export auto DWORD_BITMASK = uint_least32_t { (uint_least64_t { 1u } << DWORD_BITSIZE) - 1u };
 
 export using ::ERROR_CODE;
 export using ::ERROR_CODE_SUCCESS;

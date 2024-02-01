@@ -47,7 +47,7 @@
 enum
 {
 #if defined(__cplusplus)
-    BYTE_BITSIZE = std::numeric_limits<unsigned char>::digits,
+    BYTE_BITSIZE = unsigned { std::numeric_limits<unsigned char>::digits },
 #else
     BYTE_BITSIZE = (unsigned)CHAR_BIT,
 #endif
@@ -58,7 +58,7 @@ enum
     WORD_BITMASK = (1u << WORD_BITSIZE) - 1u,
     DWORD_SIZE = 4u,
     DWORD_BITSIZE = DWORD_SIZE * BYTE_BITSIZE,
-    DWORD_BITMASK = ((uint_least64_t)1u << DWORD_BITSIZE) - 1u,
+    // DWORD_BITMASK = ((uint_least64_t)1u << DWORD_BITSIZE) - 1u,	// end up with the wrong type (int)
     QWORD_SIZE = 8u
 };
 

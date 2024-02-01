@@ -55,8 +55,12 @@ static constexpr auto const z_MLType_Range = sizeof(Mem_Large_Range_s);
 static constexpr auto const z_MType_Range = MType_Range;
 static constexpr auto const z_MLType_Range = MLType_Range;
 #endif
-static constexpr auto const e_ResType_Mem = ResType_Mem;
-static constexpr auto const e_ResType_MemLarge = ResType_MemLarge;
+static constexpr auto const
+    local_ResType_None     = ResType_None,
+    local_ResType_All      = ResType_All,
+    local_ResType_Mem      = ResType_Mem,
+    local_ResType_MemLarge = ResType_MemLarge,
+    local_ResType_IO       = ResType_IO;
 static constexpr auto const e_mMD_MemoryType = mMD_MemoryType;
 static constexpr auto const e_mMD_Readable = mMD_Readable;
 static constexpr auto const e_fMD_RAM = fMD_RAM;
@@ -178,6 +182,9 @@ namespace
 #undef ALLOC_LOG_CONF
 #undef MType_Range
 #undef MLType_Range
+#undef ResType_All
+#undef ResType_None
+#undef ResType_IO
 #undef ResType_Mem
 #undef ResType_MemLarge
 #undef mMD_MemoryType
@@ -344,8 +351,12 @@ export           auto const INVALID_HANDLE_VALUE = f_INVALID_HANDLE_VALUE;
 export constexpr auto const ALLOC_LOG_CONF = f_ALLOC_LOG_CONF;
 export constexpr auto const MType_Range = z_MType_Range;
 export constexpr auto const MLType_Range = z_MLType_Range;
-export constexpr auto const ResType_Mem = e_ResType_Mem;
-export constexpr auto const ResType_MemLarge = e_ResType_MemLarge;
+export constexpr auto const
+    ResType_None     = local_ResType_None,
+    ResType_All      = local_ResType_All,
+    ResType_Mem      = local_ResType_Mem,
+    ResType_MemLarge = local_ResType_MemLarge,
+    ResType_IO       = local_ResType_IO;
 export constexpr auto const mMD_Readable = e_mMD_Readable;
 export constexpr auto const mMD_MemoryType = e_mMD_MemoryType;
 export constexpr auto const fMD_RAM = e_fMD_RAM;

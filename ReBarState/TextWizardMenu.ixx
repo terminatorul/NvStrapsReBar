@@ -11,6 +11,7 @@ using std::tuple;
 using std::span;
 using std::map;
 using std::vector;
+using std::max_element;
 using std::locale;
 using std::use_facet;
 using std::ctype;
@@ -31,6 +32,7 @@ using std::find;
 using std::get;
 using std::find;
 using std::views::all;
+using std::views::enumerate;
 
 namespace execution = std::execution;
 namespace views = std::ranges::views;
@@ -126,9 +128,36 @@ static wstring showMainMenuEntry(MenuCommand menuCommand, bool isGlobalEnable, v
             wstring commands(1u, L'G');
             wcout << L"\t    Manually configure BAR size for specific GPUs:\n"sv;
 
+#if defined(__clang__)
+	    auto it = max_element(/* execution::par_unseq, */ devices.cbegin(), devices.cend(), [](auto const &left, auto const &right)
+#else
+	    auto it = max_element(execution::par_unseq, devices.cbegin(), devices.cend(), [](auto const &left, auto const &right)
+#endif
+		    {
+			return left.productName.length() < right.productName.length();
+		    });
+
+	    auto maxNameLen = it == devices.cend() ? 0u : it->productName.length();
+
 	    for (auto const &&[index, device]: devices | views::enumerate)
             {
-                wcout << L"\t\t("sv << index + 1u << L"). "sv << device.productName << L'\n';
+                wcout << L"\t\t("sv << index + 1u << L"). "sv << setw(maxNameLen) << setfill(L' ') << left << device.productName;
+
+		if (device.bar0.Base != device.bar0.Top)
+		{
+		    if (device.bar0.Base < DWORD_BITMASK && device.bar0.Top <= DWORD_BITMASK)
+		    {
+			wcout << "         BAR0 at: 0x" << hex << right << setfill(L'0') << setw(DWORD_SIZE) << (device.bar0.Base >> DWORD_BITSIZE / 2u & WORD_BITMASK);
+			wcout << L'\'';
+			wcout << hex << right << setfill(L'0') << setw(DWORD_SIZE) << (device.bar0.Base & WORD_BITMASK) << dec << left << setfill(L' ');
+		    }
+		    else
+			wcout << "         BAR0 64-bit: 0x" << hex << setfill(L'0') << right << setw(QWORD_SIZE * 2u) << device.bar0.Base << left << setfill(L' ') << dec;
+
+		    wcout << ", size: " << formatMemorySize(device.bar0.Top - device.bar0.Base + 1u);
+		}
+
+		wcout << L'\n';
                 commands.push_back(static_cast<wchar_t>((L'0' + index + 1u) | WCHAR_T_HIGH_BIT_MASK));
             }
 

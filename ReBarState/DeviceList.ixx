@@ -35,6 +35,7 @@ using std::cout;
 using std::cerr;
 using std::endl;
 using std::wcout;
+using std::wcerr;
 using wregexp = std::wregex;
 using std::match_results;
 using std::wcmatch;
@@ -45,6 +46,7 @@ using std::setfill;
 using std::setw;
 using std::endl;
 using std::isprint;
+using std::ranges::views::iota;
 using std::ranges::views::all;
 
 namespace ranges = std::ranges;
@@ -59,13 +61,16 @@ export struct DeviceInfo
     uint_least8_t  bus, device, function;
     uint_least8_t  bridgeBus, bridgeDev, bridgeFunc;
     bool           busLocationSelector;
+
+    struct
+    {
+	uint_least64_t Base, Top;
+    }
+		   bar0;
     uint_least64_t currentBARSize;
     uint_least64_t dedicatedVideoMemory;
     wstring        productName;
 };
-
-export wstring formatMemorySize(uint_least64_t size);
-export vector<DeviceInfo> const &getDeviceList();
 
 template <typename ...ArgsT>
     static inline auto regexp_match(ArgsT && ...args) ->decltype(std::regex_match(forward<ArgsT>(args)...))
@@ -124,7 +129,7 @@ static bool fillDedicatedMemorySize(vector<DeviceInfo> &deviceSet)
     return false;
 }
 
-wstring formatMemorySize(uint_least64_t size)
+export wstring formatMemorySize(uint_least64_t size)
 {
     wstring_view const suffixes[] = { L"Bytes"sv, L"KiB"sv, L"MiB"sv, L"GiB"sv, L"TiB"sv, L"PiB"sv };
     wstring_view unit = L"EiB"sv; // UINT64 can hold values up to 2 EBytes - 1
@@ -141,18 +146,20 @@ wstring formatMemorySize(uint_least64_t size)
     return to_wstring(size) + L' ' + wstring { unit };
 }
 
-static bool nextResourceDescriptor(RES_DES &descriptor, RESOURCEID forResource)
+static bool nextResourceDescriptor(RES_DES &descriptor, RESOURCEID &resourceType)
 {
     RES_DES nextDescriptor;
+    resourceType = ResType_None;
 
-    return validate_config_ret<CR_NO_MORE_RES_DES>(::CM_Get_Next_Res_Des(&nextDescriptor, descriptor, forResource, NULL, 0ul)) != CR_NO_MORE_RES_DES
+    return validate_config_ret<CR_NO_MORE_RES_DES>(::CM_Get_Next_Res_Des(&nextDescriptor, descriptor, ResType_All, &resourceType, 0ul)) != CR_NO_MORE_RES_DES
          && (validate_config_ret(::CM_Free_Res_Des_Handle(exchange(descriptor, nextDescriptor))), true);
 }
 
-static uint_least64_t getMaxBarSize(DWORD deviceInstanceHandle)
+static tuple<uint_least64_t, tuple<uint_least64_t, uint_least64_t>> getMaxBarSize(DWORD deviceInstanceHandle, wstring const &productName)
 try
 {
     uint_least64_t maxBarSize { };
+    tuple<uint_least64_t, uint_least64_t> BAR0 { };
     LOG_CONF logicalConfiguration;
     CONFIGRET configRet = CM_Get_First_Log_Conf(&logicalConfiguration, DEVINST { deviceInstanceHandle }, ALLOC_LOG_CONF);
 
@@ -160,63 +167,110 @@ try
 
     unique_ptr<LOG_CONF, void (*)(LOG_CONF *)> configGuard(&logicalConfiguration, [](LOG_CONF *p) { validate_config_ret(::CM_Free_Log_Conf_Handle(*p)); });
 
+    RESOURCEID resourceType = ResType_None;
     RES_DES resourceDescriptor;
 
-    configRet = ::CM_Get_Next_Res_Des(&resourceDescriptor, RES_DES { logicalConfiguration }, ResType_Mem, NULL, 0ul);
+    configRet = ::CM_Get_Next_Res_Des(&resourceDescriptor, RES_DES { logicalConfiguration }, ResType_All, &resourceType, ULONG { 0u });
 
-    if (validate_config_ret<CR_NO_MORE_RES_DES>(configRet, "Cannot list memory resources allocated for device") != CR_NO_MORE_RES_DES)
+    if (validate_config_ret<CR_NO_MORE_RES_DES>(configRet, "Cannot list resources allocated for device") != CR_NO_MORE_RES_DES)
     {
         unique_ptr<RES_DES, void (*)(RES_DES *)> resourceGuard(&resourceDescriptor, [](RES_DES *p) { validate_config_ret(::CM_Free_Res_Des_Handle(*p)); });
 
-        do
-        {
-            MEM_RESOURCE memoryDescriptor { { .MD_Count = 0u, .MD_Type = MType_Range, .MD_Reserved = 0u } };
-            validate_config_ret(::CM_Get_Res_Des_Data(resourceDescriptor, &memoryDescriptor, sizeof memoryDescriptor, 0ul), "Error reading memory range resource for device");
-
-            if ((memoryDescriptor.MEM_Header.MD_Flags & mMD_MemoryType) == fMD_RAM && (memoryDescriptor.MEM_Header.MD_Flags & mMD_Readable) == fMD_ReadAllowed)
-                maxBarSize = max(maxBarSize, uint_least64_t { memoryDescriptor.MEM_Header.MD_Alloc_End - memoryDescriptor.MEM_Header.MD_Alloc_Base });
-                // std::cout << " - "s << formatMemorySize(memoryDescriptor.MEM_Header.MD_Alloc_End - memoryDescriptor.MEM_Header.MD_Alloc_Base) << " memory resource\n";
-        }
-        while (nextResourceDescriptor(resourceDescriptor, ResType_Mem));
-    }
-
-    configRet = ::CM_Get_Next_Res_Des(&resourceDescriptor, RES_DES { logicalConfiguration }, ResType_MemLarge, NULL, 0ul);
-
-    if (validate_config_ret<CR_NO_MORE_RES_DES>(configRet, "Cannot list memory resources allocated for device") != CR_NO_MORE_RES_DES)
-    {
-        unique_ptr<RES_DES, void (*)(RES_DES *)> resourceGuard(&resourceDescriptor, [](RES_DES *p) { validate_config_ret(::CM_Free_Res_Des_Handle(*p)); });
+	bool firstResource = true;
 
         do
         {
-            MEM_LARGE_RESOURCE memoryDescriptor { { .MLD_Count = 0u, .MLD_Type = MLType_Range, .MLD_Reserved = 0u } };
-            validate_config_ret(::CM_Get_Res_Des_Data(resourceDescriptor, &memoryDescriptor, sizeof memoryDescriptor, 0ul), "Error reading memory range resource for device");
+	    switch (resourceType)
+	    {
+	    case ResType_Mem:
+	    {
+		MEM_RESOURCE memoryDescriptor { { .MD_Count = 0u, .MD_Type = MType_Range, .MD_Reserved = 0u } };
+		validate_config_ret(::CM_Get_Res_Des_Data(resourceDescriptor, &memoryDescriptor, sizeof memoryDescriptor, ULONG { 0u }), "Error reading memory range resource for device");
 
-            if ((memoryDescriptor.MEM_LARGE_Header.MLD_Flags & mMD_MemoryType) == fMD_RAM && (memoryDescriptor.MEM_LARGE_Header.MLD_Flags & mMD_Readable) == fMD_ReadAllowed)
-                maxBarSize = max(maxBarSize, uint_least64_t { memoryDescriptor.MEM_LARGE_Header.MLD_Alloc_End - memoryDescriptor.MEM_LARGE_Header.MLD_Alloc_Base });
-                // std::cout << " - "s << formatMemorySize(memoryDescriptor.MEM_LARGE_Header.MLD_Alloc_End - memoryDescriptor.MEM_LARGE_Header.MLD_Alloc_Base) << " memory resource\n";
+		if ((memoryDescriptor.MEM_Header.MD_Flags & mMD_MemoryType) == fMD_RAM && (memoryDescriptor.MEM_Header.MD_Flags & mMD_Readable) == fMD_ReadAllowed)
+		{
+		    maxBarSize = max(maxBarSize, uint_least64_t { memoryDescriptor.MEM_Header.MD_Alloc_End - memoryDescriptor.MEM_Header.MD_Alloc_Base });
+		    // std::cout << " - "s << formatMemorySize(memoryDescriptor.MEM_Header.MD_Alloc_End - memoryDescriptor.MEM_Header.MD_Alloc_Base) << " memory resource\n";
+
+		    if (firstResource)
+		    {
+			BAR0 = tie(memoryDescriptor.MEM_Header.MD_Alloc_Base, memoryDescriptor.MEM_Header.MD_Alloc_End);
+			firstResource = false;
+		    }
+		}
+		else
+		{
+		    // BAR0 is not read-write
+		    firstResource = false;
+		    wcerr << L"BAR0 is not read-write for adapter: " << productName << endl;
+		}
+
+		break;
+	    }
+	    case ResType_MemLarge:
+	    {
+		MEM_LARGE_RESOURCE memoryDescriptor { { .MLD_Count = 0u, .MLD_Type = MLType_Range, .MLD_Reserved = 0u } };
+		validate_config_ret(::CM_Get_Res_Des_Data(resourceDescriptor, &memoryDescriptor, sizeof memoryDescriptor, ULONG { 0u }), "Error reading memory range resource for device");
+
+		if ((memoryDescriptor.MEM_LARGE_Header.MLD_Flags & mMD_MemoryType) == fMD_RAM && (memoryDescriptor.MEM_LARGE_Header.MLD_Flags & mMD_Readable) == fMD_ReadAllowed)
+		{
+		    maxBarSize = max(maxBarSize, uint_least64_t { memoryDescriptor.MEM_LARGE_Header.MLD_Alloc_End - memoryDescriptor.MEM_LARGE_Header.MLD_Alloc_Base });
+		    // std::cout << " - "s << formatMemorySize(memoryDescriptor.MEM_LARGE_Header.MLD_Alloc_End - memoryDescriptor.MEM_LARGE_Header.MLD_Alloc_Base) << " memory resource\n";
+
+		    if (firstResource)
+		    {
+			BAR0 = tie(memoryDescriptor.MEM_LARGE_Header.MLD_Alloc_Base, memoryDescriptor.MEM_LARGE_Header.MLD_Alloc_End);
+			firstResource = false;
+		    }
+		}
+		else
+		{
+		    // Large BAR0 is not read-write
+		    firstResource = false;
+		    wcerr << L"BAR0 is not read-write for adapter: " << productName << endl;
+		}
+
+		break;
+	    }
+	    case ResType_IO:
+		if (firstResource)
+		{
+		    // BAR0 in the I/O port address space
+		    firstResource = false;
+		    wcerr << "Unexpected BAR0 in the I/O port address space for adapter: " << productName << endl;
+		}
+
+		[[fallthrough]];
+	    default:
+		break;
+	    }
+
         }
-        while (nextResourceDescriptor(resourceDescriptor, ResType_MemLarge));
+        while (nextResourceDescriptor(resourceDescriptor, resourceType));
+
+	if (BAR0 == tuple(0u, 0u))
+	    throw runtime_error("No proper BAR0 could be found for display adapter"s);
     }
 
-    return maxBarSize;
+    return tuple(maxBarSize, BAR0);
 }
 catch (system_error const &ex)
 {
     cerr << ex.what() << endl;
 
-    return 0u;
+    return { };
 }
 catch (exception const &ex)
 {
     cerr << "Application error: " << ex.what() << endl;
 
-    return 0u;
+    return { };
 }
 catch (...)
 {
     cerr << "Application error while reading memory resource configuration\n";
 
-    return 0u;
+    return { };
 }
 
 tuple<uint_least8_t, uint_least8_t, uint_least8_t> getDeviceBusLocation(HDEVINFO hDeviceInfoSet, SP_DEVINFO_DATA &devInfoData, auto &devPropBuffer, char const *deviceTypeDisplayName)
@@ -332,12 +386,12 @@ static void enumPciDisplayAdapters(vector<DeviceInfo> &deviceSet)
 
 	    auto len = devPropLength / sizeof(WCHAR);
 
-	    devPropBuffer[devPropLength] = L'\0';
-	    devPropBuffer[devPropLength + 1u] = L'\0';
+	    static_cast<WCHAR *>(static_cast<void *>(devPropBuffer))[len] = WCHAR { };
 
 	    tie(deviceInfo.bridgeBus, deviceInfo.bridgeDev, deviceInfo.bridgeFunc) = getParentBridgeLocation(bridge.hDeviceInfoSet, devProp, devPropBuffer);
 
-            deviceInfo.currentBARSize = getMaxBarSize(devInfoData.DevInst);
+	    auto DeviceBAR0 = tie(deviceInfo.bar0.Base, deviceInfo.bar0.Top);
+            tie(deviceInfo.currentBARSize, DeviceBAR0) = getMaxBarSize(devInfoData.DevInst, deviceInfo.productName);
         }
         else
         {
@@ -350,12 +404,12 @@ static void enumPciDisplayAdapters(vector<DeviceInfo> &deviceSet)
     }
 
     if (DWORD dwLastError = ::GetLastError(); dwLastError != ERROR_NO_MORE_ITEMS)
-        throw system_error(static_cast<int>(dwLastError), winapi_error_category(), "Error listing display adapters"s);
+        check_last_error(dwLastError, "Error listing display adapters"s);
 }
 
 static vector<DeviceInfo> emptyDeviceSet;
 
-vector<DeviceInfo> const &getDeviceList()
+export vector<DeviceInfo> const &getDeviceList()
 try
 {
     static vector<DeviceInfo> deviceSet;
