@@ -243,3 +243,5 @@ uint_least32_t NvStraps_AdjustBARSizeList(UINTN pciAddress, uint_least16_t vid, 
 
     return barSizeMask | UINT32_C(0x00000001) << (6u + (unsigned)barSizeSelector.barSizeSelector);
 }
+
+// vim: ft=cpp

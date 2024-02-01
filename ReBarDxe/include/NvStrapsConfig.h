@@ -5,27 +5,35 @@
 #if defined(UEFI_SOURCE) || defined(EFIAPI)
 # include <Uefi.h>
 #else
-# include <windef.h>
+# if defined(__cplusplus) && !defined(NVSTRAPS_DXE_DRIVER)
+import std;
+using std::uint_least8_t;
+using std::uint_least16_t;
+using std::uint_least32_t;
+using std::exchange;
 
-# if defined(__cplusplus)
-#  include <cstddef>
-#  include <cstdint>
-#  include <utility>
+import NvStraps.WinAPI;
+import LocalAppConfig;
+import DeviceRegistry;
+
+constexpr auto const MAX_UINT8  = UINT8_MAX;
+constexpr auto const MAX_UINT16 = UINT16_MAX;
+constexpr auto const MAX_UINT32 = UINT32_MAX;
+constexpr auto const MAX_UINT64 = UINT64_MAX;
+# else
+#  include <stdbool.h>
+#  include <stdint.h>
+#  define MAX_UINT16 UINT16_MAX
+#  define MAX_UINT8  UINT8_MAX
 # endif
-
-#define MAX_UINT16 UINT16_MAX
-#define MAX_UINT8  UINT8_MAX
 #endif
 
-#if !defined(__cplusplus)
-# include <stdbool.h>
-# include <stddef.h>
+#if !defined(__cplusplus) || defined(NVSTRAPS_DXE_DRIVER)
+# include "LocalAppConfig.h"
+# include "DeviceRegistry.h"
 #endif
 
-#include "LocalAppConfig.h"
-#include "DeviceRegistry.h"
-
-typedef enum
+typedef enum ConfigPriority
 {
     UNCONFIGURED = 0u,
     IMPLIED_GLOBAL = 1u,
@@ -46,8 +54,8 @@ enum
     TARGET_GPU_VENDOR_ID = 0x10DEu
 };
 
-// Special values for desired PCI BAR size in  NVAR variable
-enum
+// Special values for desired PCI BAR size in NVAR variable
+enum TARGET_PCI_BAR_SIZE
 {
     TARGET_PCI_BAR_SIZE_DISABLED = 0u,
     TARGET_PCI_BAR_SIZE_MIN = 1u,
@@ -244,9 +252,6 @@ inline bool NvStrapsConfig_GPUSelector_BusLocationMatch(NvStraps_GPUSelector con
 
 #if defined(__cplusplus)
 }       // extern "C"
-
-NvStrapsConfig &GetNvStrapsConfig(bool reload = false);
-void SaveNvStrapsConfig();
 
 inline bool NvStrapsConfig::setGPUSelector(uint_least8_t barSizeSelector, uint_least16_t deviceID)
 {

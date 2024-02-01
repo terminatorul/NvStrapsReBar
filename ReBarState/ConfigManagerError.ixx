@@ -1,19 +1,98 @@
-#if defined(WINDOWS) || defined(_WINDOWS) || defined(_WIN64) || defined(_WIN32)
+export module ConfigManagerError;
 
-#if defined(_M_AMD64) && !defined(_AMD64_)
-# define _AMD64_
-#endif
-
-#include <windef.h>
-#include <winreg.h>
-#include <cfgmgr32.h>
-
-#include <string>
-#include "ConfigManagerError.hh"
+import std;
+import NvStraps.WinAPI;
 
 using std::string;
+using std::string_view;
 using std::to_string;
+using std::error_category;
+using std::system_error;
+using std::uncaught_exceptions;
+
 using namespace std::literals::string_literals;
+
+export class ConfigManagerErrorCategory: public error_category
+{
+public:
+    char const *name() const noexcept override;
+    string message(int error) const override;
+
+protected:
+    ConfigManagerErrorCategory() = default;
+
+    friend error_category const &config_manager_error_category();
+};
+
+inline char const *ConfigManagerErrorCategory::name() const noexcept
+{
+    return "PnP Configuration Manager";
+}
+
+export inline error_category const &config_manager_error_category()
+{
+    static ConfigManagerErrorCategory errorCategory;
+
+    return errorCategory;
+}
+
+export inline system_error make_config_ret(int error)
+{
+    return { error, config_manager_error_category() };
+}
+
+export inline system_error make_config_ret(int error, char const *message)
+{
+    return { error, config_manager_error_category(), message };
+}
+
+export inline system_error make_config_ret(int error, string const &message)
+{
+    return { error, config_manager_error_category(), message };
+}
+
+export inline int validate_config_ret(int error)
+{
+    if (error && !uncaught_exceptions())
+        throw make_config_ret(error);
+
+    return error;
+}
+
+export inline int validate_config_ret(int error, char const *message)
+{
+    if (error && !uncaught_exceptions())
+        throw make_config_ret(error, message);
+
+    return error;
+}
+
+export template <int ...SUCCESS_VALUE>
+    inline int validate_config_ret(int error)
+{
+    if (error && !(false || ... || (error == SUCCESS_VALUE)) && !uncaught_exceptions())
+        throw make_config_ret(error);
+
+    return error;
+}
+
+export template <int ...SUCCESS_VALUES>
+    inline int validate_config_ret(int error, char const *message)
+{
+    if (error && !(false || ... || (error == SUCCESS_VALUES)) && !uncaught_exceptions())
+        throw make_config_ret(error, message);
+
+    return error;
+}
+
+export template <int ...SUCCESS_VALUES>
+    inline int validate_config_ret(int error, std::string const &message)
+{
+    if (error && !(false || ... || (error == SUCCESS_VALUES)) && !uncaught_exceptions())
+        throw make_config_ret(error, message);
+
+    return error;
+}
 
 static char const *configurationManagerErrorMessage(int error)
 {
@@ -211,7 +290,5 @@ static char const *configurationManagerErrorMessage(int error)
 
 string ConfigManagerErrorCategory::message(int error) const
 {
-    return "PnP Configuration Manager error code " + to_string(error) + ": "s + configurationManagerErrorMessage(error);
+    return "PnP Configuration Manager error code " + to_string(error) + ": " + configurationManagerErrorMessage(error);
 }
-
-#endif          // defined(WINDOWS) || defined(_WINDOWS) || defined(_WIN64) || defined(_WIN32)

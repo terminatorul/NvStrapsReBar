@@ -1,6 +1,0 @@
-#if !defined(NV_STRAPS_REBAR_CONFIGURATION_WIZARD_HH)
-#define NV_STRAPS_REBAR_CONFIGURATION_WIZARD_HH
-
-void runConfigurationWizard();
-
-#endif  // !defined(NV_STRAPS_REBAR_CONFIGURATION_WIZARD_HH)

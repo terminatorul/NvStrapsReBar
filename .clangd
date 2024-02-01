@@ -1,0 +1,4 @@
+Diagnostics:
+  Suppress: unused-includes
+  Suppress: pch-langopt-mismatch
+  Suppress: pch_langopt_mismatch

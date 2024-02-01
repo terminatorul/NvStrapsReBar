@@ -1,4 +1,8 @@
-[*.{c,cc,cpp,cxx,h,hh,hpp,hxx}]
+
+root=true
+
+[*]
+charset = utf-8
 indent_size=4
 tab_width=8
 intent_style="tab"

@@ -4,6 +4,7 @@
 // Hard-coded values that must match the local system
 
 #include <stdint.h>
+#include <assert.h>
 
 // Update these values to match the output from CPU-Z .txt report
 // for your GPU and for the associated PCI-to-PCI bridge

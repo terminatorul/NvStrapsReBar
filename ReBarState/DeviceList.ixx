@@ -1,43 +1,19 @@
-#include <cstdint>
-#include <exception>
-#include <stdexcept>
-#include <system_error>
-#include <locale>
-#include <iterator>
-#include <sstream>
-#include <memory>
-#include <iomanip>
-#include <regex>
-#include <vector>
-#include <string>
-#include <string_view>
-#include <span>
-#include <utility>
-#include <algorithm>
-#include <ranges>
-#include <iostream>
-#include <ranges>
-#include <utility>
+export module DeviceList;
 
-#if defined(WINDOWS) || defined(_WINDOWS) || defined(_WIN64) || defined(_WIN32)
-#include <initguid.h>
-#include <Windows.h>
-#include <setupapi.h>
-#include <cfgmgr32.h>
-#include <devpkey.h>
-#include <dxgi.h>
+import std;
 
-#undef min
-#undef max
-#endif
-
-#include "WinAPIError.hh"
-#include "ConfigManagerError.hh"
-#include "NvStrapsConfig.h"
-#include "DeviceList.hh"
+import NvStraps.WinAPI;
+import NvStraps.DXGI;
+import WinApiError;
+import ConfigManagerError;
+import LocalAppConfig;
+import NvStrapsConfig;
 
 using std::max;
 using std::min;
+using std::uint_least8_t;
+using std::uint_least16_t;
+using std::uint_least32_t;
 using std::uint_least64_t;
 using std::move;
 using std::exchange;
@@ -48,6 +24,8 @@ using std::to_wstring;
 using std::string;
 using std::wstring;
 using std::vector;
+using std::tuple;
+using std::tie;
 using std::exception;
 using std::runtime_error;
 using std::system_error;
@@ -68,11 +46,26 @@ using std::setw;
 using std::endl;
 using std::isprint;
 using std::ranges::views::all;
+
 namespace ranges = std::ranges;
 namespace views = std::ranges::views;
 namespace regexp_constants = std::regex_constants;
 using namespace std::literals::string_literals;
 using namespace std::literals::string_view_literals;
+
+export struct DeviceInfo
+{
+    uint_least16_t vendorID, deviceID, subsystemVendorID, subsystemDeviceID;
+    uint_least8_t  bus, device, function;
+    uint_least8_t  bridgeBus, bridgeDev, bridgeFunc;
+    bool           busLocationSelector;
+    uint_least64_t currentBARSize;
+    uint_least64_t dedicatedVideoMemory;
+    wstring        productName;
+};
+
+export wstring formatMemorySize(uint_least64_t size);
+export vector<DeviceInfo> const &getDeviceList();
 
 template <typename ...ArgsT>
     static inline auto regexp_match(ArgsT && ...args) ->decltype(std::regex_match(forward<ArgsT>(args)...))
@@ -84,13 +77,13 @@ template <typename ...ArgsT>
 
 static bool fillDedicatedMemorySize(vector<DeviceInfo> &deviceSet)
 {
-    IDXGIFactory *pFactory = nullptr;
-    HRESULT hr = CreateDXGIFactory(IID_IDXGIFactory, static_cast<void **>(static_cast<void *>(&pFactory)));
+    dxgi::IFactory *pFactory = nullptr;
+    HRESULT hr = dxgi::CreateFactory(dxgi::IID_IFactory, static_cast<void **>(static_cast<void *>(&pFactory)));
 
     if (SUCCEEDED(hr))
     {
         UINT iAdapter = 0u;
-        IDXGIAdapter *pAdapter = nullptr;
+	dxgi::IAdapter *pAdapter = nullptr;
 
         do
         {
@@ -98,7 +91,7 @@ static bool fillDedicatedMemorySize(vector<DeviceInfo> &deviceSet)
 
             if (SUCCEEDED(hr))
             {
-                DXGI_ADAPTER_DESC adapterDescription { };
+		dxgi::ADAPTER_DESC adapterDescription { };
 
                 if (SUCCEEDED(pAdapter->GetDesc(&adapterDescription)))
                 {
@@ -113,7 +106,7 @@ static bool fillDedicatedMemorySize(vector<DeviceInfo> &deviceSet)
                 iAdapter++;
             }
             else
-                if (hr != DXGI_ERROR_NOT_FOUND)
+                if (hr != dxgi::ERROR_NOT_FOUND)
                 {
                     pAdapter = nullptr;
                     throw runtime_error("DirectX Graphics Infrastructure function error listing GPUs\n"s);
@@ -226,37 +219,78 @@ catch (...)
     return 0u;
 }
 
+tuple<uint_least8_t, uint_least8_t, uint_least8_t> getDeviceBusLocation(HDEVINFO hDeviceInfoSet, SP_DEVINFO_DATA &devInfoData, auto &devPropBuffer, char const *deviceTypeDisplayName)
+{
+    DEVPROPTYPE devPropType;
+    DWORD devPropLength;
+
+    if (!::SetupDiGetDevicePropertyW(hDeviceInfoSet, &devInfoData, &DEVPKEY_Device_BusNumber, &devPropType, devPropBuffer, sizeof devPropBuffer, &devPropLength, 0u))
+	check_last_error("Error listing bus information for "s + deviceTypeDisplayName);
+    else
+	if (devPropType != DEVPROP_TYPE_UINT32 || devPropLength != sizeof(ULONG) || *static_cast<ULONG const *>(static_cast<void const *>(devPropBuffer)) > BYTE_BITMASK)
+	    throw runtime_error("Unexpected PCI bus number format " + to_string(devPropType) + ", length " + to_string(devPropLength) + ", value "s + to_string(*static_cast<ULONG const *>(static_cast<void const *>(devPropBuffer))) + "for display adapter"s);
+
+    uint_least8_t bus = static_cast<uint_least8_t>(*static_cast<ULONG const *>(static_cast <void const *>(devPropBuffer)));
+
+    if (!::SetupDiGetDevicePropertyW(hDeviceInfoSet, &devInfoData, &DEVPKEY_Device_Address, &devPropType, devPropBuffer, sizeof devPropBuffer, &devPropLength, 0u))
+	check_last_error("Error listing bus information for "s + deviceTypeDisplayName);
+    else
+	if (devPropType != DEVPROP_TYPE_UINT32 || devPropLength != sizeof(ULONG) || *static_cast<ULONG const *>(static_cast<void const *>(devPropBuffer)) & uint_least32_t { 0xFF'E0'FF'F8u })
+	    throw runtime_error("Unexpected PCI bus address format " + to_string(devPropType) + ", length " + to_string(devPropLength) + ", value "s + to_string(*static_cast<ULONG const *>(static_cast<void const *>(devPropBuffer))) + "for display adapter"s);
+
+    uint_least8_t device = static_cast<uint_least8_t>(*static_cast<ULONG const *>(static_cast <void const *>(devPropBuffer)) >> 16u & BYTE_BITMASK);
+    uint_least8_t function = static_cast<uint_least8_t>(*static_cast<ULONG const *>(static_cast <void const *>(devPropBuffer))) & BYTE_BITMASK;
+
+    return tuple(bus, device, function);
+}
+
+tuple<uint_least8_t, uint_least8_t, uint_least8_t> getParentBridgeLocation(HDEVINFO hBridgeList, PCWSTR instanceID, auto &devPropBuffer)
+{
+    SP_DEVINFO_DATA devInfoData { .cbSize = sizeof devInfoData };
+
+    if (::SetupDiOpenDeviceInfoW(hBridgeList, instanceID, ::GetConsoleWindow(), 0u, &devInfoData))
+	return getDeviceBusLocation(hBridgeList, devInfoData, devPropBuffer, "PCI bridge");
+
+    check_last_error("Reading PCI bridge for display adapter failed.");
+    return tuple(BYTE_BITMASK, BYTE_BITMASK, BYTE_BITMASK);
+}
+
 // System-defined setup class for Display Adapters, from:
 // https://learn.microsoft.com/en-us/windows-hardware/drivers/install/system-defined-device-setup-classes-available-to-vendors
-static constexpr GUID const DisplayAdapterClass { 0x4d36e968, 0xe325, 0x11ce, 0xbf, 0xc1, 0x08, 0x00, 0x2b, 0xe1, 0x03, 0x18 };
+static constexpr GUID const DisplayAdapterClass { 0x4D36E968u, 0xE325u, 0x11CEu, 0xBFu, 0xC1u, 0x08u, 0x00u, 0x2Bu, 0xE1u, 0x03u, 0x18u };
 
 // Identifiers from the PCI bus driver, see:
 // https://learn.microsoft.com/en-us/windows-hardware/drivers/install/identifiers-for-pci-devices
-static wregexp const pciInstanceRegexp { L"^PCI\\\\VEN_([0-9a-fA-F]{4})&DEV_([0-9a-fA-F]{4})&SUBSYS_([0-9a-fA-F]{4})([0-9a-fA-F]{4}).*$"s, regexp_constants::extended },
-        pciLocationRegexp { L"^PCI[ -][0-9a-zA-Z]+ ([0-9]+), .+ ([0-9]+), .+ ([0-9]+).*$"s, regexp_constants::extended };
+static wregexp const pciInstanceRegexp { L"^PCI\\\\VEN_([0-9a-fA-F]{4})&DEV_([0-9a-fA-F]{4})&SUBSYS_([0-9a-fA-F]{4})([0-9a-fA-F]{4}).*$"s, regexp_constants::extended };
 
 static void enumPciDisplayAdapters(vector<DeviceInfo> &deviceSet)
 {
     struct DeviceInfoSet
     {
-        HDEVINFO hDeviceInfoSet = SetupDiGetClassDevsW(&DisplayAdapterClass, L"PCI", GetConsoleWindow(), DIGCF_PRESENT);
+        HDEVINFO hDeviceInfoSet = INVALID_HANDLE_VALUE;
+
+	DeviceInfoSet(HDEVINFO hDevInfo)
+	    : hDeviceInfoSet(hDevInfo)
+	{
+	    if (hDevInfo == INVALID_HANDLE_VALUE)
+		check_last_error("Error listing display adapters"s);
+	}
 
         ~DeviceInfoSet()
         {
             if (hDeviceInfoSet != INVALID_HANDLE_VALUE)
-                ::SetupDiDestroyDeviceInfoList(exchange(hDeviceInfoSet, INVALID_HANDLE_VALUE));
+                if (!::SetupDiDestroyDeviceInfoList(exchange(hDeviceInfoSet, INVALID_HANDLE_VALUE)))
+		    check_last_error("Error listing display adapters"s);
         }
     }
-        dev;
-
-    if (dev.hDeviceInfoSet == INVALID_HANDLE_VALUE)
-        throw system_error(static_cast<int>(::GetLastError()), winapi_error_category(), "Error listing display adapters"s);
+        dev(SetupDiGetClassDevsW(&DisplayAdapterClass, L"PCI", GetConsoleWindow(), DIGCF_PRESENT)),
+	bridge(SetupDiCreateDeviceInfoList(NULL, GetConsoleWindow()));
 
     DWORD iDeviceIndex = 0u;
     SP_DEVINFO_DATA devInfoData { .cbSize = sizeof devInfoData, .Reserved = 0ul };
     DEVPROPTYPE     devPropType;
     BYTE            devPropBuffer[512u * sizeof(wchar_t)];
-    wchar_t const  *devProp = static_cast<wchar_t *>(static_cast<void *>((devPropBuffer)));
+    WCHAR const    *devProp = static_cast<WCHAR *>(static_cast<void *>((devPropBuffer)));
     DWORD           devPropLength;
 
     std::locale globalLocale;
@@ -266,7 +300,7 @@ static void enumPciDisplayAdapters(vector<DeviceInfo> &deviceSet)
         DeviceInfo deviceInfo { .dedicatedVideoMemory = 0ull };
 
         if (!::SetupDiGetDevicePropertyW(dev.hDeviceInfoSet, &devInfoData, &DEVPKEY_Device_InstanceId, &devPropType, devPropBuffer, sizeof devPropBuffer, &devPropLength, 0u))
-            throw system_error(static_cast<int>(::GetLastError()), winapi_error_category(), "Error listing display adapters"s);
+            check_last_error("Error listing display adapters"s);
 
         if (wcmatch matches; regexp_match(devProp, devProp + devPropLength / sizeof *devProp, matches, pciInstanceRegexp))
         {
@@ -281,27 +315,27 @@ static void enumPciDisplayAdapters(vector<DeviceInfo> &deviceSet)
             deviceInfo.subsystemVendorID = static_cast<uint_least16_t>(wcstoul(matches[4u].str().c_str(), nullptr, 16));
 
             if (!::SetupDiGetDevicePropertyW(dev.hDeviceInfoSet, &devInfoData, &DEVPKEY_NAME, &devPropType, devPropBuffer, sizeof devPropBuffer, &devPropLength, 0u))
-                throw system_error(static_cast<int>(::GetLastError()), winapi_error_category(), "Error listing display adapters"s);
+                check_last_error("Error listing display adapters"s);
 
             deviceInfo.productName.assign(static_cast<wchar_t *>(static_cast<void *>(devPropBuffer)), devPropLength / sizeof(wchar_t));
 
             while (deviceInfo.productName | all && !isprint(*deviceInfo.productName.rbegin(), globalLocale))
                 deviceInfo.productName.pop_back();
 
-            if (!::SetupDiGetDevicePropertyW(dev.hDeviceInfoSet, &devInfoData, &DEVPKEY_Device_LocationInfo, &devPropType, devPropBuffer, sizeof devPropBuffer, &devPropLength, 0u))
-                throw system_error(static_cast<int>(::GetLastError()), winapi_error_category(), "Error listing display adapters"s);
+	    tie(deviceInfo.bus, deviceInfo.device, deviceInfo.function) = getDeviceBusLocation(dev.hDeviceInfoSet, devInfoData, devPropBuffer, "display adapter");
 
-            if (wcmatch matches; regexp_match(devProp, devProp + devPropLength / sizeof *devProp, matches, pciLocationRegexp))
-            {
-                deviceInfo.bus = static_cast<uint_least8_t>(wcstoul(matches[1u].first, nullptr, 10));
-                deviceInfo.device = static_cast<uint_least8_t>(wcstoul(matches[2u].first, nullptr, 10));
-                deviceInfo.function = static_cast<uint_least8_t>(wcstoul(matches[3u].first, nullptr, 10));
-            }
-            else
-            {
-                std::wcout << L"PCI location: ["s << wstring_view(devProp, devPropLength / sizeof *devProp) << L']' << std::endl;
-                throw runtime_error("Error listing display adapters: wrong PCI location property value."s);
-            }
+	    if (!::SetupDiGetDevicePropertyW(dev.hDeviceInfoSet, &devInfoData, &DEVPKEY_Device_Parent, &devPropType, devPropBuffer, sizeof devPropBuffer, &devPropLength, 0u))
+		check_last_error("Error listing bus information for display adapter"s);
+	    else
+		if (devPropType != DEVPROP_TYPE_STRING || devPropLength % sizeof(WCHAR) || devPropLength + sizeof(WCHAR) > sizeof devPropBuffer)
+		    throw runtime_error("Unexpected parent bus ID format " + to_string(devPropType) + ", of length " + to_string(devPropLength));
+
+	    auto len = devPropLength / sizeof(WCHAR);
+
+	    devPropBuffer[devPropLength] = L'\0';
+	    devPropBuffer[devPropLength + 1u] = L'\0';
+
+	    tie(deviceInfo.bridgeBus, deviceInfo.bridgeDev, deviceInfo.bridgeFunc) = getParentBridgeLocation(bridge.hDeviceInfoSet, devProp, devPropBuffer);
 
             deviceInfo.currentBARSize = getMaxBarSize(devInfoData.DevInst);
         }

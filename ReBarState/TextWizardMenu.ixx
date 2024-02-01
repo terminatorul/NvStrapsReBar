@@ -1,26 +1,9 @@
-#if defined(WINDOWS) || defined(_WINDOWS) || defined(_WIN64) || defined(_WIN32)
-# if defined(_M_AMD64) || !defined(_AMD64_)
-#  define _AMD64_
-# endif
-#endif
+export module TextWizardMenu;
 
-#include <cwctype>
-#include <optional>
-#include <tuple>
-#include <initializer_list>
-#include <span>
-#include <vector>
-#include <map>
-#include <iostream>
-#include <iomanip>
-#include <algorithm>
-#include <execution>
-#include <ranges>
-
-#include "LocalAppConfig.h"
-#include "NvStrapsConfig.h"
-#include "ReBarState.hh"
-#include "TextWizardMenu.hh"
+import std;
+import LocalAppConfig;
+import NvStrapsConfig;
+import DeviceList;
 
 using std::optional;
 using std::nullopt;
@@ -28,15 +11,15 @@ using std::tuple;
 using std::span;
 using std::map;
 using std::vector;
+using std::locale;
+using std::use_facet;
+using std::ctype;
+using std::toupper;
 using std::wstring;
 using std::wstring_view;
 using std::to_wstring;
-using std::towupper;
-using std::cerr;
-using std::wclog;
 using std::wcout;
 using std::wcin;
-using std::endl;
 using std::getline;
 using std::hex;
 using std::dec;
@@ -44,8 +27,6 @@ using std::left;
 using std::right;
 using std::setw;
 using std::setfill;
-using std::min;
-using std::max;
 using std::find;
 using std::get;
 using std::find;
@@ -54,6 +35,39 @@ using std::views::all;
 namespace execution = std::execution;
 namespace views = std::ranges::views;
 using namespace std::literals::string_view_literals;
+
+using views::enumerate;
+
+export enum class MenuCommand
+{
+    Quit,
+    DiscardQuit,
+    SaveConfiguration,
+    DiscardConfiguration,
+    DiscardPrompt,
+    GlobalEnable,
+    GlobalFallbackEnable,
+    UEFIConfiguration,
+    UEFIBARSizePrompt,
+    PerGPUConfigClear,
+    PerGPUConfig,
+    GPUSelectorByPCIID,
+    GPUSelectorByPCISubsystem,
+    GPUSelectorByPCILocation,
+    GPUVRAMSize,
+    GPUSelectorClear,
+    GPUSelectorExclude,
+
+    DefaultChoice
+};
+
+export enum class MenuType
+{
+    Main,
+    GPUConfig,
+    GPUBARSize,
+    PCIBARSize
+};
 
 static auto const mainMenuShortcuts = map<wchar_t, MenuCommand>
 {
@@ -112,7 +126,7 @@ static wstring showMainMenuEntry(MenuCommand menuCommand, bool isGlobalEnable, v
             wstring commands(1u, L'G');
             wcout << L"\t    Manually configure BAR size for specific GPUs:\n"sv;
 
-            for (auto const &&[index, device]: devices | views::enumerate)
+	    for (auto const &&[index, device]: devices | views::enumerate)
             {
                 wcout << L"\t\t("sv << index + 1u << L"). "sv << device.productName << L'\n';
                 commands.push_back(static_cast<wchar_t>((L'0' + index + 1u) | WCHAR_T_HIGH_BIT_MASK));
@@ -321,18 +335,22 @@ static wstring_view getPromptLine(MenuType menuType)
     return L"Input an option"sv;
 }
 
+static locale const &c_locale = locale::classic();
+
 static bool isNumeric(wstring const &inputValue)
 {
-    for (auto const ch: inputValue)
-        if (!isdigit(ch))
-            return false;
+    auto &ctype_facet = use_facet<ctype<wchar_t>>(c_locale);
+    auto dataStart = inputValue.data(), dataEnd = inputValue.data() + inputValue.size();
 
-    return !!(inputValue | all);
+    if (ctype_facet.scan_not(ctype_facet.digit, dataStart, dataEnd) == dataEnd)
+        return !!(inputValue | all);
+
+    return false;
 }
 
 static bool hasShortcut(wchar_t input, wstring commands)
 {
-    return find(commands.cbegin(), commands.cend(), towupper(input)) != commands.cend();
+    return find(commands.cbegin(), commands.cend(), toupper(input, wcin.getloc())) != commands.cend();
 }
 
 static tuple<optional<MenuCommand>, unsigned> translateInput(MenuType menuType, wstring commands, wstring inputValue, std::vector<DeviceInfo> const& devices)
@@ -349,17 +367,17 @@ static tuple<optional<MenuCommand>, unsigned> translateInput(MenuType menuType, 
         if (isNumeric(inputValue))
             return { MenuCommand::GPUVRAMSize, stoul(inputValue) };
 
-        if (inputValue | all && towupper(*inputValue.cbegin()) == L'C' && commands.find(L'C') != commands.npos)
+        if (inputValue | all && toupper(*inputValue.cbegin(), wcin.getloc()) == L'C' && commands.find(L'C') != commands.npos)
             return { MenuCommand::GPUSelectorClear, 0u };
 
-        if (inputValue | all && towupper(*inputValue.cbegin()) == L'X' && commands.find(L'X') != commands.npos)
+        if (inputValue | all && toupper(*inputValue.cbegin(), wcin.getloc()) == L'X' && commands.find(L'X') != commands.npos)
             return { MenuCommand::GPUSelectorExclude, 0u };
 
         return { nullopt, 0u };
 
     case MenuType::GPUConfig:
         if (inputValue.length() == 1u && hasShortcut(*inputValue.cbegin(), commands))
-            if (auto it = gpuMenuShortcuts.find(towupper(*inputValue.cbegin())); it != gpuMenuShortcuts.end())
+            if (auto it = gpuMenuShortcuts.find(toupper(*inputValue.cbegin(), wcin.getloc())); it != gpuMenuShortcuts.end())
                 return { it->second, 0u };
 
         return { nullopt, 0u };
@@ -368,8 +386,8 @@ static tuple<optional<MenuCommand>, unsigned> translateInput(MenuType menuType, 
         if (isNumeric(inputValue) && hasShortcut(L'G', commands) && [&devices](auto val) { return 1u <= val && val <= devices.size(); }(stoul(inputValue)))
             return { MenuCommand::PerGPUConfig, stoul(inputValue) - 1u };
 
-        if (inputValue.length() == 1u && hasShortcut(*inputValue.cbegin(), commands) && towupper(*inputValue.cbegin()) != L'G')         // L'G' - per-GPU configuration, GPU index used instead
-            if (auto it = mainMenuShortcuts.find(towupper(*inputValue.cbegin())); it != mainMenuShortcuts.end())
+        if (inputValue.length() == 1u && hasShortcut(*inputValue.cbegin(), commands) && toupper(*inputValue.cbegin(), wcin.getloc()) != L'G')         // L'G' - per-GPU configuration, GPU index used instead
+            if (auto it = mainMenuShortcuts.find(toupper(*inputValue.cbegin(), wcin.getloc())); it != mainMenuShortcuts.end())
                 return { it->second, 0u };
 
         return { nullopt, 0u };
@@ -426,12 +444,12 @@ static tuple<optional<MenuCommand>, unsigned> runInputPrompt(MenuType menuType, 
 
 static tuple<MenuCommand, unsigned> showMenu
     (
-        MenuType menuType,
-        std::span<MenuCommand> menu,
-        optional<MenuCommand> defaultCommand,
-        unsigned short defaultValue,
-        bool isGlobalEnable,
-        unsigned short device,
+        MenuType		       menuType,
+        std::span<MenuCommand>	       menu,
+        optional<MenuCommand>	       defaultCommand,
+        unsigned short		       defaultValue,
+        bool			       isGlobalEnable,
+        unsigned short		       device,
         std::vector<DeviceInfo> const &devices
     )
 {
@@ -455,13 +473,13 @@ static tuple<MenuCommand, unsigned> showMenu
 
 static MenuType getMenuType(span<MenuCommand> menu)
 {
-    if (find(execution::par_unseq, menu.cbegin(), menu.cend(), MenuCommand::GPUVRAMSize) != menu.cend())
+    if (find(execution::par_unseq, menu.begin(), menu.end(), MenuCommand::GPUVRAMSize) != menu.end())
         return MenuType::GPUBARSize;
 
-    if (find(execution::par_unseq, menu.cbegin(), menu.cend(), MenuCommand::UEFIBARSizePrompt) != menu.cend())
+    if (find(execution::par_unseq, menu.begin(), menu.end(), MenuCommand::UEFIBARSizePrompt) != menu.end())
         return MenuType::PCIBARSize;
 
-    if (!menu.empty() && *menu.crbegin() != MenuCommand::Quit && *menu.crbegin() != MenuCommand::DiscardQuit)
+    if (!menu.empty() && *menu.rbegin() != MenuCommand::Quit && *menu.rbegin() != MenuCommand::DiscardQuit)
         return MenuType::GPUConfig;
 
     return MenuType::Main;
@@ -496,13 +514,13 @@ static void showMenuHeader(MenuType menuType, unsigned device, vector<DeviceInfo
     }
 }
 
-tuple<MenuCommand, unsigned> showMenuPrompt
+export tuple<MenuCommand, unsigned> showMenuPrompt
     (
-        span<MenuCommand> menu,
-        optional<MenuCommand> defaultCommand,
-        unsigned short defaultValue,
-        bool isGlobalEnable,
-        unsigned short device,
+        span<MenuCommand>	  menu,
+        optional<MenuCommand>	  defaultCommand,
+        unsigned short		  defaultValue,
+        bool			  isGlobalEnable,
+        unsigned short		  device,
         vector<DeviceInfo> const &devices
     )
 {

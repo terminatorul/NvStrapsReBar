@@ -5,14 +5,25 @@
 #if defined(UEFI_SOURCE) || defined(EFIAPI)
 # include <Uefi.h>
 #else
-# include <windef.h>
+# if defined(__cplusplus) && !defined(NVSTRAPS_DXE_DRIVER)
+import NvStraps.WinAPI;
+# else
+#  include <windef.h>
+# endif
 #endif
 
-#include <stdbool.h>
+#if !defined(__cplusplus)
+# include <stdbool.h>
+#endif
 
 // From PSTRAPS documentation in envytools:
 // https://envytools.readthedocs.io/en/latest/hw/io/pstraps.html
-static unsigned short const MAX_BAR_SIZE_SELECTOR = 10u;
+#if defined(__cplusplus) && !defined(NVSTRAPS_DXE_DRIVER)
+    extern constexpr
+#else
+    static
+#endif
+	unsigned short const MAX_BAR_SIZE_SELECTOR = 10u;
 
 typedef enum BarSizeSelector
 {

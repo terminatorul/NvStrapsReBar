@@ -17,5 +17,13 @@ NvVars
 *.efi
 *.iso
 *.log
+.cache/
+.tags/
+tags
+.cscope/
+cscope.out
+cscope.out.*
 out/
 build/
+build-*/
+compile_commands.json

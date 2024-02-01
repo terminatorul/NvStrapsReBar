@@ -234,20 +234,20 @@ NvStraps_BarSize NvStrapsConfig_LookupBarSize(NvStrapsConfig const *config, uint
                     if (NvStrapsConfig_GPUSelector_HasBusLocation(config->GPUs + iGPU))
                         if (NvStrapsConfig_GPUSelector_BusLocationMatch(config->GPUs + iGPU, bus, dev, fn))
                         {
-                            NvStraps_BarSize sizeSelector = { .priority = EXPLICIT_PCI_LOCATION, .barSizeSelector = config->GPUs[iGPU].barSizeSelector };
+                            NvStraps_BarSize sizeSelector = { .priority = EXPLICIT_PCI_LOCATION, .barSizeSelector = (BarSizeSelector)config->GPUs[iGPU].barSizeSelector };
 
                             return sizeSelector;
                         }
                         else
                             ;
                     else
-                        configPriority = EXPLICIT_SUBSYSTEM_ID, barSizeSelector = config->GPUs[iGPU].barSizeSelector;
+                        configPriority = EXPLICIT_SUBSYSTEM_ID, barSizeSelector = (BarSizeSelector)config->GPUs[iGPU].barSizeSelector;
                 else
                     ;
             else
             {
                 if (configPriority < EXPLICIT_SUBSYSTEM_ID)
-                    configPriority = EXPLICIT_PCI_ID, barSizeSelector = config->GPUs[iGPU].barSizeSelector;
+                    configPriority = EXPLICIT_PCI_ID, barSizeSelector = (BarSizeSelector)config->GPUs[iGPU].barSizeSelector;
             }
 
     if (configPriority == UNCONFIGURED && config->nGlobalEnable)

@@ -1,0 +1,5 @@
+module std {
+    requires cplusplus23
+    header "cxx_std_lib.hh"
+    export *
+}

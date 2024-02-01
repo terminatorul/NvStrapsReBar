@@ -1,21 +1,9 @@
-#if defined(WINDOWS) || defined(_WINDOWS) || defined(_WIN64) || defined(_WIN32)
-# if defined(_M_AMD64) || !defined(_AMD64_)
-#  define _AMD64_
-# endif
-#endif
 
-#include <windef.h>
-#include <winerror.h>
-
-#include <iterator>
-#include <system_error>
-#include <string>
-#include <algorithm>
-#include <execution>
-#include <ranges>
-
-#include "WinApiError.hh"
 #include "NvStrapsConfig.h"
+
+import std;
+import NvStraps.WinAPI;
+import WinApiError;
 
 using std::begin;
 using std::end;
@@ -24,7 +12,7 @@ using std::find_if;
 using std::copy;
 using std::system_error;
 
-namespace views = std::views;
+namespace views = std::ranges::views;
 namespace execution = std::execution;
 using namespace std::literals::string_literals;
 
@@ -97,21 +85,3 @@ bool NvStrapsConfig::clearGPUSelector(UINT16 deviceID, UINT16 subsysVenID, UINT1
     return true;
 }
 
-NvStrapsConfig &GetNvStrapsConfig(bool reload)
-{
-    auto dwLastError = DWORD { ERROR_SUCCESS };
-    auto strapsConfig = GetNvStrapsConfig(reload, &dwLastError);
-
-    return dwLastError == ERROR_SUCCESS ? *strapsConfig :
-        throw system_error { static_cast<int>(dwLastError), winapi_error_category(), "Error loading configuration from "s + NvStrapsConfig_VarName + " EFI variable"s };
-}
-
-void SaveNvStrapsConfig()
-{
-    auto dwLastError = DWORD { ERROR_SUCCESS };
-
-    SaveNvStrapsConfig(&dwLastError);
-
-    if (dwLastError != ERROR_SUCCESS)
-        throw system_error { static_cast<int>(dwLastError), winapi_error_category(), "Error saving configuration to "s + NvStrapsConfig_VarName + " EFI variable"s };
-}

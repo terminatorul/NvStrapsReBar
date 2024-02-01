@@ -215,7 +215,7 @@ ERROR_CODE WriteEfiVariable(char const name[MAX_VARIABLE_NAME_LENGTH], BYTE /* c
         }
 
         // write variable content (data)
-        fwrite(buffer, size, 1, file) != 1)
+        if (fwrite(buffer, size, 1, file) != 1)
             result = errno;
     }
     while (false);

@@ -1,27 +1,16 @@
-#if defined(WINDOWS) || defined(_WINDOWS) || defined(_WIN64) || defined(_WIN32)
-# if defined(_M_AMD64) || !defined(_AMD64_)
-#  define _AMD64_
-# endif
-#endif
+export module ConfigurationWizard;
 
-#include <cstdint>
-#include <initializer_list>
-#include <optional>
-#include <span>
-#include <tuple>
-#include <vector>
-#include <string>
-#include <system_error>
+import std;
 
-#include "LocalAppConfig.h"
-#include "StatusVar.h"
-#include "WinApiError.hh"
-#include "NvStrapsConfig.h"
-#include "DeviceList.hh"
-#include "ReBarState.hh"
-#include "TextWizardPage.hh"
-#include "TextWizardMenu.hh"
-#include "ConfigurationWizard.hh"
+import NvStraps.WinAPI;
+import LocalAppConfig;
+import StatusVar;
+import DeviceRegistry;
+import WinApiError;
+import DeviceList;
+import NvStrapsConfig;
+import TextWizardPage;
+import TextWizardMenu;
 
 using std::uint_least8_t;
 using std::uint_least32_t;
@@ -166,7 +155,7 @@ static bool clearGPUBarSize(NvStrapsConfig &nvStrapsConfig, unsigned selectedDev
     return configured;
 }
 
-void runConfigurationWizard()
+export void runConfigurationWizard()
 {
     auto menuType = MenuType::Main;
     auto dwStatusVarLastError = ERROR_CODE { ERROR_CODE_SUCCESS };
@@ -287,7 +276,7 @@ void runConfigurationWizard()
         case MenuCommand::SaveConfiguration:
             SaveNvStrapsConfig();
 
-            showInfo(L"Successfully saved configuration to NvStrapsReBar UEFI variable\n"s);
+            showInfo(L"Configuration saved to NvStrapsReBar UEFI variable\n"s);
             showInfo(L"\nReboot for changes to take effect\n\n"s);
 
             showConfig();

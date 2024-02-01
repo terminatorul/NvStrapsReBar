@@ -1,13 +1,22 @@
 #if !defined(NV_STRAPS_REBAR_STATUS_VAR_H)
 #define NV_STRAPS_REBAR_STATUS_VAR_H
 
-#if defined(UEFI_SOURCE) || defined(EFIAPI)
+#if defined(UEFI_SOURCE)
 # include <Uefi.h>
 #else
-# include <stdint.h>
+#if defined(__cplusplus) && !defined(NVSTRAPS_DXE_DRIVER)
+import std;
+using std::uint_least64_t;
+# else
+#  include <stdint.h>
+# endif
 #endif
 
-#include "LocalAppConfig.h"
+#if defined(__cplusplus) && !defined(NVSTRAPS_DXE_DRIVER)
+import LocalAppConfig;
+#else
+# include "LocalAppConfig.h"
+#endif
 
 typedef enum StatusVar
 {
@@ -28,10 +37,11 @@ typedef enum StatusVar
     StatusVar_GpuNoReBarCapability = 140u,
     StatusVar_GpuExcluded = 150u,
 
-    StatusVar_EFIAllocationError = 160u,
-    StatusVar_Internal_EFIError = 170u,
-    StatusVar_NVAR_API_Error = 180u,
-    StatusVar_ParseError = 190u
+    StatusVar_BadBridgeConfig = 160u,
+    StatusVar_EFIAllocationError = 170u,
+    StatusVar_Internal_EFIError = 180u,
+    StatusVar_NVAR_API_Error = 190u,
+    StatusVar_ParseError = 200u
 }
     StatusVar;
 

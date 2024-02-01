@@ -1,0 +1,110 @@
+[
+{
+  "directory": "C:/Users/Adrian/Packages/edk2/NvStrapsReBar/ReBarState/build-mingw",
+  "command": "C:\\msys64\\clang64\\bin\\cc.exe -IC:/Users/Adrian/Packages/edk2/NvStrapsReBar/ReBarDxe/include -IC:/Users/Adrian/Packages/edk2/NvStrapsReBar/ReBarState -fms-compatibility -fms-extensions -fmodule-file=C:/Users/Adrian/Packages/edk2/NvStrapsReBar/ReBarState/build-mingw/cxx_std_lib.pcm -o CMakeFiles\\NvStrapsReBar.dir\\F_\\UserStorage\\Adrian\\Packages\\edk2\\NvStrapsReBar\\ReBarDxe\\DeviceRegistry.c.obj -c C:\\Users\\Adrian\\Packages\\edk2\\NvStrapsReBar\\ReBarDxe\\DeviceRegistry.c -x c++",
+  "file": "C:\\Users\\Adrian\\Packages\\edk2\\NvStrapsReBar\\ReBarDxe\\DeviceRegistry.c",
+  "output": "CMakeFiles\\NvStrapsReBar.dir\\C_\\Users\\Adrian\\Packages\\edk2\\NvStrapsReBar\\ReBarDxe\\DeviceRegistry.c.obj"
+},
+{
+  "directory": "C:/Users/Adrian/Packages/edk2/NvStrapsReBar/ReBarState/build-mingw",
+  "command": "C:\\msys64\\clang64\\bin\\cc.exe -IC:/Users/Adrian/Packages/edk2/NvStrapsReBar/ReBarDxe/include -IC:/Users/Adrian/Packages/edk2/NvStrapsReBar/ReBarState -fms-compatibility -fms-extensions -fmodule-file=C:/Users/Adrian/Packages/edk2/NvStrapsReBar/ReBarState/build-mingw/cxx_std_lib.pcm -o CMakeFiles\\NvStrapsReBar.dir\\F_\\UserStorage\\Adrian\\Packages\\edk2\\NvStrapsReBar\\ReBarDxe\\EfiVariable.c.obj -c C:\\Users\\Adrian\\Packages\\edk2\\NvStrapsReBar\\ReBarDxe\\EfiVariable.c -x c++",
+  "file": "C:\\Users\\Adrian\\Packages\\edk2\\NvStrapsReBar\\ReBarDxe\\EfiVariable.c",
+  "output": "CMakeFiles\\NvStrapsReBar.dir\\C_\\Users\\Adrian\\Packages\\edk2\\NvStrapsReBar\\ReBarDxe\\EfiVariable.c.obj"
+},
+{
+  "directory": "C:/Users/Adrian/Packages/edk2/NvStrapsReBar/ReBarState/build-mingw",
+  "command": "C:\\msys64\\clang64\\bin\\cc.exe -IC:/Users/Adrian/Packages/edk2/NvStrapsReBar/ReBarDxe/include -IC:/Users/Adrian/Packages/edk2/NvStrapsReBar/ReBarState -fms-compatibility -fms-extensions -Wno-bitwise-op-parentheses -Wno-deprecated-anon-enum-enum-conversion -fmodule-file=C:/Users/Adrian/Packages/edk2/NvStrapsReBar/ReBarState/build-mingw/cxx_std_lib.pcm -o CMakeFiles\\NvStrapsReBar.dir\\F_\\UserStorage\\Adrian\\Packages\\edk2\\NvStrapsReBar\\ReBarDxe\\NvStrapsConfig.c.obj -c C:\\Users\\Adrian\\Packages\\edk2\\NvStrapsReBar\\ReBarDxe\\NvStrapsConfig.c -x c++",
+  "file": "C:\\Users\\Adrian\\Packages\\edk2\\NvStrapsReBar\\ReBarDxe\\NvStrapsConfig.c",
+  "output": "CMakeFiles\\NvStrapsReBar.dir\\C_\\Users\\Adrian\\Packages\\edk2\\NvStrapsReBar\\ReBarDxe\\NvStrapsConfig.c.obj"
+},
+{
+  "directory": "C:/Users/Adrian/Packages/edk2/NvStrapsReBar/ReBarState/build-mingw",
+  "command": "C:\\msys64\\clang64\\bin\\cc.exe -IC:/Users/Adrian/Packages/edk2/NvStrapsReBar/ReBarDxe/include -IC:/Users/Adrian/Packages/edk2/NvStrapsReBar/ReBarState -fms-compatibility -fms-extensions -fmodule-file=C:/Users/Adrian/Packages/edk2/NvStrapsReBar/ReBarState/build-mingw/cxx_std_lib.pcm -o CMakeFiles\\NvStrapsReBar.dir\\F_\\UserStorage\\Adrian\\Packages\\edk2\\NvStrapsReBar\\ReBarDxe\\StatusVar.c.obj -c C:\\Users\\Adrian\\Packages\\edk2\\NvStrapsReBar\\ReBarDxe\\StatusVar.c -x c++",
+  "file": "C:\\Users\\Adrian\\Packages\\edk2\\NvStrapsReBar\\ReBarDxe\\StatusVar.c",
+  "output": "CMakeFiles\\NvStrapsReBar.dir\\C_\\Users\\Adrian\\Packages\\edk2\\NvStrapsReBar\\ReBarDxe\\StatusVar.c.obj"
+},
+{
+  "directory": "C:/Users/Adrian/Packages/edk2/NvStrapsReBar/ReBarState/build-mingw",
+  "command": "C:\\msys64\\clang64\\bin\\c++.exe -IC:/Users/Adrian/Packages/edk2/NvStrapsReBar/ReBarDxe/include -IC:/Users/Adrian/Packages/edk2/NvStrapsReBar/ReBarState -fms-compatibility -fms-extensions -std=gnu++23 -fexperimental-library -Wno-switch -Wno-unqualified-std-cast-call -fretain-comments-from-system-headers -fmodule-file=C:/Users/Adrian/Packages/edk2/NvStrapsReBar/ReBarState/build-mingw/cxx_std_lib.pcm @CMakeFiles\\NvStrapsReBar.dir\\ReBarState.cc.obj.modmap -o CMakeFiles\\NvStrapsReBar.dir\\ReBarState.cc.obj -c C:\\Users\\Adrian\\Packages\\edk2\\NvStrapsReBar\\ReBarState\\ReBarState.cc",
+  "file": "C:\\Users\\Adrian\\Packages\\edk2\\NvStrapsReBar\\ReBarState\\ReBarState.cc",
+  "output": "CMakeFiles\\NvStrapsReBar.dir\\ReBarState.cc.obj"
+},
+{
+  "directory": "C:/Users/Adrian/Packages/edk2/NvStrapsReBar/ReBarState/build-mingw",
+  "command": "C:\\msys64\\clang64\\bin\\c++.exe -IC:/Users/Adrian/Packages/edk2/NvStrapsReBar/ReBarDxe/include -IC:/Users/Adrian/Packages/edk2/NvStrapsReBar/ReBarState -fms-compatibility -fms-extensions -std=gnu++23 -fexperimental-library -Wno-switch -Wno-unqualified-std-cast-call -fretain-comments-from-system-headers -fmodule-file=C:/Users/Adrian/Packages/edk2/NvStrapsReBar/ReBarState/build-mingw/cxx_std_lib.pcm @CMakeFiles\\NvStrapsReBar.dir\\NvStrapsWinAPI.ixx.obj.modmap -o CMakeFiles\\NvStrapsReBar.dir\\StatusVar.ixx.obj -c C:\\Users\\Adrian\\Packages\\edk2\\NvStrapsReBar\\ReBarState\\StatusVar.ixx -x c++",
+  "file": "C:\\Users\\Adrian\\Packages\\edk2\\NvStrapsReBar\\ReBarState\\StatusVar.ixx",
+  "output": "CMakeFiles\\NvStrapsReBar.dir\\StatusVar.ixx.obj"
+},
+{
+  "directory": "C:/Users/Adrian/Packages/edk2/NvStrapsReBar/ReBarState/build-mingw",
+  "command": "C:\\msys64\\clang64\\bin\\c++.exe -IC:/Users/Adrian/Packages/edk2/NvStrapsReBar/ReBarDxe/include -IC:/Users/Adrian/Packages/edk2/NvStrapsReBar/ReBarState -fms-compatibility -fms-extensions -std=gnu++23 -fexperimental-library -Wno-switch -Wno-unqualified-std-cast-call -fretain-comments-from-system-headers -fmodule-file=C:/Users/Adrian/Packages/edk2/NvStrapsReBar/ReBarState/build-mingw/cxx_std_lib.pcm @CMakeFiles\\NvStrapsReBar.dir\\NvStrapsWinAPI.ixx.obj.modmap -o CMakeFiles\\NvStrapsReBar.dir\\DeviceRegistry.ixx.obj -c C:\\Users\\Adrian\\Packages\\edk2\\NvStrapsReBar\\ReBarState\\DeviceRegistry.ixx -x c++",
+  "file": "C:\\Users\\Adrian\\Packages\\edk2\\NvStrapsReBar\\ReBarState\\DeviceRegistry.ixx",
+  "output": "CMakeFiles\\NvStrapsReBar.dir\\DeviceRegistry.ixx.obj"
+},
+{
+  "directory": "C:/Users/Adrian/Packages/edk2/NvStrapsReBar/ReBarState/build-mingw",
+  "command": "C:\\msys64\\clang64\\bin\\c++.exe -IC:/Users/Adrian/Packages/edk2/NvStrapsReBar/ReBarDxe/include -IC:/Users/Adrian/Packages/edk2/NvStrapsReBar/ReBarState -fms-compatibility -fms-extensions -std=gnu++23 -fexperimental-library -Wno-switch -Wno-unqualified-std-cast-call -fretain-comments-from-system-headers -fmodule-file=C:/Users/Adrian/Packages/edk2/NvStrapsReBar/ReBarState/build-mingw/cxx_std_lib.pcm @CMakeFiles\\NvStrapsReBar.dir\\NvStrapsWinAPI.ixx.obj.modmap -o CMakeFiles\\NvStrapsReBar.dir\\LocalAppConfig.ixx.obj -c C:\\Users\\Adrian\\Packages\\edk2\\NvStrapsReBar\\ReBarState\\LocalAppConfig.ixx -x c++",
+  "file": "C:\\Users\\Adrian\\Packages\\edk2\\NvStrapsReBar\\ReBarState\\LocalAppConfig.ixx",
+  "output": "CMakeFiles\\NvStrapsReBar.dir\\LocalAppConfig.ixx.obj"
+},
+{
+  "directory": "C:/Users/Adrian/Packages/edk2/NvStrapsReBar/ReBarState/build-mingw",
+  "command": "C:\\msys64\\clang64\\bin\\c++.exe -IC:/Users/Adrian/Packages/edk2/NvStrapsReBar/ReBarDxe/include -IC:/Users/Adrian/Packages/edk2/NvStrapsReBar/ReBarState -fms-compatibility -fms-extensions -std=gnu++23 -fexperimental-library -Wno-switch -Wno-unqualified-std-cast-call -fretain-comments-from-system-headers -fmodule-file=C:/Users/Adrian/Packages/edk2/NvStrapsReBar/ReBarState/build-mingw/cxx_std_lib.pcm @CMakeFiles\\NvStrapsReBar.dir\\NvStrapsWinAPI.ixx.obj.modmap -o CMakeFiles\\NvStrapsReBar.dir\\NvStrapsWinAPI.ixx.obj -c C:\\Users\\Adrian\\Packages\\edk2\\NvStrapsReBar\\ReBarState\\NvStrapsWinAPI.ixx -x c++",
+  "file": "C:\\Users\\Adrian\\Packages\\edk2\\NvStrapsReBar\\ReBarState\\NvStrapsWinAPI.ixx",
+  "output": "CMakeFiles\\NvStrapsReBar.dir\\NvStrapsWinAPI.ixx.obj"
+},
+{
+  "directory": "C:/Users/Adrian/Packages/edk2/NvStrapsReBar/ReBarState/build-mingw",
+  "command": "C:\\msys64\\clang64\\bin\\c++.exe -IC:/Users/Adrian/Packages/edk2/NvStrapsReBar/ReBarDxe/include -IC:/Users/Adrian/Packages/edk2/NvStrapsReBar/ReBarState -fms-compatibility -fms-extensions -std=gnu++23 -fexperimental-library -Wno-switch -Wno-unqualified-std-cast-call -fretain-comments-from-system-headers -fmodule-file=C:/Users/Adrian/Packages/edk2/NvStrapsReBar/ReBarState/build-mingw/cxx_std_lib.pcm @CMakeFiles\\NvStrapsReBar.dir\\NvStrapsDXGI.ixx.obj.modmap -o CMakeFiles\\NvStrapsReBar.dir\\NvStrapsDXGI.ixx.obj -c C:\\Users\\Adrian\\Packages\\edk2\\NvStrapsReBar\\ReBarState\\NvStrapsDXGI.ixx -x c++",
+  "file": "C:\\Users\\Adrian\\Packages\\edk2\\NvStrapsReBar\\ReBarState\\NvStrapsDXGI.ixx",
+  "output": "CMakeFiles\\NvStrapsReBar.dir\\NvStrapsDXGI.ixx.obj"
+},
+{
+  "directory": "C:/Users/Adrian/Packages/edk2/NvStrapsReBar/ReBarState/build-mingw",
+  "command": "C:\\msys64\\clang64\\bin\\c++.exe -IC:/Users/Adrian/Packages/edk2/NvStrapsReBar/ReBarDxe/include -IC:/Users/Adrian/Packages/edk2/NvStrapsReBar/ReBarState -std=gnu++23 -fexperimental-library -Wno-switch -Wno-unqualified-std-cast-call -fretain-comments-from-system-headers -fmodule-file=C:/Users/Adrian/Packages/edk2/NvStrapsReBar/ReBarState/build-mingw/cxx_std_lib.pcm @CMakeFiles\\NvStrapsReBar.dir\\WinApiError.ixx.obj.modmap -o CMakeFiles\\NvStrapsReBar.dir\\WinApiError.ixx.obj -c C:\\Users\\Adrian\\Packages\\edk2\\NvStrapsReBar\\ReBarState\\WinApiError.ixx -x c++",
+  "file": "C:\\Users\\Adrian\\Packages\\edk2\\NvStrapsReBar\\ReBarState\\WinApiError.ixx",
+  "output": "CMakeFiles\\NvStrapsReBar.dir\\WinApiError.ixx.obj"
+},
+{
+  "directory": "C:/Users/Adrian/Packages/edk2/NvStrapsReBar/ReBarState/build-mingw",
+  "command": "C:\\msys64\\clang64\\bin\\c++.exe -IC:/Users/Adrian/Packages/edk2/NvStrapsReBar/ReBarDxe/include -IC:/Users/Adrian/Packages/edk2/NvStrapsReBar/ReBarState -std=gnu++23 -fexperimental-library -Wno-switch -Wno-unqualified-std-cast-call -fretain-comments-from-system-headers -fmodule-file=C:/Users/Adrian/Packages/edk2/NvStrapsReBar/ReBarState/build-mingw/cxx_std_lib.pcm @CMakeFiles\\NvStrapsReBar.dir\\ConfigManagerError.ixx.obj.modmap -o CMakeFiles\\NvStrapsReBar.dir\\ConfigManagerError.ixx.obj -c C:\\Users\\Adrian\\Packages\\edk2\\NvStrapsReBar\\ReBarState\\ConfigManagerError.ixx -x c++",
+  "file": "C:\\Users\\Adrian\\Packages\\edk2\\NvStrapsReBar\\ReBarState\\ConfigManagerError.ixx",
+  "output": "CMakeFiles\\NvStrapsReBar.dir\\ConfigManagerError.ixx.obj"
+},
+{
+  "directory": "C:/Users/Adrian/Packages/edk2/NvStrapsReBar/ReBarState/build-mingw",
+  "command": "C:\\msys64\\clang64\\bin\\c++.exe -IC:/Users/Adrian/Packages/edk2/NvStrapsReBar/ReBarDxe/include -IC:/Users/Adrian/Packages/edk2/NvStrapsReBar/ReBarState -std=gnu++23 -fexperimental-library -Wno-switch -Wno-unqualified-std-cast-call -fretain-comments-from-system-headers -fmodule-file=C:/Users/Adrian/Packages/edk2/NvStrapsReBar/ReBarState/build-mingw/cxx_std_lib.pcm @CMakeFiles\\NvStrapsReBar.dir\\DeviceList.ixx.obj.modmap -o CMakeFiles\\NvStrapsReBar.dir\\DeviceList.ixx.obj -c C:\\Users\\Adrian\\Packages\\edk2\\NvStrapsReBar\\ReBarState\\DeviceList.ixx -x c++",
+  "file": "C:\\Users\\Adrian\\Packages\\edk2\\NvStrapsReBar\\ReBarState\\DeviceList.ixx",
+  "output": "CMakeFiles\\NvStrapsReBar.dir\\DeviceList.ixx.obj"
+},
+{
+  "directory": "C:/Users/Adrian/Packages/edk2/NvStrapsReBar/ReBarState/build-mingw",
+  "command": "C:\\msys64\\clang64\\bin\\c++.exe -IC:/Users/Adrian/Packages/edk2/NvStrapsReBar/ReBarDxe/include -IC:/Users/Adrian/Packages/edk2/NvStrapsReBar/ReBarState -std=gnu++23 -fexperimental-library -Wno-switch -Wno-unqualified-std-cast-call -fretain-comments-from-system-headers -fmodule-file=C:/Users/Adrian/Packages/edk2/NvStrapsReBar/ReBarState/build-mingw/cxx_std_lib.pcm @CMakeFiles\\NvStrapsReBar.dir\\TextWizardPage.ixx.obj.modmap -o CMakeFiles\\NvStrapsReBar.dir\\TextWizardPage.ixx.obj -c C:\\Users\\Adrian\\Packages\\edk2\\NvStrapsReBar\\ReBarState\\TextWizardPage.ixx -x c++",
+  "file": "C:\\Users\\Adrian\\Packages\\edk2\\NvStrapsReBar\\ReBarState\\TextWizardPage.ixx",
+  "output": "CMakeFiles\\NvStrapsReBar.dir\\TextWizardPage.ixx.obj"
+},
+{
+  "directory": "C:/Users/Adrian/Packages/edk2/NvStrapsReBar/ReBarState/build-mingw",
+  "command": "C:\\msys64\\clang64\\bin\\c++.exe -IC:/Users/Adrian/Packages/edk2/NvStrapsReBar/ReBarDxe/include -IC:/Users/Adrian/Packages/edk2/NvStrapsReBar/ReBarState -std=gnu++23 -fexperimental-library -Wno-switch -Wno-unqualified-std-cast-call -fretain-comments-from-system-headers -fmodule-file=C:/Users/Adrian/Packages/edk2/NvStrapsReBar/ReBarState/build-mingw/cxx_std_lib.pcm @CMakeFiles\\NvStrapsReBar.dir\\NvStrapsConfig.ixx.obj.modmap -o CMakeFiles\\NvStrapsReBar.dir\\NvStrapsConfig.ixx.obj -c C:\\Users\\Adrian\\Packages\\edk2\\NvStrapsReBar\\ReBarState\\NvStrapsConfig.ixx -x c++",
+  "file": "C:\\Users\\Adrian\\Packages\\edk2\\NvStrapsReBar\\ReBarState\\NvStrapsConfig.ixx",
+  "output": "CMakeFiles\\NvStrapsReBar.dir\\NvStrapsConfig.ixx.obj"
+},
+{
+  "directory": "C:/Users/Adrian/Packages/edk2/NvStrapsReBar/ReBarState/build-mingw",
+  "command": "C:\\msys64\\clang64\\bin\\c++.exe -IC:/Users/Adrian/Packages/edk2/NvStrapsReBar/ReBarDxe/include -IC:/Users/Adrian/Packages/edk2/NvStrapsReBar/ReBarState -std=gnu++23 -fexperimental-library -Wno-switch -Wno-unqualified-std-cast-call -fretain-comments-from-system-headers -fmodule-file=C:/Users/Adrian/Packages/edk2/NvStrapsReBar/ReBarState/build-mingw/cxx_std_lib.pcm @CMakeFiles\\NvStrapsReBar.dir\\TextWizardMenu.ixx.obj.modmap -o CMakeFiles\\NvStrapsReBar.dir\\TextWizardMenu.ixx.obj -c C:\\Users\\Adrian\\Packages\\edk2\\NvStrapsReBar\\ReBarState\\TextWizardMenu.ixx -x c++",
+  "file": "C:\\Users\\Adrian\\Packages\\edk2\\NvStrapsReBar\\ReBarState\\TextWizardMenu.ixx",
+  "output": "CMakeFiles\\NvStrapsReBar.dir\\TextWizardMenu.ixx.obj"
+},
+{
+  "directory": "C:/Users/Adrian/Packages/edk2/NvStrapsReBar/ReBarState/build-mingw",
+  "command": "C:\\msys64\\clang64\\bin\\c++.exe -IC:/Users/Adrian/Packages/edk2/NvStrapsReBar/ReBarDxe/include -IC:/Users/Adrian/Packages/edk2/NvStrapsReBar/ReBarState -std=gnu++23 -fexperimental-library -Wno-switch -Wno-unqualified-std-cast-call -fretain-comments-from-system-headers -fmodule-file=C:/Users/Adrian/Packages/edk2/NvStrapsReBar/ReBarState/build-mingw/cxx_std_lib.pcm @CMakeFiles\\NvStrapsReBar.dir\\ConfigurationWizard.ixx.obj.modmap -o CMakeFiles\\NvStrapsReBar.dir\\ConfigurationWizard.ixx.obj -c C:\\Users\\Adrian\\Packages\\edk2\\NvStrapsReBar\\ReBarState\\ConfigurationWizard.ixx -x c++",
+  "file": "C:\\Users\\Adrian\\Packages\\edk2\\NvStrapsReBar\\ReBarState\\ConfigurationWizard.ixx",
+  "output": "CMakeFiles\\NvStrapsReBar.dir\\ConfigurationWizard.ixx.obj"
+},
+{
+  "directory": "C:/Users/Adrian/Packages/edk2/NvStrapsReBar/ReBarState/build-mingw",
+  "command": "C:\\msys64\\clang64\\bin\\c++.exe -std=gnu++23 -fexperimental-library -x c++ -Xclang -emit-module -fmodule-name=std -fretain-comments-from-system-headers -o C:/Users/Adrian/Packages/edk2/NvStrapsReBar/ReBarState/build-mingw/cxx_std_lib.pcm -IC:/Users/Adrian/Packages/edk2/NvStrapsReBar/ReBarState -c C:/Users/Adrian/Packages/edk2/NvStrapsReBar/ReBarState/cxx_std_lib.modulemap",
+  "file": "C:\\Users\\Adrian\\Packages\\edk2\\NvStrapsReBar\\ReBarState\\cxx_std_lib.modulemap",
+  "output": "cxx_std_lib.pcm"
+}
+]
