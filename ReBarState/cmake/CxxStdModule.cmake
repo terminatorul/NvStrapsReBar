@@ -74,6 +74,13 @@ elseif(MSVC)
     cmake_path(GET MSVC_CXX_STD_MODULE_SOURCE_FILE PARENT_PATH MSVC_CXX_STD_MODULE_DIR)
     target_sources(CxxModuleStd INTERFACE "${MSVC_CXX_STD_MODULE_SOURCE_FILE}")
     target_compile_features(CxxModuleStd INTERFACE cxx_std_23)
+    target_compile_options(CxxModuleStd INTERFACE
+	"/permissive-"
+	"/Zc:enumTypes"
+	"/Zc:__cplusplus"
+	"/Zc:__STDC__"
+	"/Zc:templateScope"
+	"/volatile:iso")
 
     add_library(CxxModule::Std ALIAS CxxModuleStd)
 endif()

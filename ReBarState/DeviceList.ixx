@@ -202,7 +202,7 @@ try
 		{
 		    // BAR0 is not read-write
 		    firstResource = false;
-		    wcerr << L"BAR0 is not read-write for adapter: " << productName << endl;
+		    wcerr << L"BAR0 must be read-write for adapter: " << productName << endl;
 		}
 
 		break;
@@ -227,7 +227,7 @@ try
 		{
 		    // Large BAR0 is not read-write
 		    firstResource = false;
-		    wcerr << L"BAR0 is not read-write for adapter: " << productName << endl;
+		    wcerr << L"BAR0 must be read-write for adapter: " << productName << endl;
 		}
 
 		break;

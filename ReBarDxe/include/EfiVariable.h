@@ -76,24 +76,16 @@ inline BYTE *pack_WORD(BYTE *buffer, uint_least16_t value)
 
 inline BYTE *pack_DWORD(BYTE *buffer, uint_least32_t value)
 {
-    *buffer++ = value & BYTE_BITMASK, value >>= BYTE_BITSIZE;
-    *buffer++ = value & BYTE_BITMASK, value >>= BYTE_BITSIZE;
-    *buffer++ = value & BYTE_BITMASK, value >>= BYTE_BITSIZE;
-    *buffer++ = value & BYTE_BITMASK;
+    for (unsigned i = 0u; i < DWORD_SIZE; i++)
+	*buffer++ = value & BYTE_BITMASK, value >>= BYTE_BITSIZE;
 
     return buffer;
 }
 
 inline BYTE *pack_QWORD(BYTE *buffer, uint_least64_t value)
 {
-    *buffer++ = value & BYTE_BITMASK, value >>= BYTE_BITSIZE;
-    *buffer++ = value & BYTE_BITMASK, value >>= BYTE_BITSIZE;
-    *buffer++ = value & BYTE_BITMASK, value >>= BYTE_BITSIZE;
-    *buffer++ = value & BYTE_BITMASK, value >>= BYTE_BITSIZE;
-    *buffer++ = value & BYTE_BITMASK, value >>= BYTE_BITSIZE;
-    *buffer++ = value & BYTE_BITMASK, value >>= BYTE_BITSIZE;
-    *buffer++ = value & BYTE_BITMASK, value >>= BYTE_BITSIZE;
-    *buffer++ = value & BYTE_BITMASK;
+    for (unsigned i = 0u; i < QWORD_SIZE; i++)
+	*buffer++ = value & BYTE_BITMASK, value >>= BYTE_BITSIZE;
 
     return buffer;
 }

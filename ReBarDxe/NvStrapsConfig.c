@@ -1,3 +1,5 @@
+// vi: ft=cpp
+//
 #if defined(UEFI_SOURCE) || defined(EFIAPI)
 # include <Uefi.h>
 # include <Library/UefiRuntimeServicesTableLib.h>
@@ -67,7 +69,8 @@ static void GPUConfig_unpack(BYTE const *buffer, NvStraps_GPUConfig *config)
     config->device = busPosition >> 3u & 0b0001'1111u;
     config->function = busPosition & 0b0111u;
 
-    config->baseAddressSelector = unpack_DWORD(buffer), buffer += DWORD_SIZE;
+    config->bar0.base = unpack_QWORD(buffer), buffer += QWORD_SIZE;
+    config->bar0.top  = unpack_QWORD(buffer), buffer += QWORD_SIZE;
 }
 
 static BYTE *GPUConfig_pack(BYTE *buffer, NvStraps_GPUConfig const *config)
@@ -77,7 +80,8 @@ static BYTE *GPUConfig_pack(BYTE *buffer, NvStraps_GPUConfig const *config)
     buffer = pack_WORD(buffer, config->subsysDeviceID);
     buffer = pack_BYTE(buffer, config->bus);
     buffer = pack_BYTE(buffer, (unsigned)config->device << 3u & 0b1111'1000u | (unsigned)config->function & 0b0111u);
-    buffer = pack_DWORD(buffer, config->baseAddressSelector);
+    buffer = pack_QWORD(buffer, config->bar0.base);
+    buffer = pack_QWORD(buffer, config->bar0.top);
 
     return buffer;
 }
@@ -90,13 +94,10 @@ static void BridgeConfig_unpack(BYTE const *buffer, NvStraps_BridgeConfig *confi
 
     uint_least8_t busPos = unpack_BYTE(buffer); buffer += BYTE_SIZE;
 
-    config->bridgeDevice        = busPos == 0xFFu ? 0xFFu : busPos >> 3u & 0b0001'1111u;
-    config->bridgeFunction      = busPos == 0xFFu ? 0xFFu : busPos & 0b0111u;
+    config->bridgeDevice        = config->bridgeBus == 0xFF && busPos == 0xFFu ? 0xFFu : busPos >> 3u & 0b0001'1111u;
+    config->bridgeFunction      = config->bridgeBus == 0xFF && busPos == 0xFFu ? 0xFFu : busPos & 0b0111u;
 
     config->bridgeSecondaryBus  = unpack_BYTE(buffer), buffer += BYTE_SIZE;
-    config->bridgeSubsidiaryBus = unpack_BYTE(buffer), buffer += BYTE_SIZE;
-    config->bridgeIOBaseLimit   = unpack_WORD(buffer), buffer += WORD_SIZE;
-    config->bridgeMemBaseLimit  = unpack_DWORD(buffer), buffer += DWORD_SIZE;
 }
 
 static UINT8 *BridgeConfig_pack(BYTE *buffer, NvStraps_BridgeConfig  const *config)
@@ -106,11 +107,21 @@ static UINT8 *BridgeConfig_pack(BYTE *buffer, NvStraps_BridgeConfig  const *conf
     buffer = pack_BYTE(buffer, config->bridgeBus);
     buffer = pack_BYTE(buffer, (unsigned)config->bridgeDevice << 3u & 0b1111'1000u | (unsigned)config->bridgeFunction & 0b0111u);
     buffer = pack_BYTE(buffer, config->bridgeSecondaryBus);
-    buffer = pack_BYTE(buffer, config->bridgeSubsidiaryBus);
-    buffer = pack_WORD(buffer, config->bridgeIOBaseLimit);
-    buffer = pack_DWORD(buffer,config-> bridgeMemBaseLimit);
 
     return buffer;
+}
+
+bool NvStrapsConfig_ResetConfig(NvStrapsConfig *config)
+{
+    bool hasConfig = !!config->nGPUConfig && !!config->nBridgeConfig;
+
+    if (hasConfig)
+	config->dirty = true;
+
+    config->nGPUConfig = 0u;
+    config->nBridgeConfig = 0u;
+
+    return hasConfig;
 }
 
 void NvStrapsConfig_Clear(NvStrapsConfig *config)
@@ -193,7 +204,7 @@ static unsigned NvStrapsConfig_Save(BYTE *buffer, unsigned size, NvStrapsConfig 
         buffer = pack_BYTE(buffer, config->nGlobalEnable);
         buffer = pack_BYTE(buffer, config->nGPUSelector);
 
-        for (unsigned i = 0; i < config->nGPUSelector; i++)
+        for (unsigned i = 0u; i < config->nGPUSelector; i++)
             buffer = GPUSelector_pack(buffer, config->GPUs + i);
 
         buffer = pack_BYTE(buffer, config->nGPUConfig);
@@ -203,7 +214,7 @@ static unsigned NvStrapsConfig_Save(BYTE *buffer, unsigned size, NvStrapsConfig 
 
         buffer = pack_BYTE(buffer, config->nBridgeConfig);
 
-        for (unsigned i = 0; i < config->nBridgeConfig; i++)
+        for (unsigned i = 0u; i < config->nBridgeConfig; i++)
             BridgeConfig_pack(buffer, config->bridge + i);
 
         return BUFFER_SIZE;
@@ -272,6 +283,128 @@ NvStraps_BarSize NvStrapsConfig_LookupBarSize(NvStrapsConfig const *config, uint
     return sizeSelector;
 }
 
+static unsigned NvStrapsConfig_FindGPUConfig(NvStrapsConfig const *config, uint_least8_t busNr, uint_least8_t dev, uint_least8_t fun)
+{
+    for (unsigned i = 0u; i < config->nGPUConfig; i++)
+	if (config->gpuConfig[i].bus == busNr && config->gpuConfig[i].device == dev && config->gpuConfig[i].function == fun)
+	    return i;
+
+    return WORD_BITMASK;
+}
+
+static unsigned NvStrapsConfig_FindBridgeConfig(NvStrapsConfig const *config, uint_least8_t busNr, uint_least8_t dev, uint_least8_t fun)
+{
+    for (unsigned i = 0u; i < config->nBridgeConfig; i++)
+	if (config->bridge[i].bridgeBus == busNr && config->bridge[i].bridgeDevice == dev && config->bridge[i].bridgeFunction == fun)
+	    return i;
+
+    return WORD_BITMASK;
+}
+
+NvStraps_GPUConfig const *NvStrapsConfig_LookupGPUConfig(NvStrapsConfig const *config, uint_least8_t bus, uint_least8_t dev, uint_least8_t fn)
+{
+    unsigned index = NvStrapsConfig_FindGPUConfig(config, bus, dev, fn);
+
+    return index == WORD_BITMASK ? NULL : config->gpuConfig + index;
+}
+
+NvStraps_BridgeConfig const *NvStrapsConfig_LookupBridgeConfig(NvStrapsConfig const *config, uint_least8_t secondaryBus)
+{
+    for (unsigned index = 0u; index < config->nBridgeConfig; index++)
+	if (config->bridge[index].bridgeSecondaryBus == secondaryBus)
+	    return config->bridge + index;
+
+    return NULL;
+}
+
+uint_least32_t NvStrapsConfig_HasBridgeDevice(NvStrapsConfig const *config, uint_least8_t bus, uint_least8_t dev, uint_least8_t fn)
+{
+    unsigned index = NvStrapsConfig_FindBridgeConfig(config, bus, dev, fn);
+
+    if (index == WORD_BITMASK)
+	return (uint_least32_t)WORD_BITMASK << WORD_BITSIZE | WORD_BITMASK;
+
+    return (uint_least32_t)config->bridge[index].deviceID << WORD_BITSIZE | config->bridge[index].vendorID & WORD_BITMASK;
+}
+
+static void NvStraps_UpdateGPUConfig(NvStrapsConfig *config, unsigned gpuIndex, NvStraps_GPUConfig const *gpuConfig)
+{
+    if (config->gpuConfig[gpuIndex].deviceID != gpuConfig->deviceID)
+	config->gpuConfig[gpuIndex].deviceID = gpuConfig->deviceID, config->dirty = true;
+
+    if (config->gpuConfig[gpuIndex].subsysVendorID != gpuConfig->subsysVendorID)
+	config->gpuConfig[gpuIndex].subsysVendorID = gpuConfig->subsysVendorID, config->dirty = true;
+
+    if (config->gpuConfig[gpuIndex].subsysDeviceID != gpuConfig->subsysDeviceID)
+	config->gpuConfig[gpuIndex].subsysDeviceID = gpuConfig->subsysDeviceID, config->dirty = true;
+
+    if (config->gpuConfig[gpuIndex].bar0.base != gpuConfig->bar0.base)
+	config->gpuConfig[gpuIndex].bar0.base = gpuConfig->bar0.base, config->dirty = true;
+
+    if (config->gpuConfig[gpuIndex].bar0.top != gpuConfig->bar0.top)
+	config->gpuConfig[gpuIndex].bar0.top = gpuConfig->bar0.top, config->dirty = true;
+}
+
+bool NvStrapsConfig_SetGPUConfig(NvStrapsConfig *config, NvStraps_GPUConfig const *gpuConfig)
+{
+    unsigned gpuIndex = NvStrapsConfig_FindGPUConfig(config, gpuConfig->bus, gpuConfig->device, gpuConfig->function);
+
+    if (gpuIndex == WORD_BITMASK)
+	if (config->nGPUConfig < ARRAY_SIZE(config->gpuConfig))
+	{
+	    config->gpuConfig[config->nGPUConfig++] = *gpuConfig;
+	    config->dirty = true;
+
+	    return true;
+	}
+	else
+	    ;
+    else
+    {
+	NvStraps_UpdateGPUConfig(config, gpuIndex, gpuConfig);
+
+	return true;
+    }
+
+    return false;
+}
+
+static void NvStrapsConfig_UpdateBridgeConfig(NvStrapsConfig *config, unsigned bridgeIndex, NvStraps_BridgeConfig const *bridgeConfig)
+{
+    if (config->bridge[bridgeIndex].vendorID != bridgeConfig->vendorID)
+	config->bridge[bridgeIndex].vendorID = bridgeConfig->vendorID, config->dirty = true;
+
+    if (config->bridge[bridgeIndex].deviceID != bridgeConfig->deviceID)
+	config->bridge[bridgeIndex].deviceID = bridgeConfig->deviceID, config->dirty = true;
+
+    if (config->bridge[bridgeIndex].bridgeSecondaryBus != bridgeConfig->bridgeSecondaryBus)
+	config->bridge[bridgeIndex].bridgeSecondaryBus = bridgeConfig->bridgeSecondaryBus, config->dirty = true;
+}
+
+bool NvStrapsCongig_SetBridgeConfig(NvStrapsConfig *config, NvStraps_BridgeConfig const *bridgeConfig)
+{
+    unsigned bridgeIndex = NvStrapsConfig_FindBridgeConfig(config, bridgeConfig->bridgeBus, bridgeConfig->bridgeDevice, bridgeConfig->bridgeFunction);
+
+    if (bridgeIndex == WORD_BITMASK)
+	if (config->nBridgeConfig < ARRAY_SIZE(config->bridge))
+	{
+	    config->bridge[config->nBridgeConfig++] = *bridgeConfig;
+	    config->dirty = true;
+
+	    return true;
+	}
+	else
+	    ;
+    else
+    {
+	NvStrapsConfig_UpdateBridgeConfig(config, bridgeIndex, bridgeConfig);
+
+	return true;
+    }
+
+    return false;
+}
+
 NvStrapsConfig *GetNvStrapsConfig(bool reload, ERROR_CODE *errorCode)
 {
     static bool isLoaded = false;
@@ -282,7 +415,7 @@ NvStrapsConfig *GetNvStrapsConfig(bool reload, ERROR_CODE *errorCode)
         uint_least32_t size = sizeof buffer;
         ERROR_CODE status = ReadEfiVariable(NvStrapsConfig_VarName, buffer, &size);
 
-#if defined(UEFI_SOURCE) || defined(EFIAPI)
+#if defined(UEFI_SOURCE)
         if (EFI_ERROR(status))
             SetEFIError(EFIError_ReadConfigVar, status);
         else
