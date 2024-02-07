@@ -40,7 +40,7 @@ Currently the location of the GPU on the PCI bus has to be hard-coded right into
 #define TARGET_BRIDGE_IO_BASE_LIMIT   0x8181u
 ```
 
-See https://github.com/xCuri0/ReBarUEFI/discussions/89#discussioncomment-7697768 for more step-by-step details.
+See https://github.com/terminatorul/NvStrapsReBar/discussions/8 for more step-by-step details.
 
 Rebuild the project using the instructions below (that were slightly adapted from the original [ReBarUEFI](https://github.com/xCuri0/ReBARUEFI) project).
 
