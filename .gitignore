@@ -13,6 +13,7 @@
 *.vsix
 
 uefimount/
+vc140.pdb
 NvVars
 *.efi
 *.iso

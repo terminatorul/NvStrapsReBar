@@ -12,14 +12,19 @@ import NvStrapsConfig;
 import TextWizardPage;
 import TextWizardMenu;
 
+export void runConfigurationWizard();
+
+module: private;
+
 using std::uint_least8_t;
 using std::uint_least32_t;
 using std::uint_least64_t;
-using std::optional;
 using std::span;
 using std::tuple;
 using std::vector;
+using std::to_string;
 using std::to_wstring;
+using std::runtime_error;
 using std::system_error;
 using namespace std::literals::string_literals;
 
@@ -48,7 +53,14 @@ MenuCommand
 
 static vector<MenuCommand> buildConfigurationMenu(NvStrapsConfig &nvStrapsConfig, bool isDirty)
 {
-    auto configMenu = vector<MenuCommand> { MenuCommand::GlobalEnable, MenuCommand::PerGPUConfig, MenuCommand::PerGPUConfigClear, MenuCommand::UEFIConfiguration };
+    auto configMenu = vector<MenuCommand>
+    {
+	MenuCommand::GlobalEnable,
+	MenuCommand::PerGPUConfig,
+	MenuCommand::PerGPUConfigClear,
+	MenuCommand::UEFIConfiguration,
+	MenuCommand::ShowConfiguration
+    };
 
     if (isDirty)
     {
@@ -155,7 +167,98 @@ static bool clearGPUBarSize(NvStrapsConfig &nvStrapsConfig, unsigned selectedDev
     return configured;
 }
 
-export void runConfigurationWizard()
+static void setConfigDirtyOnMismatch(vector<DeviceInfo> const &deviceList, NvStrapsConfig &config)
+{
+    for (auto const &device: deviceList)
+    {
+	auto const [priority, barSize] = config.lookupBarSize
+	    (
+		device.deviceID,
+		device.subsystemVendorID,
+		device.subsystemDeviceID,
+		device.bus,
+		device.device,
+		device.function
+	    );
+
+	if (!!priority && barSize < BarSizeSelector_Excluded)
+	{
+	    auto &&bridgeConfig = config.lookupBridgeConfig(device.bus);
+
+	    if (
+		       !bridgeConfig
+		    || !bridgeConfig->deviceMatch(device.bridge.vendorID, device.bridge.deviceID)
+		    || !bridgeConfig->busLocationMatch(device.bridge.bus, device.bridge.dev, device.bridge.func)
+		)
+	    {
+		return (void)config.isDirty(true);
+	    }
+
+	    auto &&gpuConfig = config.lookupGPUConfig(device.bus, device.device, device.function);
+
+	    if (!gpuConfig || !gpuConfig->bar0.base || gpuConfig->bar0.base != device.bar0.Base || gpuConfig->bar0.top != device.bar0.Top)
+		return (void)config.isDirty(true);
+	}
+    }
+}
+
+static void populateBridgeAndGpuConfig(NvStrapsConfig &config, vector<DeviceInfo> deviceList)
+{
+    config.resetConfig();
+
+    for (auto const &device: deviceList)
+    {
+	auto const [priority, barSize] = config.lookupBarSize
+	    (
+		device.deviceID,
+		device.subsystemVendorID,
+		device.subsystemDeviceID,
+		device.bus,
+		device.device,
+		device.function
+	    );
+
+	if (!!priority && barSize < BarSizeSelector_Excluded)
+	{
+	    auto gpuConfig = NvStraps_GPUConfig
+	    {
+		.deviceID	= device.deviceID,
+		.subsysVendorID = device.subsystemVendorID,
+		.subsysDeviceID = device.subsystemDeviceID,
+		.bus		= device.bus,
+		.device		= device.device,
+		.function	= device.function,
+		.bar0		= { .base = device.bar0.Base, .top = device.bar0.Top }
+	    };
+
+	    if (!config.setGPUConfig(gpuConfig))
+		throw runtime_error("Unsupported configuration: too many GPUs to configure: " + to_string(config.nGPUConfig) + '+');
+
+	    auto bridgeConfig = NvStraps_BridgeConfig
+	    {
+		.vendorID	    = device.bridge.vendorID,
+		.deviceID 	    = device.bridge.deviceID,
+		.bridgeBus	    = device.bridge.bus,
+		.bridgeDevice	    = device.bridge.dev,
+		.bridgeFunction     = device.bridge.func,
+		.bridgeSecondaryBus = device.bus
+	    };
+
+	    auto &&previousBridge = config.lookupBridgeConfig(device.bus);
+
+	    if (previousBridge)
+		if (*previousBridge != bridgeConfig)
+		    throw runtime_error("Unsupported system: multiple PCI bridges for bus " + to_string(device.bus));
+		else
+		    ;
+	    else
+		if (!config.setBridgeConfig(bridgeConfig))
+		    throw runtime_error("Unsupported configuration: too many PCI bridges to record: " + to_string(config.nBridgeConfig) + '+');
+	}
+    }
+}
+
+void runConfigurationWizard()
 {
     auto menuType = MenuType::Main;
     auto dwStatusVarLastError = ERROR_CODE { ERROR_CODE_SUCCESS };
@@ -172,9 +275,10 @@ export void runConfigurationWizard()
     auto selectedDevice = 0u;
     auto deviceSelector = MenuCommand::GPUSelectorByPCIID;
 
+    setConfigDirtyOnMismatch(deviceList, nvStrapsConfig);
     showConfiguration(deviceList, nvStrapsConfig, driverStatus);
 
-    bool runMenuLoop = true;
+    auto runMenuLoop = true;
 
     auto showConfig = [&]()
     {
@@ -192,7 +296,8 @@ export void runConfigurationWizard()
                 defaultValue,
                 nvStrapsConfig.isGlobalEnable(),
                 selectedDevice,
-                deviceList
+                deviceList,
+		nvStrapsConfig
             );
 
         switch (menuCommand)
@@ -266,15 +371,24 @@ export void runConfigurationWizard()
             showConfig();
             break;
 
+	case MenuCommand::ShowConfiguration:
+	    ShowNvStrapsConfig(showInfo);
+	    break;
+
         case MenuCommand::DiscardConfiguration:
             if (nvStrapsConfig.isDirty())
+	    {
                 GetNvStrapsConfig(true);
+		setConfigDirtyOnMismatch(deviceList, nvStrapsConfig);
+	    }
 
             showConfig();
             break;
 
         case MenuCommand::SaveConfiguration:
+	    populateBridgeAndGpuConfig(nvStrapsConfig, deviceList);
             SaveNvStrapsConfig();
+	    setConfigDirtyOnMismatch(deviceList, nvStrapsConfig);
 
             showInfo(L"Configuration saved to NvStrapsReBar UEFI variable\n"s);
             showInfo(L"\nReboot for changes to take effect\n\n"s);

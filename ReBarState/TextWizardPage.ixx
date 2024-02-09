@@ -7,17 +7,51 @@ import StatusVar;
 import DeviceRegistry;
 import DeviceList;
 
-using std::uint_least8_t;
 using std::uint_least64_t;
 using std::string;
 using std::wstring;
+using std::vector;
+using std::wcout;
+using std::wcerr;
+using std::cerr;
+using namespace std::literals::string_view_literals;
+
+export void showInfo(wstring const &message);
+export void showError(wstring const &message);
+export void showError(string const &message);
+export void showStartupLogo();
+
+export void showConfiguration(vector<DeviceInfo> const &devices, NvStrapsConfig const &nvStrapsConfig, uint_least64_t driverStatus);
+
+inline void showInfo(wstring const &message)
+{
+    wcout << message;
+}
+
+inline void showError(wstring const &message)
+{
+    wcerr << L'\n' << message;
+}
+
+inline void showError(string const &message)
+{
+    cerr << '\n' << message;
+}
+
+inline void showStartupLogo()
+{
+    wcout << L"NvStrapsReBar, based on:\nReBarState (c) 2023 xCuri0\n\n"sv;
+}
+
+module: private;
+
+using std::uint_least8_t;
+using std::uint_least64_t;
+using std::string;
 using std::wstring_view;
 using std::to_wstring;
 using std::vector;
-using std::cerr;
 using std::wcout;
-using std::wcerr;
-using std::wcin;
 using std::wostringstream;
 using std::hex;
 using std::dec;
@@ -26,35 +60,11 @@ using std::right;
 using std::uppercase;
 using std::setw;
 using std::setfill;
-using std::min;
 using std::max;
-using std::get;
-using std::find;
-using std::ranges::views::all;
 
 namespace views = std::ranges::views;
 using namespace std::literals::string_literals;
 using namespace std::literals::string_view_literals;
-
-export void showInfo(wstring const &message)
-{
-    wcout << message;
-}
-
-export void showError(wstring const &message)
-{
-    wcerr << L'\n' << message;
-}
-
-export void showError(string const &message)
-{
-    cerr << '\n' << message;
-}
-
-export void showStartupLogo()
-{
-    wcout << L"NvStrapsReBar, based on:\nReBarState (c) 2023 xCuri0\n\n"sv;
-}
 
 static wstring formatDirectMemorySize(uint_least64_t memorySize)
 {
@@ -69,7 +79,7 @@ static wstring formatLocation(DeviceInfo const &devInfo)
     wostringstream str;
 
     str << hex << uppercase << setfill(L'0') << right;
-    str << setw(2u) << devInfo.bridgeBus << L':' << setw(2u) << devInfo.bridgeDev << L'.' << devInfo.bridgeFunc;
+    str << setw(2u) << devInfo.bridge.bus << L':' << setw(2u) << devInfo.bridge.dev << L'.' << devInfo.bridge.func;
     str << L' ';
     str << setw(2u) << devInfo.bus << L':' << setw(2u) << devInfo.device << L'.' << devInfo.function;
 
@@ -123,7 +133,7 @@ static void showLocalGPUs(vector<DeviceInfo> const &deviceSet, NvStrapsConfig co
 #if defined(NDEBUG)
     if (deviceSet.empty())
     {
-        cerr << "No NVIDIA GPUS present!\n";
+        cerr << "No NVIDIA GPUs present!\n";
         return;
     }
 #endif
@@ -151,6 +161,8 @@ static void showLocalGPUs(vector<DeviceInfo> const &deviceSet, NvStrapsConfig co
 
     for (auto const &&[deviceIndex, deviceInfo]: deviceSet | views::enumerate)
     {
+	auto bridgeInfo = nvStrapsConfig.lookupBridgeConfig(deviceInfo.bus);
+
         auto [configPriority, barSizeSelector] = nvStrapsConfig.lookupBarSize
             (
                 deviceInfo.deviceID,
@@ -160,6 +172,17 @@ static void showLocalGPUs(vector<DeviceInfo> const &deviceSet, NvStrapsConfig co
                 deviceInfo.device,
                 deviceInfo.function
             );
+
+	auto bridgeMismatch = bool
+	{
+		!!configPriority && barSizeSelector < BarSizeSelector_Excluded
+	    &&
+	    (
+		   !bridgeInfo
+		|| !bridgeInfo->deviceMatch(deviceInfo.bridge.vendorID, deviceInfo.bridge.deviceID)
+		|| !bridgeInfo->busLocationMatch(deviceInfo.bridge.bus, deviceInfo.bridge.dev, deviceInfo.bridge.func)
+	    )
+	};
 
         // GPU number
         wcout << L"| "sv << dec << right << setw(2u) << setfill(L' ') << deviceIndex + 1u;
@@ -171,7 +194,7 @@ static void showLocalGPUs(vector<DeviceInfo> const &deviceSet, NvStrapsConfig co
         wcout << L" | "sv << (configPriority < ConfigPriority::EXPLICIT_SUBSYSTEM_ID ? L' ' : L'*') << hex << setw(WORD_SIZE * 2u) << setfill(L'0') << uppercase << deviceInfo.subsystemVendorID << L':' << hex << setw(WORD_SIZE * 2u) << setfill(L'0') << uppercase << deviceInfo.subsystemDeviceID;
 
         // PCI bus location
-        wcout << L" | "sv << (configPriority < ConfigPriority::EXPLICIT_PCI_LOCATION ? L' ' : L'*') << right << setw(nMaxLocationSize) << setfill(L' ') << left << formatLocation(deviceInfo);
+        wcout << L" | "sv << (bridgeMismatch ? L'!' : configPriority < ConfigPriority::EXPLICIT_PCI_LOCATION ? L' ' : L'*') << right << setw(nMaxLocationSize) << setfill(L' ') << left << formatLocation(deviceInfo);
 
         // Target BAR1 size
         wcout << L" | "sv << dec << setw(nMaxTargetBarSize) << right << setfill(L' ') << formatBarSizeSelector(barSizeSelector);
@@ -363,7 +386,7 @@ static void showPciReBarState(uint_least8_t reBarState)
     }
 }
 
-export void showConfiguration(vector<DeviceInfo> const &devices, NvStrapsConfig const &nvStrapsConfig, uint_least64_t driverStatus)
+void showConfiguration(vector<DeviceInfo> const &devices, NvStrapsConfig const &nvStrapsConfig, uint_least64_t driverStatus)
 {
     showLocalGPUs(devices, nvStrapsConfig);
     showDriverStatus(driverStatus);

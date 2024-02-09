@@ -24,34 +24,50 @@ protected:
     friend error_category const &config_manager_error_category();
 };
 
+export error_category const &config_manager_error_category();
+export system_error make_config_ret(int error);
+export system_error make_config_ret(int error, char const *message);
+export system_error make_config_ret(int error, string const &message);
+export int validate_config_ret(int error);
+export int validate_config_ret(int error, char const *message);
+
+export template <int ...SUCCESS_VALUE>
+    int validate_config_ret(int error);
+
+export template <int ...SUCCESS_VALUES>
+    int validate_config_ret(int error, char const *message);
+
+export template <int ...SUCCESS_VALUES>
+    int validate_config_ret(int error, std::string const &message);
+
 inline char const *ConfigManagerErrorCategory::name() const noexcept
 {
     return "PnP Configuration Manager";
 }
 
-export inline error_category const &config_manager_error_category()
+inline error_category const &config_manager_error_category()
 {
     static ConfigManagerErrorCategory errorCategory;
 
     return errorCategory;
 }
 
-export inline system_error make_config_ret(int error)
+inline system_error make_config_ret(int error)
 {
     return { error, config_manager_error_category() };
 }
 
-export inline system_error make_config_ret(int error, char const *message)
+inline system_error make_config_ret(int error, char const *message)
 {
     return { error, config_manager_error_category(), message };
 }
 
-export inline system_error make_config_ret(int error, string const &message)
+inline system_error make_config_ret(int error, string const &message)
 {
     return { error, config_manager_error_category(), message };
 }
 
-export inline int validate_config_ret(int error)
+inline int validate_config_ret(int error)
 {
     if (error && !uncaught_exceptions())
         throw make_config_ret(error);
@@ -59,7 +75,7 @@ export inline int validate_config_ret(int error)
     return error;
 }
 
-export inline int validate_config_ret(int error, char const *message)
+inline int validate_config_ret(int error, char const *message)
 {
     if (error && !uncaught_exceptions())
         throw make_config_ret(error, message);
@@ -67,7 +83,7 @@ export inline int validate_config_ret(int error, char const *message)
     return error;
 }
 
-export template <int ...SUCCESS_VALUE>
+template <int ...SUCCESS_VALUE>
     inline int validate_config_ret(int error)
 {
     if (error && !(false || ... || (error == SUCCESS_VALUE)) && !uncaught_exceptions())
@@ -76,7 +92,7 @@ export template <int ...SUCCESS_VALUE>
     return error;
 }
 
-export template <int ...SUCCESS_VALUES>
+template <int ...SUCCESS_VALUES>
     inline int validate_config_ret(int error, char const *message)
 {
     if (error && !(false || ... || (error == SUCCESS_VALUES)) && !uncaught_exceptions())
@@ -85,7 +101,7 @@ export template <int ...SUCCESS_VALUES>
     return error;
 }
 
-export template <int ...SUCCESS_VALUES>
+template <int ...SUCCESS_VALUES>
     inline int validate_config_ret(int error, std::string const &message)
 {
     if (error && !(false || ... || (error == SUCCESS_VALUES)) && !uncaught_exceptions())
@@ -93,6 +109,8 @@ export template <int ...SUCCESS_VALUES>
 
     return error;
 }
+
+module: private;
 
 static char const *configurationManagerErrorMessage(int error)
 {
@@ -288,7 +306,7 @@ static char const *configurationManagerErrorMessage(int error)
     return "Configuration Manager error";
 }
 
-string ConfigManagerErrorCategory::message(int error) const
+inline string ConfigManagerErrorCategory::message(int error) const
 {
     return "PnP Configuration Manager error code " + to_string(error) + ": " + configurationManagerErrorMessage(error);
 }

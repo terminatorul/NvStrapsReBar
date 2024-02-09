@@ -215,7 +215,7 @@ static unsigned NvStrapsConfig_Save(BYTE *buffer, unsigned size, NvStrapsConfig 
         buffer = pack_BYTE(buffer, config->nBridgeConfig);
 
         for (unsigned i = 0u; i < config->nBridgeConfig; i++)
-            BridgeConfig_pack(buffer, config->bridge + i);
+            buffer = BridgeConfig_pack(buffer, config->bridge + i);
 
         return BUFFER_SIZE;
     }
@@ -381,7 +381,7 @@ static void NvStrapsConfig_UpdateBridgeConfig(NvStrapsConfig *config, unsigned b
 	config->bridge[bridgeIndex].bridgeSecondaryBus = bridgeConfig->bridgeSecondaryBus, config->dirty = true;
 }
 
-bool NvStrapsCongig_SetBridgeConfig(NvStrapsConfig *config, NvStraps_BridgeConfig const *bridgeConfig)
+bool NvStrapsConfig_SetBridgeConfig(NvStrapsConfig *config, NvStraps_BridgeConfig const *bridgeConfig)
 {
     unsigned bridgeIndex = NvStrapsConfig_FindBridgeConfig(config, bridgeConfig->bridgeBus, bridgeConfig->bridgeDevice, bridgeConfig->bridgeFunction);
 

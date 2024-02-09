@@ -51,14 +51,22 @@ inline uint_least16_t unpack_WORD(BYTE const *buffer)
 
 inline uint_least32_t unpack_DWORD(BYTE const *buffer)
 {
-    return *buffer | (uint_least16_t)buffer[1u] << BYTE_SIZE | (uint_least32_t)buffer[2u] << 2u * BYTE_BITSIZE | (uint_least32_t)buffer[3u] << 3u * BYTE_BITSIZE;
+    return *buffer
+	| (uint_least16_t)buffer[1u] <<	     BYTE_BITSIZE
+	| (uint_least32_t)buffer[2u] << 2u * BYTE_BITSIZE
+	| (uint_least32_t)buffer[3u] << 3u * BYTE_BITSIZE;
 }
 
 inline uint_least64_t unpack_QWORD(BYTE const *buffer)
 {
-    return
-        *buffer | (uint_least16_t)buffer[1u] << BYTE_SIZE | (uint_least32_t)buffer[2u] << 2u * BYTE_BITSIZE | (uint_least32_t)buffer[3u] << 3u * BYTE_BITSIZE
-        | (uint_least64_t)buffer[4u] << 4u * BYTE_BITSIZE | (uint_least64_t)buffer[5u] << 5u * BYTE_BITSIZE | (uint_least64_t)buffer[6u] << 6u * BYTE_BITSIZE | (uint_least64_t)buffer[7u] << 7u * BYTE_BITSIZE;
+    return *buffer
+	| (uint_least16_t)buffer[1u] <<      BYTE_BITSIZE
+	| (uint_least32_t)buffer[2u] << 2u * BYTE_BITSIZE
+	| (uint_least32_t)buffer[3u] << 3u * BYTE_BITSIZE
+        | (uint_least64_t)buffer[4u] << 4u * BYTE_BITSIZE
+	| (uint_least64_t)buffer[5u] << 5u * BYTE_BITSIZE
+	| (uint_least64_t)buffer[6u] << 6u * BYTE_BITSIZE
+	| (uint_least64_t)buffer[7u] << 7u * BYTE_BITSIZE;
 }
 
 inline BYTE *pack_BYTE(BYTE *buffer, uint_least8_t value)

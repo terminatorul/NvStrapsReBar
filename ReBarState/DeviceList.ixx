@@ -9,8 +9,42 @@ import ConfigManagerError;
 import LocalAppConfig;
 import NvStrapsConfig;
 
+using std::uint_least8_t;
+using std::uint_least16_t;
+using std::uint_least64_t;
+using std::wstring;
+using std::vector;
+
+export struct DeviceInfo
+{
+    uint_least16_t vendorID, deviceID, subsystemVendorID, subsystemDeviceID;
+    uint_least8_t  bus, device, function;
+
+    bool           busLocationSelector;
+
+    struct
+    {
+	uint_least16_t vendorID, deviceID;
+	uint_least8_t  bus, dev, func;
+    }
+		   bridge;
+
+    struct
+    {
+	uint_least64_t Base, Top;
+    }
+		   bar0;
+    uint_least64_t currentBARSize;
+    uint_least64_t dedicatedVideoMemory;
+    wstring        productName;
+};
+
+export wstring formatMemorySize(uint_least64_t size);
+export vector<DeviceInfo> const &getDeviceList();
+
+module: private;
+
 using std::max;
-using std::min;
 using std::uint_least8_t;
 using std::uint_least16_t;
 using std::uint_least32_t;
@@ -31,46 +65,20 @@ using std::runtime_error;
 using std::system_error;
 using std::unique_ptr;
 using std::stringstream;
-using std::cout;
 using std::cerr;
 using std::endl;
-using std::wcout;
 using std::wcerr;
 using wregexp = std::wregex;
-using std::match_results;
 using std::wcmatch;
-using std::span;
 using std::wstring_view;
-using std::hex;
-using std::setfill;
-using std::setw;
 using std::endl;
 using std::isprint;
-using std::ranges::views::iota;
 using std::ranges::views::all;
 
 namespace ranges = std::ranges;
-namespace views = std::ranges::views;
 namespace regexp_constants = std::regex_constants;
 using namespace std::literals::string_literals;
 using namespace std::literals::string_view_literals;
-
-export struct DeviceInfo
-{
-    uint_least16_t vendorID, deviceID, subsystemVendorID, subsystemDeviceID;
-    uint_least8_t  bus, device, function;
-    uint_least8_t  bridgeBus, bridgeDev, bridgeFunc;
-    bool           busLocationSelector;
-
-    struct
-    {
-	uint_least64_t Base, Top;
-    }
-		   bar0;
-    uint_least64_t currentBARSize;
-    uint_least64_t dedicatedVideoMemory;
-    wstring        productName;
-};
 
 template <typename ...ArgsT>
     static inline auto regexp_match(ArgsT && ...args) ->decltype(std::regex_match(forward<ArgsT>(args)...))
@@ -129,7 +137,7 @@ static bool fillDedicatedMemorySize(vector<DeviceInfo> &deviceSet)
     return false;
 }
 
-export wstring formatMemorySize(uint_least64_t size)
+wstring formatMemorySize(uint_least64_t size)
 {
     wstring_view const suffixes[] = { L"Bytes"sv, L"KiB"sv, L"MiB"sv, L"GiB"sv, L"TiB"sv, L"PiB"sv };
     wstring_view unit = L"EiB"sv; // UINT64 can hold values up to 2 EBytes - 1
@@ -306,6 +314,7 @@ tuple<uint_least8_t, uint_least8_t, uint_least8_t> getParentBridgeLocation(HDEVI
 	return getDeviceBusLocation(hBridgeList, devInfoData, devPropBuffer, "PCI bridge");
 
     check_last_error("Reading PCI bridge for display adapter failed.");
+
     return tuple(BYTE_BITMASK, BYTE_BITMASK, BYTE_BITMASK);
 }
 
@@ -388,7 +397,18 @@ static void enumPciDisplayAdapters(vector<DeviceInfo> &deviceSet)
 
 	    static_cast<WCHAR *>(static_cast<void *>(devPropBuffer))[len] = WCHAR { };
 
-	    tie(deviceInfo.bridgeBus, deviceInfo.bridgeDev, deviceInfo.bridgeFunc) = getParentBridgeLocation(bridge.hDeviceInfoSet, devProp, devPropBuffer);
+	    if (wcmatch matches; regexp_match(devProp, devProp + devPropLength / sizeof *devProp, matches, pciInstanceRegexp))
+	    {
+		deviceInfo.bridge.vendorID = static_cast<uint_least16_t>(wcstoul(matches[1u].str().c_str(), nullptr, 16));
+		deviceInfo.bridge.deviceID = static_cast<uint_least16_t>(wcstoul(matches[2u].str().c_str(), nullptr, 16));
+	    }
+	    else
+	    {
+		std::wcout << L"Device instace ID: "s << wstring_view(devProp, devPropLength / sizeof *devProp) << std::endl;
+		throw runtime_error("Error listing PCI bridge for display adapter: wrong PCI instance ID property value"s);
+	    }
+
+	    tie(deviceInfo.bridge.bus, deviceInfo.bridge.dev, deviceInfo.bridge.func) = getParentBridgeLocation(bridge.hDeviceInfoSet, devProp, devPropBuffer);
 
 	    auto DeviceBAR0 = tie(deviceInfo.bar0.Base, deviceInfo.bar0.Top);
             tie(deviceInfo.currentBARSize, DeviceBAR0) = getMaxBarSize(devInfoData.DevInst, deviceInfo.productName);
@@ -409,7 +429,7 @@ static void enumPciDisplayAdapters(vector<DeviceInfo> &deviceSet)
 
 static vector<DeviceInfo> emptyDeviceSet;
 
-export vector<DeviceInfo> const &getDeviceList()
+vector<DeviceInfo> const &getDeviceList()
 try
 {
     static vector<DeviceInfo> deviceSet;

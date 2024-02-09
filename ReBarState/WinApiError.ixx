@@ -6,15 +6,8 @@ import NvStraps.WinAPI;
 #if defined(WINDOWS) || defined(_WINDOWS) || defined(_WIN64) || defined(_WIN32)
 
 using std::string;
-using std::exchange;
 using std::error_category;
 using std::system_error;
-using std::stringstream;
-using std::hex;
-using std::setfill;
-using std::setw;
-using std::endl;
-using namespace std::literals::string_literals;
 
 export class WinAPIErrorCategory: public error_category
 {
@@ -28,42 +21,62 @@ protected:
     friend error_category const &winapi_error_category();
 };
 
-export inline error_category const &winapi_error_category()
+export error_category const &winapi_error_category();
+
+export void check_last_error(DWORD dwLastError = ::GetLastError());
+export void check_last_error(DWORD dwLastError, char const* msg);
+export void check_last_error(DWORD dwLastError, string const& msg);
+export void check_last_error(char const *msg, DWORD dwLastError = ::GetLastError());
+export void check_last_error(string const &msg, DWORD dwLastError = ::GetLastError());
+
+inline error_category const &winapi_error_category()
 {
     static WinAPIErrorCategory errorCategory;
 
     return errorCategory;
 }
 
-export inline void check_last_error(DWORD dwLastError = ::GetLastError())
+inline void check_last_error(DWORD dwLastError)
 {
     if (dwLastError && !std::uncaught_exceptions())
         throw system_error(static_cast<int>(dwLastError), winapi_error_category());
 }
 
-export inline void check_last_error(DWORD dwLastError, char const* msg)
+inline void check_last_error(DWORD dwLastError, char const* msg)
 {
     if (dwLastError && !std::uncaught_exceptions())
         throw system_error(static_cast<int>(dwLastError), winapi_error_category(), msg);
 }
 
-export inline void check_last_error(DWORD dwLastError, string const& msg)
+inline void check_last_error(DWORD dwLastError, string const& msg)
 {
     if (dwLastError && !std::uncaught_exceptions())
         throw system_error(static_cast<int>(dwLastError), winapi_error_category(), msg);
 }
 
-export inline void check_last_error(char const* msg, DWORD dwLastError = ::GetLastError())
+inline void check_last_error(char const *msg, DWORD dwLastError)
 {
     if (dwLastError && !std::uncaught_exceptions())
         throw system_error(static_cast<int>(dwLastError), winapi_error_category(), msg);
 }
 
-export inline void check_last_error(string const& msg, DWORD dwLastError = ::GetLastError())
+inline void check_last_error(string const &msg, DWORD dwLastError)
 {
     if (dwLastError && !std::uncaught_exceptions())
         throw system_error(static_cast<int>(dwLastError), winapi_error_category(), msg);
 }
+
+module: private;
+
+using std::string;
+using std::exchange;
+using std::stringstream;
+using std::hex;
+using std::setfill;
+using std::setw;
+using std::endl;
+using namespace std::literals::string_literals;
+
 
 inline char const *WinAPIErrorCategory::name() const noexcept
 {
