@@ -29,7 +29,7 @@ SPDX-License-Identifier: MIT
 #include "ReBar.h"
 
 // if system time is before this year then CMOS reset will be detected and rebar will be disabled.
-static unsigned const BUILD_YEAR = 2023u;
+static unsigned const BUILD_YEAR = 2024u;
 
 // for quirk
 static uint_least16_t const PCI_VENDOR_ID_ATI = 0x1002u;
