@@ -3,7 +3,7 @@
 <p>This is a copy of the rather popular <a href="https://github.com/xCuri0/ReBARUEFI">ReBarUEFI</a> DXE driver. <a href="https://github.com/xCuri0/ReBARUEFI">ReBarUEFI</a> enables Resizable BAR for older motherboards and chipsets without ReBAR support from the manufacturer. NvStrapsReBar was created to test Resizable BAR support for GPUs from the RTX 2000 (and GTX 1600, Turing architecture) line. Apparently for the GTX 1000 cards (Pascal architecture) the Windows driver just resets the computer during boot if the BAR size has been changed, so GTX 1000 cards still can not enable ReBAR. The Linux driver does not crash, but does not pick up the new BAR size either.</p>
 
 ### Do I need to flash a new UEFI image on the motherboard, to enable ReBAR on the GPU ?
-Yes, this is how it works for Turing GPUs (GTX 1600 / RTX 2000). It's ususally the video BIOS (vBIOS) that should enable ReBAR, but the vBIOS is digitally signed and can not be modified by end-users (is locked-down). The motherboard UEFI image can also be signed or have integrity checks, but in general it is thankfully not as locked down, and users and UEFI modders still have a way to modify it.
+Yes, this is how it works for Turing GPUs (GTX 1600 / RTX 2000). It's ususally the video BIOS (vBIOS) that should enable ReBAR, but the vBIOS is digitally signed and can not be modified by end-users (is locked-down). The motherboard UEFI image can also be signed or have integrity checks, but in general it is thankfully not as locked down, and users and UEFI modders often still have a way to modify it. ReBAR functionality depends on the Above 4G Decoding option in your UEFI setup (if you have it), which must be turned on in advance, and CSM must be disabled. If you accidentaly turn off 4G decoding and are unable to boot, you need to clear CMOS. Do not use the Clear CMOS button that is present on some motherboards, instead short the pin headers, or remove the battery. The button may still keep the date and time, and the date has to be reset to recover the board.
 
 Currently the location of the GPU on the PCI bus has to be hard-coded right into the motherboard UEFI, and so does the associated PCI-to-PCI bridge. All hard-coded values are in the header file [`ReBarDxe/include/LocalPciGPU.h`](https://github.com/terminatorul/NvStrapsReBar/blob/master/ReBarDxe/include/LocalPciGPU.h), and all the neccesary values can be read from the CPU-Z .txt report file, so you can manually change them to match your system. Currently these settings are listed below, where all numeric values are examples only (for my computer):
 
@@ -68,7 +68,7 @@ in the below format
 
 Use command `nvidia-smi -q -d memory` to check the new BAR size reported by the Windows/Linux driver.
 
-It maybe easier and more informative to post GPU-Z screenshots with the main GPU page + ReBAR page, and CPU-X with the CPU page and motherboard page screenshots. If you needed to apply more changes to make ReBAR work, please post about them as well.
+It maybe easier and more informative to post GPU-Z screenshots with the main GPU page + ReBAR page, and CPU-X with the CPU page and motherboard page screenshots, plus the output from nvidia-smi command. If you needed to apply more changes to make ReBAR work, please post about them as well.
 
 ## Building (Windows only)
 * Download and install [Visual Studio 2022 Community Edition](https://visualstudio.microsoft.com/vs/community/) from Microsoft. Be sure to select C/C++ Desktop Development option for installation.
@@ -140,11 +140,11 @@ See the original project [ReBarUEFI](https://github.com/xCuri0/ReBarUEFI/) for t
 <p>So you will still have to check the README page from the original project: <ul><li><a href="https://github.com/xCuri0/ReBarUEFI">https://github.com/xCuri0/ReBarUEFI</a></li></ul> for all the details and instructions on working with the UEFI image, and patching it if necessary (for older motherboards and chipsets). </p>
 
 ## Enable ReBAR and choose BAR size
-After flashing the motherboard with the new UEFI image, you need to enable "Above 4G decoding" and disable CSM in UEFI setup, and then run `NvStrapsReBar.exe` as Administrator.
+After flashing the motherboard with the new UEFI image, you need to enable "Above 4G Decoding" (if you have the option) and disable CSM in UEFI setup, and then run `NvStrapsReBar.exe` as Administrator. ReBAR feature depends on Above 4G Decoding, so if you accidentaly turn it off and can not POST, you need to clear CMOS. Do not use the Clear CMOS button present on some motherboards, as it may still keep the current date and time. But the current date has to be reset to recover the board. So instead of the Clear CMOS button, you should short the Clear CMOS pin headers (with a screwdriver that is metallic, and the metal is not painted), or by removing the battery for 1 to 5 minutes.
 
 `NvStrapsReBar.exe` prompts you with a small text-based menu. You can configure 2 value for the BAR size with this tool:
 * GPU-side BAR size
-* PCI BAR size
+* PCI BAR size (for older boards, without Resizable BAR)
 
 Both sizes must be right for Resizable BAR to work, but maybe some newer boards can already configure PCI BAR size as expected, so maybe there is a small chance you only need to set the GPU-side value for the BAR size. But you should try and experiment with both of them, as needed.
 
