@@ -148,7 +148,8 @@ After flashing the motherboard with the new UEFI image, you need to enable "Abov
 
 Both sizes must be right for Resizable BAR to work, but maybe some newer boards can already configure PCI BAR size as expected, so maybe there is a small chance you only need to set the GPU-side value for the BAR size. But you should try and experiment with both of them, as needed.
 
-![image](https://github.com/terminatorul/NvStrapsReBar/assets/378924/c89a05d0-c5bf-4d2f-a1ba-90b7e951b44c)
+![image](https://github.com/terminatorul/NvStrapsReBar/assets/378924/fc432819-6710-43da-829f-41c2119b89d7)
+
 
 Most people should choose the first menu option and press `E` to Enable auto-settings BAR size for Turing GPUs. Depending on your board, you may need to also input `P` at the menu prompt, to choose Target PCI BAR size, and select value 64 (for the option to configure PCI BAR for selected GPUs only). Befor quitting the menu, input `S` to save the changes you made to the EFI variable store, for the UEFI DXE driver to read them.
 
