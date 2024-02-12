@@ -21,6 +21,7 @@ using std::uint_least32_t;
 using std::uint_least64_t;
 using std::span;
 using std::tuple;
+using std::tie;
 using std::vector;
 using std::to_string;
 using std::to_wstring;
@@ -189,6 +190,7 @@ static void setConfigDirtyOnMismatch(vector<DeviceInfo> const &deviceList, NvStr
 		       !bridgeConfig
 		    || !bridgeConfig->deviceMatch(device.bridge.vendorID, device.bridge.deviceID)
 		    || !bridgeConfig->busLocationMatch(device.bridge.bus, device.bridge.dev, device.bridge.func)
+		    || config.hasBridgeDevice(device.bridge.bus, device.bridge.dev, device.bridge.func) != tie(device.bridge.vendorID, device.bridge.deviceID)
 		)
 	    {
 		return (void)config.isDirty(true);
@@ -230,6 +232,15 @@ static void populateBridgeAndGpuConfig(NvStrapsConfig &config, vector<DeviceInfo
 		.function	= device.function,
 		.bar0		= { .base = device.bar0.Base, .top = device.bar0.Top }
 	    };
+
+	    if (gpuConfig.bar0.base >= UINT32_MAX || gpuConfig.bar0.top >= UINT32_MAX)
+		throw runtime_error("64-bit address for GPU BAR0 not implmented"s);
+
+	    if (gpuConfig.bar0.base & uint_least32_t { 0x0000'000Ful })
+		throw runtime_error("PCI BARs must be aligned at least to 16 bytes"s);
+
+	    if (gpuConfig.bar0.base % (gpuConfig.bar0.top - gpuConfig.bar0.base + 1u))
+		throw runtime_error("PCI BARs must the naturally aligned (aligned to their size)"s);
 
 	    if (!config.setGPUConfig(gpuConfig))
 		throw runtime_error("Unsupported configuration: too many GPUs to configure: " + to_string(config.nGPUConfig) + '+');
@@ -398,3 +409,5 @@ void runConfigurationWizard()
         }
     }
 }
+
+// vim: ft=cpp

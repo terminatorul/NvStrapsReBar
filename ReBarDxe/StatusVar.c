@@ -2,8 +2,6 @@
 #if defined(UEFI_SOURCE) || defined(EFIAPI)
 # include <Uefi.h>
 # include <Library/UefiRuntimeServicesTableLib.h>
-
-# include "LocalPciGpu.h"
 #else
 # if defined(WINDOWS) || defined(_WINDOWS) || defined(_WIN32) || defined(_WIN64)
 #  if defined(_M_AMD64) && !defined(_AMD64_)
@@ -16,6 +14,7 @@
 #include <stdint.h>
 
 #include "LocalAppConfig.h"
+#include "PciConfig.h"
 #include "NvStrapsConfig.h"
 #include "EfiVariable.h"
 #include "StatusVar.h"
@@ -36,12 +35,10 @@ static inline UINT16 PciAddressToBusLocation(UINTN pciAddress)
     return MakeBusLocation(pciAddress >> 24u & 0xFFu, pciAddress >> 16u & 0xFFu, pciAddress >> 8u & 0xFFu);
 }
 
-static EFI_STATUS WriteStatusVar()
+static EFI_STATUS WriteStatusVar(uint_least16_t pciLocation)
 {
     uint_least64_t var =
-           (uint_least64_t)TARGET_GPU_PCI_BUS      << (8u + WORD_BITSIZE + DWORD_BITSIZE)
-         | (uint_least64_t)TARGET_GPU_PCI_DEVICE   << (3u + WORD_BITSIZE + DWORD_BITSIZE)
-         | (uint_least64_t)TARGET_GPU_PCI_FUNCTION <<      (WORD_BITSIZE + DWORD_BITSIZE)
+           (uint_least64_t)pciLocation << (WORD_BITSIZE + DWORD_BITSIZE)
          | (uint_least64_t)statusVar[0u] & UINT64_C(0x0000FFFF'FFFFFFFF);
 
     BYTE buffer[QWORD_SIZE];
@@ -49,37 +46,53 @@ static EFI_STATUS WriteStatusVar()
     return WriteEfiVariable(StatusVar_Name, buffer, (uint_least32_t)(pack_QWORD(buffer, var) - buffer), EFI_VARIABLE_BOOTSERVICE_ACCESS | EFI_VARIABLE_RUNTIME_ACCESS);
 };
 
-void SetStatusVar(StatusVar val)
+static void SetStatusVarInternal(StatusVar val, uint_least16_t pciLocation)
 {
     if (val > statusVar[0u])
     {
         statusVar[0u] = val;
-        WriteStatusVar();
+        WriteStatusVar(pciLocation);
+    }
+}
+
+void SetStatusVar(StatusVar val)
+{
+    SetStatusVarInternal(val, 0u);
+}
+
+void SetEFIErrorInternal(EFIErrorLocation errLocation, EFI_STATUS status, uint_least16_t pciLocation)
+{
+    if (statusVar[0u] < UINT64_C(1) << DWORD_BITSIZE)
+    {
+        uint_least64_t value =
+                   (uint_least64_t)(+errLocation & +BYTE_BITMASK) << (DWORD_BITSIZE + BYTE_BITSIZE)
+                 | (uint_least64_t)(status & BYTE_BITMASK) << DWORD_BITSIZE
+                 | StatusVar_Internal_EFIError;
+
+        statusVar[0u] = value;
+        WriteStatusVar(pciLocation);
     }
 }
 
 void SetEFIError(EFIErrorLocation errLocation, EFI_STATUS status)
 {
-    if (statusVar[0u] < UINT64_C(1) << DWORD_BITSIZE)
-    {
-        uint_least64_t value =
-                   (uint_least64_t)(errLocation & BYTE_BITMASK) << (DWORD_BITSIZE + BYTE_BITSIZE)
-                 | (uint_least64_t)(status & BYTE_BITMASK) << DWORD_BITSIZE
-                 | StatusVar_Internal_EFIError;
-
-        statusVar[0u] = value;
-        WriteStatusVar();
-    }
+    SetEFIErrorInternal(errLocation, status, 0u);
 }
 
 void SetDeviceEFIError(UINTN pciAddress, EFIErrorLocation errLocation, EFI_STATUS status)
 {
-    SetEFIError(errLocation, status);
+    uint_least8_t bus, dev, fun;
+
+    pciUnpackAddress(pciAddress, &bus, &dev, &fun);
+    SetEFIErrorInternal(errLocation, status, pciPackLocation(bus, dev, fun));
 }
 
 void SetDeviceStatusVar(UINTN pciAddress, StatusVar val)
 {
-    SetStatusVar(val);
+    uint_least8_t bus, dev, fun;
+
+    pciUnpackAddress(pciAddress, &bus, &dev, &fun);
+    SetStatusVarInternal(val, pciPackLocation(bus, dev, fun));
 }
 #else
 uint_least64_t ReadStatusVar(ERROR_CODE *errorCode)

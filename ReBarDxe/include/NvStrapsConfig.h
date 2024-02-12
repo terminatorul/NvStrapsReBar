@@ -51,6 +51,7 @@ enum
 
 enum
 {
+    TARGET_BRIDGE_IO_BASE_LIMIT = 0xF1F1u,
     TARGET_GPU_VENDOR_ID = 0x10DEu
 };
 

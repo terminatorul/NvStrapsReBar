@@ -81,7 +81,44 @@ EFI_STATUS pciReadDeviceSubsystem(UINTN pciAddress, uint_least16_t *subsysVenID,
     return status;
 }
 
-UINTN pciLocatedDevice(EFI_HANDLE RootBridgeHandle, EFI_PCI_ROOT_BRIDGE_IO_PROTOCOL_PCI_ADDRESS addressInfo, uint_least16_t *venID, uint_least16_t *devID)
+uint_least32_t pciDeviceClass(UINTN pciAddress)
+{
+    UINT32 configReg;
+
+    if (EFI_ERROR(pciReadConfigDword(pciAddress, PCI_REVISION_ID_OFFSET, &configReg)))
+	return UINT32_C(0xFFFF'FFFF);
+
+    return configReg & UINT32_C(0xFFFF'FF00);
+}
+
+EFI_STATUS pciBridgeSecondaryBus(UINTN pciAddress, uint_least8_t *secondaryBus)
+{
+    UINT32 configReg;
+
+    EFI_STATUS status = pciReadConfigDword(pciAddress, PCI_BRIDGE_PRIMARY_BUS_REGISTER_OFFSET, &configReg);
+
+    if (EFI_ERROR(status))
+	*secondaryBus = BYTE_BITMASK;
+    else
+	*secondaryBus = configReg >> BYTE_BITSIZE & BYTE_BITMASK;
+
+    return status;
+}
+
+bool pciIsPciBridge(uint_least8_t headerType)
+{
+    return (headerType & ~HEADER_TYPE_MULTI_FUNCTION) == (uint_least8_t) HEADER_TYPE_PCI_TO_PCI_BRIDGE;
+}
+
+bool pciIsVgaController(uint_least32_t pciClassReg)
+{
+    return pciClassReg ==
+	     ((uint_least32_t)PCI_CLASS_DISPLAY     << 3u * BYTE_BITSIZE
+	    | (uint_least32_t)PCI_CLASS_DISPLAY_VGA << 2u * BYTE_BITSIZE
+	    | (uint_least32_t)PCI_IF_VGA_VGA	    << 1u * BYTE_BITSIZE);
+}
+
+UINTN pciLocateDevice(EFI_HANDLE RootBridgeHandle, EFI_PCI_ROOT_BRIDGE_IO_PROTOCOL_PCI_ADDRESS addressInfo, uint_least16_t *venID, uint_least16_t *devID, uint_least8_t *headerType)
 {
     gBS->HandleProtocol(RootBridgeHandle, &gEfiPciRootBridgeIoProtocolGuid, (void **)&pciRootBridgeIo);
 
@@ -89,6 +126,18 @@ UINTN pciLocatedDevice(EFI_HANDLE RootBridgeHandle, EFI_PCI_ROOT_BRIDGE_IO_PROTO
     UINT32 pciID;
 
     pciReadConfigDword(pciAddress, PCI_VENDOR_ID_OFFSET, &pciID);
+
+    if (pciID != ((uint_least32_t) WORD_BITMASK << WORD_BITSIZE | WORD_BITMASK))
+    {
+	UINT32 configReg;
+
+	if (EFI_ERROR(pciReadConfigDword(pciAddress, PCI_CACHELINE_SIZE_OFFSET, &configReg)))
+	    *headerType = BYTE_BITMASK;
+	else
+	    *headerType = (configReg >> WORD_BITSIZE) & BYTE_BITMASK;
+    }
+    else
+	*headerType = BYTE_BITMASK;
 
     *venID = pciID & WORD_BITMASK;
     *devID = pciID >> WORD_BITSIZE & WORD_BITMASK;
@@ -209,45 +258,54 @@ bool pciRebarSetSize(UINTN pciAddress, uint_least16_t capabilityOffset, uint_lea
     return false;
 }
 
-void pciSaveAndRemapBridgeConfig(UINTN bridgePciAddress, UINT32 bridgeSaveArea[4u], EFI_PHYSICAL_ADDRESS baseAddress0, EFI_PHYSICAL_ADDRESS bridgeBaseIo, UINT8 busNo)
+void pciSaveAndRemapBridgeConfig(UINTN bridgePciAddress, UINT32 bridgeSaveArea[3u], EFI_PHYSICAL_ADDRESS baseAddress0, EFI_PHYSICAL_ADDRESS topAddress0, EFI_PHYSICAL_ADDRESS ioBaseLimit)
 {
     bool efiError = false;
     EFI_STATUS status;
 
-    efiError = efiError || EFI_ERROR((status = pciReadConfigDword(bridgePciAddress, PCI_COMMAND,     bridgeSaveArea + 0u)));
-    efiError = efiError || EFI_ERROR((status = pciReadConfigDword(bridgePciAddress, PCI_PRIMARY_BUS, bridgeSaveArea + 1u)));
-    efiError = efiError || EFI_ERROR((status = pciReadConfigDword(bridgePciAddress, PCI_IO_BASE,     bridgeSaveArea + 2u)));
-    efiError = efiError || EFI_ERROR((status = pciReadConfigDword(bridgePciAddress, PCI_MEMORY_BASE, bridgeSaveArea + 3u)));
+    efiError = efiError || EFI_ERROR((status = pciReadConfigDword(bridgePciAddress, PCI_COMMAND_OFFSET, bridgeSaveArea + 0u)));
+    efiError = efiError || EFI_ERROR((status = pciReadConfigDword(bridgePciAddress, PCI_IO_BASE,        bridgeSaveArea + 1u)));
+    efiError = efiError || EFI_ERROR((status = pciReadConfigDword(bridgePciAddress, PCI_MEMORY_BASE,    bridgeSaveArea + 2u)));
 
     if (!efiError)
     {
-        UINT32 bridgeIoRange = (bridgeBaseIo & 0xFF00u | bridgeBaseIo >> 8u & 0x00FFu) & 0xFFFFu;
+	topAddress0++;
 
+	if (topAddress0 & UINT32_C(0x000F'FFFF))
+	{
+	    topAddress0 += UINT32_C(0x0010'0000);	// round up to next 1 MiByte alignment
+	    topAddress0 &= UINT32_C(0xFFF0'0000);
+	}
+
+	if (topAddress0 <= baseAddress0)
+	{
+	    SetStatusVar(StatusVar_BadBridgeConfig);
+	    return;
+	}
+
+        UINT32 bridgeIoRange = ioBaseLimit & 0xFF00u | ioBaseLimit >> BYTE_BITSIZE & 0x00FFu;
         UINT32
-                bridgeMemoryBaseLimit = (baseAddress0 >> 16u & 0x0000FFFFu | baseAddress0 + SIZE_32MB & 0xFFFF0000u) & 0xFFFFFFFFu,
-                bridgeIoBaseLimit = bridgeSaveArea[2u] & UINT32_C(0xFFFF0000) | bridgeIoRange & UINT32_C(0x0000FFFF),
-                bridgePciBusNumber = bridgeSaveArea[1u] & UINT32_C(0xFF0000FF) | (busNo & UINT8_C(0xFF)) << 8u | (busNo & UINT8_C(0xFF)) << 16u,
-                bridgeCommand = bridgeSaveArea[0u] | PCI_COMMAND_IO | PCI_COMMAND_MEMORY | PCI_COMMAND_MASTER;
+                bridgeCommand = bridgeSaveArea[0u] | EFI_PCI_COMMAND_IO_SPACE | EFI_PCI_COMMAND_MEMORY_SPACE | EFI_PCI_COMMAND_BUS_MASTER,
+                bridgeIoBaseLimit = bridgeSaveArea[1u] & UINT32_C(0xFFFF'0000) | bridgeIoRange & UINT32_C(0x0000'FFFF),
+                bridgeMemoryBaseLimit = (baseAddress0 >> 16u & UINT32_C(0x0000'FFF0) | topAddress0 & UINT32_C(0xFFF0'0000));
 
-        efiError = efiError || EFI_ERROR((status = pciWriteConfigDword(bridgePciAddress, PCI_MEMORY_BASE, &bridgeMemoryBaseLimit)));
-        efiError = efiError || EFI_ERROR((status = pciWriteConfigDword(bridgePciAddress, PCI_IO_BASE,     &bridgeIoBaseLimit)));
-        efiError = efiError || EFI_ERROR((status = pciWriteConfigDword(bridgePciAddress, PCI_PRIMARY_BUS, &bridgePciBusNumber)));
-        efiError = efiError || EFI_ERROR((status = pciWriteConfigDword(bridgePciAddress, PCI_COMMAND,     &bridgeCommand)));
+        efiError = efiError || EFI_ERROR((status = pciWriteConfigDword(bridgePciAddress, PCI_MEMORY_BASE,    &bridgeMemoryBaseLimit)));
+        efiError = efiError || EFI_ERROR((status = pciWriteConfigDword(bridgePciAddress, PCI_IO_BASE,        &bridgeIoBaseLimit)));
+        efiError = efiError || EFI_ERROR((status = pciWriteConfigDword(bridgePciAddress, PCI_COMMAND_OFFSET, &bridgeCommand)));
     }
 
     if (efiError)
         SetEFIError(EFIError_PCI_BridgeConfig, status);
 }
 
-void pciRestoreBridgeConfig(UINTN bridgePciAddress, UINT32 bridgeSaveArea[4u])
+void pciRestoreBridgeConfig(UINTN bridgePciAddress, UINT32 bridgeSaveArea[3u])
 {
     bool efiError = false;
     EFI_STATUS status;
 
-    efiError = efiError || EFI_ERROR((status = pciWriteConfigDword(bridgePciAddress, PCI_COMMAND,     bridgeSaveArea + 0u)));
-    efiError = efiError || EFI_ERROR((status = pciWriteConfigDword(bridgePciAddress, PCI_PRIMARY_BUS, bridgeSaveArea + 1u)));
-    efiError = efiError || EFI_ERROR((status = pciWriteConfigDword(bridgePciAddress, PCI_IO_BASE,     bridgeSaveArea + 2u)));
-    efiError = efiError || EFI_ERROR((status = pciWriteConfigDword(bridgePciAddress, PCI_MEMORY_BASE, bridgeSaveArea + 3u)));
+    efiError = efiError || EFI_ERROR((status = pciWriteConfigDword(bridgePciAddress, PCI_COMMAND_OFFSET, bridgeSaveArea + 0u)));
+    efiError = efiError || EFI_ERROR((status = pciWriteConfigDword(bridgePciAddress, PCI_IO_BASE,        bridgeSaveArea + 1u)));
+    efiError = efiError || EFI_ERROR((status = pciWriteConfigDword(bridgePciAddress, PCI_MEMORY_BASE,    bridgeSaveArea + 2u)));
 
     if (efiError)
         SetEFIError(EFIError_PCI_BridgeRestore, status);
@@ -258,17 +316,23 @@ void pciSaveAndRemapDeviceBAR0(UINTN pciAddress, UINT32 gpuSaveArea[2u], EFI_PHY
     bool efiError = false;
     EFI_STATUS status;
 
-    efiError = efiError || EFI_ERROR((status = pciReadConfigDword(pciAddress, PCI_COMMAND,        gpuSaveArea + 0u)));
+    efiError = efiError || EFI_ERROR((status = pciReadConfigDword(pciAddress, PCI_COMMAND_OFFSET, gpuSaveArea + 0u)));
     efiError = efiError || EFI_ERROR((status = pciReadConfigDword(pciAddress, PCI_BASE_ADDRESS_0, gpuSaveArea + 1u)));
 
     if (!efiError)
     {
+	if (baseAddress0 & UINT32_C(0x0000'000F))
+	{
+	    SetDeviceStatusVar(pciAddress, StatusVar_BadGpuConfig);
+	    return;
+	}
+
         UINT32
-           gpuBaseAddress = baseAddress0 & 0xFFFFFFFFu,
+           gpuBaseAddress = baseAddress0 & UINT32_C(0xFFFFFFF0),
            gpuCommand = gpuSaveArea[0u] | PCI_COMMAND_IO | PCI_COMMAND_MEMORY | PCI_COMMAND_MASTER;
 
         efiError = efiError || EFI_ERROR((status = pciWriteConfigDword(pciAddress, PCI_BASE_ADDRESS_0, &gpuBaseAddress)));
-        efiError = efiError || EFI_ERROR((status = pciWriteConfigDword(pciAddress, PCI_COMMAND,        &gpuCommand)));
+        efiError = efiError || EFI_ERROR((status = pciWriteConfigDword(pciAddress, PCI_COMMAND_OFFSET, &gpuCommand)));
     }
 
     if (efiError)
@@ -280,9 +344,11 @@ void pciRestoreDeviceConfig(UINTN pciAddress, UINT32 saveArea[2u])
     bool efiError = false;
     EFI_STATUS status;
 
-    efiError = efiError || EFI_ERROR((status = pciWriteConfigDword(pciAddress, PCI_COMMAND,        saveArea + 0u)));
+    efiError = efiError || EFI_ERROR((status = pciWriteConfigDword(pciAddress, PCI_COMMAND_OFFSET, saveArea + 0u)));
     efiError = efiError || EFI_ERROR((status = pciWriteConfigDword(pciAddress, PCI_BASE_ADDRESS_0, saveArea + 1u)));
 
     if (efiError)
         SetEFIError(EFIError_PCI_DeviceBARRestore, status);
 }
+
+// vim: ft=cpp

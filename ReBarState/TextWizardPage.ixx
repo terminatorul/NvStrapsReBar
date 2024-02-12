@@ -263,8 +263,20 @@ static wstring_view driverStatusString(uint_least64_t driverStatus)
     case StatusVar_GpuExcluded:
         return L"GPU excluded"sv;
 
+    case StatusVar_NoBridgeConfig:
+	return L"Missing bridge configuration"sv;
+
     case StatusVar_BadBridgeConfig:
 	return L"Bad PCI Bridge Configuration"sv;
+
+    case StatusVar_BridgeNotEnumerated:
+	return L"GPU enumerated before bridge"sv;
+
+    case StatusVar_BadGpuConfig:
+	return L"Improper GPU BAR configuration"sv;
+
+    case StatusVar_NoGpuConfig:
+	return L"Missing GPU BAR0 Configuration"sv;
 
     case StatusVar_EFIAllocationError:
         return L"EFI Allocation error"sv;
@@ -301,6 +313,9 @@ wstring_view driverErrorString(EFIErrorLocation errLocation)
 
     case EFIError_PCI_FindCap:
         return L" (at PCI find capability)"sv;
+
+    case EFIError_PCI_BridgeSecondaryBus:
+	return L" (at Secondary Bus read)"sv;
 
     case EFIError_PCI_BridgeConfig:
         return L" (at PCI bridge configuration)"sv;

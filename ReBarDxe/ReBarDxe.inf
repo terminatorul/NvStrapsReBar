@@ -11,7 +11,6 @@
   include/LocalAppConfig.h
   include/PciConfig.h
   include/DeviceRegistry.h
-  include/LocalPciGPU.h
   include/SetupNvStraps.h
   include/EfiVariable.h
   include/NvStrapsConfig.h

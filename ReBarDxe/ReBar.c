@@ -79,14 +79,15 @@ uint_least32_t getReBarSizeMask(UINTN pciAddress, uint_least16_t capabilityOffse
 static void reBarSetupDevice(EFI_HANDLE handle, EFI_PCI_ROOT_BRIDGE_IO_PROTOCOL_PCI_ADDRESS addrInfo)
 {
     uint_least16_t vid, did;
-    UINTN pciAddress = pciLocatedDevice(handle, addrInfo, &vid, &did);
+    uint_least8_t headerType;
+    UINTN pciAddress = pciLocateDevice(handle, addrInfo, &vid, &did, &headerType);
 
     if (vid == WORD_BITMASK)
         return;
 
     DEBUG((DEBUG_INFO, "ReBarDXE: Device vid:%x did:%x\n", vid, did));
 
-    NvStraps_EnumDevice(pciAddress, vid, did);
+    NvStraps_EnumDevice(pciAddress, vid, did, headerType);
 
     uint_least16_t subsysVenID = WORD_BITMASK, subsysDevID = WORD_BITMASK;
     bool isSelectedGpu = NvStraps_CheckDevice(pciAddress, vid, did, &subsysVenID, &subsysDevID);
