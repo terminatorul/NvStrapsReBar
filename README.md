@@ -22,7 +22,7 @@ After building you need to go through a number of steps:
 * enable ReBAR, enable "Above 4G Decoding" (if you have the option) and disable CSM in UEFI Setup
 * run `NvStrapsReBar.exe` as Administrator to enable the new BAR size, by following the text-mode menus. If you have a recent motherboard, you only need to input `E` to Enable ReBAR for Turing GPUS, then input `S` to save the new driver configuration to EFI variable. For older motherboards without ReBAR, you also need to input `P` to set BAR size on the PCI side (motherboard side).
 * reboot after saving the menu options.
-* for older motherboards without ReBAR, if you want to load default UEFI settings again, or disable Above 4G Decoding / enable CSM, you need to  disable ReBAR first in `NvStrapsReBar.exe`.
+* for older motherboards without ReBAR, if you want to load default UEFI settings again, or disable Above 4G Decoding / enable CSM, you need to  disable ReBAR first in `NvStrapsReBar.exe`. Or you can set back the current year in UEFI Setup.
 
 ![image](https://github.com/terminatorul/NvStrapsReBar/assets/378924/09756f17-804a-40e8-86b7-306014061732)
 
