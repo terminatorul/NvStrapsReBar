@@ -3,47 +3,29 @@
 <p>This is a copy of the rather popular <a href="https://github.com/xCuri0/ReBARUEFI">ReBarUEFI</a> DXE driver. <a href="https://github.com/xCuri0/ReBARUEFI">ReBarUEFI</a> enables Resizable BAR for older motherboards and chipsets without ReBAR support from the manufacturer. NvStrapsReBar was created to test Resizable BAR support for GPUs from the RTX 2000 (and GTX 1600, Turing architecture) line. Apparently for the GTX 1000 cards (Pascal architecture) the Windows driver just resets the computer during boot if the BAR size has been changed, so GTX 1000 cards still can not enable ReBAR. The Linux driver does not crash, but does not pick up the new BAR size either.</p>
 
 ### Do I need to flash a new UEFI image on the motherboard, to enable ReBAR on the GPU ?
-Yes, this is how it works for Turing GPUs (GTX 1600 / RTX 2000). It's ususally the video BIOS (vBIOS) that should enable ReBAR, but the vBIOS is digitally signed and can not be modified by end-users (is locked-down). The motherboard UEFI image can also be signed or have integrity checks, but in general it is thankfully not as locked down, and users and UEFI modders often still have a way to modify it. ReBAR functionality depends on the Above 4G Decoding option in your UEFI setup (if you have it), which must be turned on in advance, and CSM must be disabled. If you accidentaly turn off 4G decoding and are unable to boot, you need to clear CMOS. Do not use the Clear CMOS button that is present on some motherboards, instead short the pin headers, or remove the battery. The button may still keep the date and time, and the date has to be reset to recover the board.
+Yes, this is how it works for Turing GPUs (GTX 1600 / RTX 2000).
+
+It's ususally the video BIOS (vBIOS) that should enable ReBAR, but the vBIOS is digitally signed and can not be modified by modders and end-users (is locked-down). The motherboard UEFI image can also be signed or have integrity checks, but in general it is thankfully not as locked down, and users and UEFI modders often still have a way to modify it.
+
+For older boards without ReBAR, adding ReBAR functionality depends on the Above 4G Decoding option in your UEFI setup (if you have it), which must be turned on in advance, and CSM must be disabled. If you accidentaly turn off 4G decoding and are unable to boot, you need to clear CMOS. Do not use the Clear CMOS button that is present on some motherboards, instead short the pin headers, or remove the battery. The button may still keep the date and time, and the date needs to be reset to recover the board.
 
 #### Warning:
-Some users report BSOD or crash when resuming from suspend, which can be even worse for laptop users trying to stay mobile. Developing a boot script for the DXE driver might address the issue, but the feature is  under development and there is currently no fix for this issue.
+Some users report BSOD or crash when resuming from suspend, which can be even worse for laptop users trying to stay mobile. Developing a boot script for the DXE driver might address the issue, but the feature is not implemented and there is currently no fix for this issue.
 
-Currently the location of the GPU on the PCI bus has to be hard-coded right into the motherboard UEFI, and so does the associated PCI-to-PCI bridge. All hard-coded values are in the header file [`ReBarDxe/include/LocalPciGPU.h`](https://github.com/terminatorul/NvStrapsReBar/blob/master/ReBarDxe/include/LocalPciGPU.h), and all the neccesary values can be read from the CPU-Z .txt report file, so you can manually change them to match your system. Currently these settings are listed below, where all numeric values are examples only (for my computer):
+### Usage
+Build the project using the instructions below (that were slightly adapted from the original [ReBarUEFI](https://github.com/xCuri0/ReBARUEFI) project). This should produce two files:
+* `NvStrapsReBar.ffs` UEFI DXE driver
+* `NvStrapsReBar.exe` Windows executable
 
-```C++
-#define TARGET_GPU_PCI_VENDOR_ID        0x10DEu
-#define TARGET_GPU_PCI_DEVICE_ID        0x1E07u
+After building you need to go through a number of steps:
+* update the motherbord UEFI image to add the new `NvStrapsReBar.ffs` driver (see below)
+* enable ReBAR, enable "Above 4G Decoding" (if you have the option) and disable CSM in UEFI Setup
+* run `NvStrapsReBar.exe` as Administrator to enable the new BAR size, by following the text-mode menus. If you have a recent motherboard, you only need to input `E` to Enable ReBAR for Turing GPUS, then input `S` to save the new driver configuration to EFI variable. For older motherboards without ReBAR, you also need to input `P` to set BAR size on the PCI side (motherboard side).
+* reboot after saving the menu options.
+* for older motherboards without ReBAR, if you want to load default UEFI settings again, or disable Above 4G Decoding / enable CSM, you need to  disable ReBAR first in `NvStrapsReBar.exe`.
 
-#define TARGET_GPU_PCI_BUS              0x41u
-#define TARGET_GPU_PCI_DEVICE           0x00u
-#define TARGET_GPU_PCI_FUNCTION         0x00u
+![image](https://github.com/terminatorul/NvStrapsReBar/assets/378924/09756f17-804a-40e8-86b7-306014061732)
 
-// PCIe config register offset 0x10
-#define TARGET_GPU_BAR0_ADDRESS         UINT32_C(0x8200'0000)               // Should fall within memory range mapped by the bridge
-
-// Secondary bus of the bridge must match the GPU bus
-// Check the output form CPU-Z .txt report
-
-#define TARGET_BRIDGE_PCI_VENDOR_ID     0x1022u
-#define TARGET_BRIDGE_PCI_DEVICE_ID     0x1453u
-
-#define TARGET_BRIDGE_PCI_BUS           0x40u
-#define TARGET_BRIDGE_PCI_DEVICE        0x03u
-#define TARGET_BRIDGE_PCI_FUNCTION      0x01u
-
-// Memory range and I/O port range (base + limit) mapped to bridge
-// from CPU-Z .txt report of the bridge and GPU
-
-// PCIe config register offset 0x20
-#define TARGET_BRIDGE_MEM_BASE_LIMIT  UINT32_C(0x8300'8200)                 // Should cover the GPU BAR0
-
-// PCIe config register offset 0x1C
-#define TARGET_BRIDGE_IO_BASE_LIMIT   0x8181u
-```
-
-See https://github.com/terminatorul/NvStrapsReBar/discussions/8 for more step-by-step details.
-
-Rebuild the project using the instructions below (that were slightly adapted from the original [ReBarUEFI](https://github.com/xCuri0/ReBARUEFI) project).
 
 Credits go to the bellow github users, as I integrated and coded their findings and results:
 * [envytools](https://github.com/envytools/envytools) project for the original effort on reverse-engineering the register interface for the GPUs, a very long time ago, for use by the [nouveau](https://nouveau.freedesktop.org/) open-source driver in Linux. Amazing how this documentation could still help us today !
@@ -147,14 +129,14 @@ After flashing the motherboard with the new UEFI image, you need to enable "Abov
 
 `NvStrapsReBar.exe` prompts you with a small text-based menu. You can configure 2 value for the BAR size with this tool:
 * GPU-side BAR size
-* PCI BAR size (for older boards, without Resizable BAR)
+* PCI BAR size (for older motherboards without ReBAR)
 
-Both sizes must be right for Resizable BAR to work, but maybe some newer boards can already configure PCI BAR size as expected, so maybe there is a small chance you only need to set the GPU-side value for the BAR size. But you should try and experiment with both of them, as needed.
+Both sizes must be right for Resizable BAR to work, but newer boards can configure PCI BAR size as expected, so you only need to set the GPU-side value for the BAR size. If not, you should try and experiment with both of them, as needed.
 
 ![image](https://github.com/terminatorul/NvStrapsReBar/assets/378924/fc432819-6710-43da-829f-41c2119b89d7)
 
 
-Most people should choose the first menu option and press `E` to Enable auto-settings BAR size for Turing GPUs. Depending on your board, you may need to also input `P` at the menu prompt, to choose Target PCI BAR size, and select value 64 (for the option to configure PCI BAR for selected GPUs only). Befor quitting the menu, input `S` to save the changes you made to the EFI variable store, for the UEFI DXE driver to read them.
+Most people should choose the first menu option and press `E` to Enable auto-settings BAR size for Turing GPUs. Depending on your board, you may need to also input `P` at the menu prompt, to choose Target PCI BAR size, and select value 64 (for the option to configure PCI BAR for selected GPUs only). Before quitting the menu, input `S` to save the changes you made to the EFI variable store, for the UEFI DXE driver to read them.
 
 If you choose a GPU BAR size of 8 GiB for example, and a Target PCI BAR size of 4 GiB, you will get a 4 GiB BAR.
 
