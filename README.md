@@ -10,7 +10,7 @@ It's ususally the video BIOS (vBIOS) that should enable ReBAR, but the vBIOS is 
 For older boards without ReBAR, adding ReBAR functionality depends on the Above 4G Decoding option in your UEFI setup (if you have it), which must be turned on in advance, and CSM must be disabled.
 
 #### Warning:
-Some users report BSOD or crash when resuming from suspend, which can be even worse for laptop users trying to stay mobile. Developing a boot script for the DXE driver might address the issue, but the feature is not implemented and there is currently no fix for this issue.
+Some users report BSOD or crash when resuming from suspend, which can be even worse for laptop users. Developing a boot script for the DXE driver might address the issue, but the feature is not implemented and there is currently no fix for this issue.
 
 ### Usage
 Build the project using the instructions below (that were slightly adapted from the original [ReBarUEFI](https://github.com/xCuri0/ReBARUEFI) project). This should produce two files:
