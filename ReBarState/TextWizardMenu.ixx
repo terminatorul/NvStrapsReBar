@@ -579,9 +579,7 @@ static void showMenuHeader(MenuType menuType, unsigned device, vector<DeviceInfo
     switch (menuType)
     {
     case MenuType::Main:
-        wcout << L"\nWARNING: GPU location on the PCI bus MUST be hard-coded.\n"sv;
-        wcout << L"See README page on the project repository at https://github.com/terminatorul/NvStrapsReBar\n\n"sv;
-
+	wcout << '\n';
         wcout << L"BAR size configuration menu:\n"sv;
         break;
 
