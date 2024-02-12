@@ -7,7 +7,7 @@ Yes, this is how it works for Turing GPUs (GTX 1600 / RTX 2000).
 
 It's ususally the video BIOS (vBIOS) that should enable ReBAR, but the vBIOS is digitally signed and can not be modified by modders and end-users (is locked-down). The motherboard UEFI image can also be signed or have integrity checks, but in general it is thankfully not as locked down, and users and UEFI modders often still have a way to modify it.
 
-For older boards without ReBAR, adding ReBAR functionality depends on the Above 4G Decoding option in your UEFI setup (if you have it), which must be turned on in advance, and CSM must be disabled. If you accidentaly turn off 4G decoding and are unable to boot, you need to clear CMOS. Do not use the Clear CMOS button that is present on some motherboards, instead short the pin headers, or remove the battery. The button may still keep the date and time, and the date needs to be reset to recover the board. If you can enter UEFI Setup, you can also manually set back the year to a value before 2024, reboot, and restore it after.
+For older boards without ReBAR, adding ReBAR functionality depends on the Above 4G Decoding option in your UEFI setup (if you have it), which must be turned on in advance, and CSM must be disabled.
 
 #### Warning:
 Some users report BSOD or crash when resuming from suspend, which can be even worse for laptop users trying to stay mobile. Developing a boot script for the DXE driver might address the issue, but the feature is not implemented and there is currently no fix for this issue.
