@@ -1,6 +1,6 @@
 <h1 align="center">NvStrapsReBar</h1>
 <p>UEFI driver to enable and test Resizable BAR on Turing graphics cards (GTX 1600, RTX 2000). Pre-Pascal cards might also work.</p>
-<p>This is a copy of the rather popular <a href="https://github.com/xCuri0/ReBARUEFI">ReBarUEFI</a> DXE driver. <a href="https://github.com/xCuri0/ReBARUEFI">ReBarUEFI</a> enables Resizable BAR for older motherboards and chipsets without ReBAR support from the manufacturer. NvStrapsReBar was created to test Resizable BAR support for GPUs from the RTX 2000 (and GTX 1600, Turing architecture) line. Apparently for the GTX 1000 cards (Pascal architecture) the Windows driver just resets the computer during boot if the BAR size has been changed, so GTX 1000 cards still can not enable ReBAR. The Linux driver does not crash, but does not pick up the new BAR size either.</p>
+<p>This is a copy of the rather popular <a href="https://github.com/xCuri0/ReBARUEFI">ReBarUEFI</a> DXE driver. <a href="https://github.com/xCuri0/ReBARUEFI">ReBarUEFI</a> enables Resizable BAR for older motherboards and chipsets without ReBAR support from the manufacturer. NvStrapsReBar was created to test Resizable BAR support for GPUs from the RTX 2000 (and GTX 1600, Turing architecture) line. Apparently for the GTX 1000 cards (Pascal architecture) the Windows driver resets the computer during boot if the BAR size has been changed, so GTX 1000 cards still can not enable ReBAR. The Linux driver does not crash, but does not pick up the new BAR size either.</p>
 
 ### Do I need to flash a new UEFI image on the motherboard, to enable ReBAR on the GPU ?
 Yes, this is how it works for Turing GPUs (GTX 1600 / RTX 2000).
@@ -10,7 +10,7 @@ It's ususally the video BIOS (vBIOS) that should enable ReBAR, but the vBIOS is 
 For older boards without ReBAR, adding ReBAR functionality depends on the Above 4G Decoding option in your UEFI setup (if you have it), which must be turned on in advance, and CSM must be disabled.
 
 #### Warning:
-Some users report BSOD or crash when resuming from suspend, which can be even worse for laptop users. Developing a boot script for the DXE driver might address the issue, but the feature is not implemented and there is currently no fix for this issue.
+Some users report BSOD or crash when resuming from sleep, which can be even worse for laptop users. Developing a boot script for the DXE driver might address the issue, but the feature is not implemented and there is currently no fix for this issue.
 
 ### Usage
 Build the project using the instructions below (that were slightly adapted from the original [ReBarUEFI](https://github.com/xCuri0/ReBARUEFI) project). This should produce two files:
@@ -19,8 +19,8 @@ Build the project using the instructions below (that were slightly adapted from 
 
 After building you need to go through a number of steps:
 * update the motherbord UEFI image to add the new `NvStrapsReBar.ffs` driver (see below)
-* enable ReBAR, enable "Above 4G Decoding" (if you have the option) and disable CSM in UEFI Setup
-* run `NvStrapsReBar.exe` as Administrator to enable the new BAR size, by following the text-mode menus. If you have a recent motherboard, you only need to input `E` to Enable ReBAR for Turing GPUS, then input `S` to save the new driver configuration to EFI variable. For older motherboards without ReBAR, you also need to input `P` to set BAR size on the PCI side (motherboard side).
+* enable ReBAR in UEFI Setup if the motherboard supports it. Otherwise enable "Above 4G Decoding" (if you have the option) and disable CSM
+* run `NvStrapsReBar.exe` as Administrator to enable the new BAR size, by following the text-mode menus. If you have a recent motherboard, you only need to input `E` to Enable ReBAR for Turing GPUs, then input `S` to save the new driver configuration to EFI variable. For older motherboards without ReBAR, you also need to input `P` to set BAR size on the PCI side (motherboard side).
 * reboot after saving the menu options.
 * for older motherboards without ReBAR, if you want to load default UEFI settings again, or disable Above 4G Decoding / enable CSM, you need to  disable ReBAR first in `NvStrapsReBar.exe`. Or you can manually set back the current year in UEFI Setup.
 
@@ -127,13 +127,13 @@ See the original project [ReBarUEFI](https://github.com/xCuri0/ReBarUEFI/) for t
 ## Enable ReBAR and choose BAR size
 After flashing the motherboard with the new UEFI image, you need to enable ReBAR, enable "Above 4G Decoding" (if you have the option) and disable CSM in UEFI setup, and then run `NvStrapsReBar.exe` as Administrator.
 
-For older motherboard without ReBAR support, enablging ReBAR depends on Above 4G Decoding. So if you accidentaly turn it off later and can not POST, you need to clear CMOS. Do not use the Clear CMOS button present on some motherboards, as it may still keep the current date and time. The current date has to be reset to recover the board. So instead of the Clear CMOS button, you should short the Clear CMOS pin headers (with a screwdriver that is metallic, and the metal is not painted), or by removing the battery for 1 to 5 minutes. Another way is to move the GPU to a different PCI slot, or replace it with a non-Turring GPU, if you have an extra. If you can enter UEFI Setup, you can also manually set back the year to a value before 2024, reboot, and restore the year after.
+For older motherboard without ReBAR support, enablging ReBAR depends on Above 4G Decoding. So if you accidentaly turn it off later and can not POST, you need to clear CMOS. Remember to disconnect wall power before you clear CMOS. The Clear CMOS button present on some motherboards may still keep the current date and time. The current date has to be reset to recover the board. So if needed, you should short the Clear CMOS pin headers (with a screwdriver that is metallic, and the metal is not painted / coated), or by removing the battery for 1 to 5 minutes. Another way is to move the GPU to a different PCI slot, or replace it with a different model, if you have an extra. If you can enter UEFI Setup, you can manually set back the year to a value before 2024, reboot, and restore the year after.
 
 `NvStrapsReBar.exe` prompts you with a small text-based menu. You can configure 2 value for the BAR size with this tool:
 * GPU-side BAR size
 * PCI BAR size (for older motherboards without ReBAR)
 
-Both sizes must be right for Resizable BAR to work, but newer boards can configure PCI BAR size as expected, so you only need to set the GPU-side value for the BAR size. If not, you should try and experiment with both of them, as needed.
+Newer boards can configure PCI BAR size, so you only need to set the GPU-side value for the BAR size. If not, you should try and experiment with both of them, as needed.
 
 ![image](https://github.com/terminatorul/NvStrapsReBar/assets/378924/fc432819-6710-43da-829f-41c2119b89d7)
 
