@@ -135,7 +135,7 @@ For older motherboard without ReBAR support, enablging ReBAR depends on Above 4G
 
 Newer boards can configure PCI BAR size, so you only need to set the GPU-side value for the BAR size. If not, you should try and experiment with both of them, as needed.
 
-![image](https://github.com/terminatorul/NvStrapsReBar/assets/378924/dd6d8999-d223-4f8f-9bfa-d9f16312833a)
+![image](https://github.com/terminatorul/NvStrapsReBar/assets/378924/a960adff-665f-4fbb-92ba-a8a4114996ca)
 
 
 
