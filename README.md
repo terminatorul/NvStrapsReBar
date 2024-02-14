@@ -135,7 +135,8 @@ For older motherboard without ReBAR support, enablging ReBAR depends on Above 4G
 
 Newer boards can configure PCI BAR size, so you only need to set the GPU-side value for the BAR size. If not, you should try and experiment with both of them, as needed.
 
-![image](https://github.com/terminatorul/NvStrapsReBar/assets/378924/fc432819-6710-43da-829f-41c2119b89d7)
+![image](https://github.com/terminatorul/NvStrapsReBar/assets/378924/dd6d8999-d223-4f8f-9bfa-d9f16312833a)
+
 
 
 Most people should choose the first menu option and press `E` to Enable auto-settings BAR size for Turing GPUs. Depending on your board, you may need to also input `P` at the menu prompt, to choose Target PCI BAR size, and select value 64 (for the option to configure PCI BAR for selected GPUs only). Before quitting the menu, input `S` to save the changes you made to the EFI variable store, for the UEFI DXE driver to read them.
