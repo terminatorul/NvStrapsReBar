@@ -24,7 +24,7 @@ After building you need to go through a number of steps:
 * reboot after saving the menu options.
 * for older motherboards without ReBAR, if you want to load default UEFI settings again, or disable Above 4G Decoding / enable CSM, you need to  disable ReBAR first in `NvStrapsReBar.exe`. Or you can manually set back the current year in UEFI Setup.
 
-![image](https://github.com/terminatorul/NvStrapsReBar/assets/378924/09756f17-804a-40e8-86b7-306014061732)
+![image](https://github.com/terminatorul/NvStrapsReBar/assets/378924/21da2dc9-82be-4ac6-8e60-2f61bd619f0a)
 
 
 Credits go to the bellow github users, as I integrated and coded their findings and results:
