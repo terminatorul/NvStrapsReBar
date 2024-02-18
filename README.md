@@ -55,70 +55,10 @@ Use command `nvidia-smi -q -d memory` to check the new BAR size reported by the 
 
 It maybe easier and more informative to post GPU-Z screenshots with the main GPU page + ReBAR page, and CPU-X with the CPU page and motherboard page screenshots, plus the output from nvidia-smi command. If you needed to apply more changes to make ReBAR work, please post about them as well.
 
-## Building (Windows only)
-* Download and install [Visual Studio 2022 Community Edition](https://visualstudio.microsoft.com/vs/community/) from Microsoft. Be sure to select C/C++ Desktop Development option for installation.
-* Download and install [Python 3](https://www.python.org/downloads/). Make sure you select the option to add python to PATH during installation.
-* Download and install [git](https://git-scm.com/download/win)
-* Download and install [CMake](https://cmake.org/download/)
-* Download and install [NASM](https://www.nasm.us/), and update environment variables `NASM_PREFIX` and `PATH` with the chosen install location. By default it is %ProgramFiles%\NASM. Set NASM_PREFIX environment variable to `%ProgramFiles%\NASM\` (NOTE the backslash character `\` at the end of the path), and also add %ProgramFiles%\NASM to the PATH environment variable (in Windows Settings). You can change your NASM_PREFIX and PATH variable from Start Menu | Windows Settings | System | About | Advanced Windows Settings | Environment Variables | System variables | PATH | Edit... | New...
-* You can check all installed commands are available on PATH: open a new `cmd` console window, and run the following commands:
-  ```
-  python --version
-  pip --version
-  git --version
-  nasm --version
-  cmake --version
-  ```
-  If the output from any of the above commands says `'cmd-name' is not recognized as an internal or external command...` you need to check PATH environment variable again. Also make sure `python --version` outputs version 3 and not version 2.
-* Install pefile module for python:
-   - Use Win+R to open a `cmd` window and run `pip install pefile`
-* Get `edk2` framework from github. In a cmd window run:
-  ```
-  git -C "%UserProfile%" clone https://github.com/tianocore/edk2.git
-  git -C "%UserProfile%\edk2" submodule update --init --jobs "%Number_Of_Processors%"
-  ```
-* Build edk2. Open x86 Native Tools Command Prompt from the start menu (like in the image)
-
-  ![image](https://github.com/terminatorul/NvStrapsReBar/assets/378924/3e10ca0a-5544-45d3-b2f9-f81a7f7e2510)
-
-  and type the following commands in the resulting console window:
-  - `If Not Defined VSCMD_VER "%ProgramFiles%\Microsoft Visual Studio\2022\Community\VC\Auxiliary\Build\vcvars32.bat"`
-  - `ChDir "%UserProfile%\edk2"`
-  - `edksetup.bat Rebuild`
-* Configure `edk2`. Edit file `%UserProfile%\edk2\Conf\target.txt` with a text editor like Notepad for example and search, in order, for the lines begining with `TARGET =`, `TARGET_ARCH = ` and `TOOL_CHAIN_TAG =` (without any # characters -- if needed remove the leading # character from such lines, to uncomment them). Modify these lines to read:
-  ```
-  TARGET                = RELEASE
-  TARGET_ARCH           = X64
-  TOOL_CHAIN_TAG        = VS2019
-  ```
-* Get `NvStrapsReBar` from this repository, and place it as a subdirectory right under the `edk2` directory, with the following commands:
-  ```
-  ChDir "%UserProfile%\edk2"
-  git clone https://github.com/terminatorul/NvStrapsReBar.git
-  ```
-You can now build the UEFI DXE driver `NvStrapsReBar.ffs`, and the Windows executable `NvStrapsReBar.exe`
-* To build UEFI DXE driver NvStrapsReBar.ffs, run the following commands in the x86 Native Tools Command Prompt window
-  ```
-  If Not Defined VSCMD_VER "%ProgramFiles%\Microsoft Visual Studio\2022\Community\VC\Auxiliary\Build\vcvars32.bat"
-  ChDir "%UserProfile%\edk2"
-  If Not Defined EDK_TOOLS_BIN edksetup.bat
-  ChDir NvStrapsReBar\ReBarDxe
-  python buildffs.py
-  ```
-  The NvStrapsReBar.ffs file will be found under the directory `%UserProfile%\edk2\Build\NvStrapsReBar\RELEASE_VS2019\X64\`.
-* To build the Windows executable NvStrapsReBar.exe, run the following commands in the x86 Native Tools Command Prompt window
-  ```
-  If Not Defined VSCMD_VER "%ProgramFiles%\Microsoft Visual Studio\2022\Community\VC\Auxiliary\Build\vcvars32.bat"
-  ChDir "%UserProfile%\edk2"
-  If Not Defined EDK_TOOLS_BIN edksetup.bat
-  ChDir NvStrapsRebar\ReBarState
-  If Not Exist build MkDir build
-  ChDir build
-  cmake .. && cmake --build . --config Release
-  ```
-  The NvStrapsRebar.exe file will be found under the `%UserProfile%\edk2\NvStrapsRebar\ReBarState\build\Release\` subdirectory
-
 ## Updating UEFI image
+
+You can download the latest release from the [Releases](https://github.com/terminatorul/NvStrapsReBar/releases) page, or build the UEFI DXE driver and the Windows executable using the instructions on the [building](https://github.com/terminatorul/NvStrapsReBar/wiki/Building-(Windows-only)) page.
+
 The resulting `NvStrapsReBar.ffs` file needs to be included in the motherboard UEFI image (downloaded from the montherboard manufacturer), and the resulting image should be flashed onto the motherboard as if it were a new UEFI version for that board.
 See the original project [ReBarUEFI](https://github.com/xCuri0/ReBarUEFI/) for the instructions to update motherboard UEFI. Replace "ReBarUEFI.ffs" with "NvStrapsReBar.ffs" where appropriate.
 
