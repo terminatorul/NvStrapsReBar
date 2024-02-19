@@ -44,7 +44,7 @@ static uint_least8_t updatedGPUsCount = 0u;
 EFI_S3_SAVE_STATE_PROTOCOL s3SaveState;
 EFI_EVENT eventBeforeExitBootServices;
 
-void PreExitBootServices(EFI_EVENT event, void *context)
+void EFIAPI PreExitBootServices(EFI_EVENT event, void *context)
 {
     UINT32
 	BAR1_SIZE_PART1_MASK = ~(UINT32)(((UINT64_C(1) << BAR1_SIZE_PART1_BITSIZE) - 1u) << BAR1_SIZE_PART1_SHIFT),
@@ -103,10 +103,26 @@ void PreExitBootServices(EFI_EVENT event, void *context)
     if (updatedGPUsCount)
 	SetStatusVar(StatusVar_BootScriptWritten);
 
-    status = gBS->CloseEvent(eventBeforeExitBootServices);
+//    status = gBS->CloseEvent(eventBeforeExitBootServices);
+//
+//    if (EFI_ERROR(status))
+//	SetEFIError(EFIError_CloseEvent, status);
+}
 
-    if (EFI_ERROR(status))
-	SetEFIError(EFIError_CloseEvent, status);
+EFI_EXIT_BOOT_SERVICES ExitBootServices = NULL;
+
+EFI_STATUS EFIAPI ExitBootServicesOverride(EFI_HANDLE imageHandle, UINTN systemMap)
+{
+    PreExitBootServices(NULL, NULL);
+
+    if (ExitBootServices)
+    {
+	gBS->ExitBootServices = ExitBootServices;
+	ExitBootServices = NULL;
+	return gBS->ExitBootServices(imageHandle, systemMap);
+    }
+
+    return RETURN_NOT_STARTED;
 }
 
 void RecordUpdateGPU(uint_least8_t bus, uint_least8_t device, uint_least8_t func, uint_least8_t barSize)
@@ -151,10 +167,13 @@ void RecordUpdateGPU(uint_least8_t bus, uint_least8_t device, uint_least8_t func
 		return;
 	    }
 
-	    status = gBS->CreateEventEx(EVT_NOTIFY_SIGNAL, TPL_APPLICATION, &PreExitBootServices, NULL, &gEfiEventBeforeExitBootServicesGuid, &eventBeforeExitBootServices);
+	ExitBootServices = gBS->ExitBootServices;
+	gBS->ExitBootServices = ExitBootServicesOverride;
 
-	    if (EFI_ERROR(status))
-		SetEFIError(EFIError_CreateEvent, status);
+	//    status = gBS->CreateEventEx(EVT_NOTIFY_SIGNAL, TPL_APPLICATION, &PreExitBootServices, NULL, &gEfiEventReadyToBootGuid, &eventBeforeExitBootServices);
+
+	//    if (EFI_ERROR(status))
+	//	SetEFIError(EFIError_CreateEvent, status);
 	}
     }
 }

@@ -44,7 +44,7 @@
   gEfiPciRootBridgeIoProtocolGuid
 
 [Guids]
-  gEfiEventBeforeExitBootServicesGuid
+  gEfiEventReadyToBootGuid
 
 [BuildOptions]
   GCC:*_*_*_CC_FLAGS        = -flto -DUSING_LTO -Wextra -Wno-unused-parameter -D UEFI_SOURCE

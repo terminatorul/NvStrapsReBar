@@ -401,15 +401,19 @@ static void showPciReBarState(uint_least8_t reBarState)
     case TARGET_PCI_BAR_SIZE_DISABLED:
         wcout << L"Target PCI BAR size: "sv << +reBarState << L" / System default\n"sv;
         break;
+
     case TARGET_PCI_BAR_SIZE_MAX:
         wcout << L"Target PCI BAR size: "sv << +reBarState << L" / Any BAR size supported by PCI devices.\n"sv;
         break;
+
     case TARGET_PCI_BAR_SIZE_GPU_ONLY:
         wcout << L"Target PCI BAR size: "sv << +reBarState << L" / Selected GPUs only\n"sv;
         break;
+
     case TARGET_PCI_BAR_SIZE_GPU_STRAPS_ONLY:
         wcout << L"Target PCI BAR size: "sv << +reBarState << L" / GPU-side only for selected GPUs, without PCI BAR configuration\n"sv;
         break;
+
     default:
         if (TARGET_PCI_BAR_SIZE_MIN <= reBarState && reBarState < TARGET_PCI_BAR_SIZE_MAX)
             wcout << L"Target PCI BAR size: "sv << +reBarState << L" / Maximum "sv << formatPciBarSize(reBarState) << L" BAR size for PCI devices\n"sv;
@@ -425,3 +429,5 @@ void showConfiguration(vector<DeviceInfo> const &devices, NvStrapsConfig const &
     showDriverStatus(driverStatus);
     showPciReBarState(nvStrapsConfig.targetPciBarSizeSelector());
 }
+
+// vi: ft=cpp
