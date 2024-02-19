@@ -36,6 +36,7 @@ typedef enum StatusVar
     StatusVar_GpuStrapsNoConfirm = 130u,
     StatusVar_GpuNoReBarCapability = 140u,
     StatusVar_GpuExcluded = 150u,
+    StatusVar_BootScriptWritten = 151u,
 
     StatusVar_NoBridgeConfig = 159u,
     StatusVar_BadBridgeConfig = 160u,
@@ -64,11 +65,16 @@ typedef enum EFIErrorLocation
     EFIError_PCI_DeviceSubsystem,
     EFIError_LocateBridgeProtocol,
     EFIError_LoadBridgeProtocol,
+    EFIError_LocateS3SaveStateProtocol,
+    EFIError_LoadS3SaveStateProtocol,
+    EFIError_ReadBaseAddress0,
     EFIError_CMOSTime,
     EFIError_CreateTimer,
     EFIError_CloseTimer,
     EFIError_SetupTimer,
-    EFIError_WaitTimer
+    EFIError_WaitTimer,
+    EFIError_CreateEvent,
+    EFIError_CloseEvent
 }
     EFIErrorLocation;
 

@@ -38,9 +38,13 @@
 [Protocols]
   gEfiPciRootBridgeIoProtocolGuid ## SOMETIMES_CONSUMES
   gEfiPciHostBridgeResourceAllocationProtocolGuid ## SOMETIMES_CONSUMES
+  gEfiS3SaveStateProtocolGuid ## SOMETIMES_CONSUMES
 
 [Depex]
   gEfiPciRootBridgeIoProtocolGuid
+
+[Guids]
+  gEfiEventBeforeExitBootServicesGuid
 
 [BuildOptions]
   GCC:*_*_*_CC_FLAGS        = -flto -DUSING_LTO -Wextra -Wno-unused-parameter -D UEFI_SOURCE
