@@ -2,6 +2,8 @@
 #include <stdint.h>
 
 #include <Uefi.h>
+#include <Guid/EventGroup.h>
+#include <Protocol/S3SaveState.h>
 #include <Library/BaseLib.h>
 #include <Library/BaseMemoryLib.h>
 #include <Library/UefiBootServicesTableLib.h>
@@ -30,7 +32,133 @@ static uint_least32_t const
     BAR1_SIZE_PART2_SHIFT = 20u,
     BAR1_SIZE_PART2_BITSIZE = 3u;
 
-// static bool isBridgeEnumerated = false;
+static struct GpuUpdate
+{
+    uint_least8_t  sizeSelector;
+    uint_least16_t pciLocation;
+}
+    updatedGPUs[ARRAY_SIZE(config->gpuConfig)] = { 0, };
+
+static uint_least8_t updatedGPUsCount = 0u;
+
+EFI_S3_SAVE_STATE_PROTOCOL s3SaveState;
+EFI_EVENT eventBeforeExitBootServices;
+
+void PreExitBootServices(EFI_EVENT event, void *context)
+{
+    UINT32
+	BAR1_SIZE_PART1_MASK = ~(UINT32)(((UINT64_C(1) << BAR1_SIZE_PART1_BITSIZE) - 1u) << BAR1_SIZE_PART1_SHIFT),
+	BAR1_SIZE_PART2_MASK = ~(UINT32)(((UINT64_C(1) << BAR1_SIZE_PART2_BITSIZE) - 1u) << BAR1_SIZE_PART2_SHIFT);
+
+    EFI_STATUS status;
+
+    for (uint_least8_t i = 0u; i < updatedGPUsCount; i++)
+    {
+	uint_least8_t
+	    bus  = updatedGPUs[i].pciLocation >> BYTE_BITSIZE & BYTE_BITMASK,
+	    dev  = updatedGPUs[i].pciLocation >> 3u & 0b0001'1111u,
+	    func = updatedGPUs[i].pciLocation & 0b0000'0111u;
+
+	UINTN pciAddress = EFI_PCI_ADDRESS(bus, dev, func, 0u);
+
+	uint_least32_t
+	    baseAddress0 = pciDeviceBAR0(pciAddress, &status);
+
+	if (baseAddress0 == UINT32_C(0xFFFF'FFFF))
+	{
+	    SetDeviceEFIError(pciAddress, EFIError_ReadBaseAddress0, status);
+	    continue;
+	}
+
+	uint_least8_t sizeSelector = updatedGPUs[i].sizeSelector;
+
+	UINT32
+	    bar1SizePart1 = sizeSelector < 3u ? sizeSelector : sizeSelector < 10u ? 2u                : 3u,
+	    bar1SizePart2 = sizeSelector < 3u ? 0u           : sizeSelector < 10u ? sizeSelector - 2u : 7u;
+
+	bar1SizePart1 <<= BAR1_SIZE_PART1_SHIFT;
+	bar1SizePart2 <<= BAR1_SIZE_PART2_SHIFT;
+
+	s3SaveState.Write
+	    (
+		&s3SaveState,
+		EFI_BOOT_SCRIPT_MEM_READ_WRITE_OPCODE,
+		EfiBootScriptWidthUint32,
+		baseAddress0 + TARGET_GPU_STRAPS_BASE_OFFSET + TARGET_GPU_STRAPS_SET0_OFFSET,
+		&bar1SizePart1,
+		&BAR1_SIZE_PART1_MASK
+	    );
+
+	s3SaveState.Write
+	    (
+		&s3SaveState,
+		EFI_BOOT_SCRIPT_MEM_READ_WRITE_OPCODE,
+		EfiBootScriptWidthUint32,
+		baseAddress0 + TARGET_GPU_STRAPS_BASE_OFFSET + TARGET_GPU_STRAPS_SET1_OFFSET,
+		&bar1SizePart2,
+		&BAR1_SIZE_PART2_MASK
+	    );
+    }
+
+    if (updatedGPUsCount)
+	SetStatusVar(StatusVar_BootScriptWritten);
+
+    status = gBS->CloseEvent(eventBeforeExitBootServices);
+
+    if (EFI_ERROR(status))
+	SetEFIError(EFIError_CloseEvent, status);
+}
+
+void RecordUpdateGPU(uint_least8_t bus, uint_least8_t device, uint_least8_t func, uint_least8_t barSize)
+{
+    if (updatedGPUsCount < ARRAY_SIZE(updatedGPUs))
+    {
+	struct GpuUpdate *gpuUpdate = updatedGPUs + updatedGPUsCount++;
+
+	gpuUpdate->sizeSelector = barSize;
+	gpuUpdate->pciLocation = pciPackLocation(bus, device, func);
+
+	if (updatedGPUsCount == 1u)
+	{
+	    EFI_STATUS status;
+	    UINTN handleCount;
+	    EFI_HANDLE *handleBuffer = NULL;
+
+	    status = gBS->LocateHandleBuffer(
+		ByProtocol,
+		&gEfiS3SaveStateProtocolGuid,
+		NULL,
+		&handleCount,
+		&handleBuffer);
+
+	    if (EFI_ERROR(status))
+	    {
+		SetEFIError(EFIError_LocateS3SaveStateProtocol, status);
+		return;
+	    }
+
+	    status = gBS->OpenProtocol(
+		*handleBuffer,
+		&gEfiS3SaveStateProtocolGuid,
+		(VOID **)&s3SaveState,
+		gImageHandle,
+		NULL,
+		EFI_OPEN_PROTOCOL_GET_PROTOCOL);
+
+	    if (EFI_ERROR(status))
+	    {
+		SetEFIError(EFIError_LoadS3SaveStateProtocol, status);
+		return;
+	    }
+
+	    status = gBS->CreateEventEx(EVT_NOTIFY_SIGNAL, TPL_APPLICATION, &PreExitBootServices, NULL, &gEfiEventBeforeExitBootServicesGuid, &eventBeforeExitBootServices);
+
+	    if (EFI_ERROR(status))
+		SetEFIError(EFIError_CreateEvent, status);
+	}
+    }
+}
+
 static uint_least16_t enumeratedBridges[ARRAY_SIZE(config->bridge)] = { 0, };
 static uint_least8_t enumeratedBridgeCount = 0u;
 
@@ -210,6 +338,8 @@ void NvStraps_Setup(UINTN pciAddress, uint_least16_t vendorId, uint_least16_t de
 
                 SetDeviceStatusVar(pciAddress, configUpdated ? StatusVar_GpuStrapsConfigured : StatusVar_GpuStrapsPreConfigured);
 
+		RecordUpdateGPU(bus, device, func, barSizeSelector.barSizeSelector);
+
                 uint_least16_t capabilityOffset = pciFindExtCapability(pciAddress, PCI_EXPRESS_EXTENDED_CAPABILITY_RESIZABLE_BAR_ID);
                 uint_least32_t barSizeMask = capabilityOffset ? pciRebarGetPossibleSizes(pciAddress, capabilityOffset, vendorId, deviceId, PCI_BAR_IDX1) : 0u;
 
@@ -263,42 +393,43 @@ void NvStraps_Setup(UINTN pciAddress, uint_least16_t vendorId, uint_least16_t de
 //        SetStatusVar(StatusVar_EFIAllocationError);
 }
 
-bool NvStraps_CheckBARSizeListAdjust(UINTN pciAddress, uint_least16_t vid, uint_least16_t did, uint_least16_t subsysVenID, uint_least16_t subsysDevID, uint_least8_t barIndex)
-{
-    if (vid == TARGET_GPU_VENDOR_ID && subsysVenID != WORD_BITMASK && subsysDevID != WORD_BITMASK && barIndex == PCI_BAR_IDX1)
-    {
-	uint_least8_t bus, device, func;
-	pciUnpackAddress(pciAddress, &bus, &device, &func);
-
-	NvStraps_BarSize barSizeSelector = NvStrapsConfig_LookupBarSize(config, did, subsysVenID, subsysDevID, bus, device, func);
-
-	if (barSizeSelector.priority == UNCONFIGURED || barSizeSelector.barSizeSelector == BarSizeSelector_None || barSizeSelector.barSizeSelector == BarSizeSelector_Excluded)
-	    return false;
-
-	NvStraps_BridgeConfig const *bridgeConfig = NvStrapsConfig_LookupBridgeConfig(config, bus);
-
-	return isBridgeEnumerated(pciPackLocation(bridgeConfig->bridgeBus, bridgeConfig->bridgeDevice, bridgeConfig->bridgeFunction));
-    }
-
-    return false;
-}
-
-uint_least32_t NvStraps_AdjustBARSizeList(UINTN pciAddress, uint_least16_t vid, uint_least16_t did, uint_least16_t subsysVenID, uint_least16_t subsysDevID, uint_least8_t barIndex, uint_least32_t barSizeMask)
-{
-    uint_least8_t bus, device, func;
-
-    pciUnpackAddress(pciAddress, &bus, &device, &func);
-
-    NvStraps_BarSize barSizeSelector = NvStrapsConfig_LookupBarSize(config, did, subsysVenID, subsysDevID, bus, device, func);
-
-    if (barSizeSelector.priority == UNCONFIGURED || barSizeSelector.barSizeSelector == BarSizeSelector_None || barSizeSelector.barSizeSelector == BarSizeSelector_Excluded)
-        return barSizeMask;
-    else
-        if (barSizeMask >> 9u)  // any BAR sizes over 256 MB
-            SetStatusVar(StatusVar_GpuReBarConfigured);
-
-
-    return barSizeMask | UINT32_C(0x00000001) << (6u + (unsigned)barSizeSelector.barSizeSelector);
-}
+// bool NvStraps_CheckBARSizeListAdjust(UINTN pciAddress, uint_least16_t vid, uint_least16_t did, uint_least16_t subsysVenID, uint_least16_t subsysDevID, uint_least8_t barIndex)
+// {
+//     if (vid == TARGET_GPU_VENDOR_ID && subsysVenID != WORD_BITMASK && subsysDevID != WORD_BITMASK && barIndex == PCI_BAR_IDX1)
+//     {
+// 	uint_least8_t bus, device, func;
+// 	pciUnpackAddress(pciAddress, &bus, &device, &func);
+//
+// 	NvStraps_BarSize barSizeSelector = NvStrapsConfig_LookupBarSize(config, did, subsysVenID, subsysDevID, bus, device, func);
+//
+// 	if (barSizeSelector.priority == UNCONFIGURED || barSizeSelector.barSizeSelector == BarSizeSelector_None || barSizeSelector.barSizeSelector == BarSizeSelector_Excluded)
+// 	    return false;
+//
+// 	NvStraps_BridgeConfig const *bridgeConfig = NvStrapsConfig_LookupBridgeConfig(config, bus);
+//
+// 	return isBridgeEnumerated(pciPackLocation(bridgeConfig->bridgeBus, bridgeConfig->bridgeDevice, bridgeConfig->bridgeFunction));
+//     }
+//
+//     return false;
+// }
+//
+// uint_least32_t NvStraps_AdjustBARSizeList(UINTN pciAddress, uint_least16_t vid, uint_least16_t did, uint_least16_t subsysVenID, uint_least16_t subsysDevID, uint_least8_t barIndex, uint_least32_t barSizeMask)
+// {
+//     uint_least8_t bus, device, func;
+//
+//     pciUnpackAddress(pciAddress, &bus, &device, &func);
+//
+//     NvStraps_BarSize barSizeSelector = NvStrapsConfig_LookupBarSize(config, did, subsysVenID, subsysDevID, bus, device, func);
+//
+//     if (barSizeSelector.priority == UNCONFIGURED || barSizeSelector.barSizeSelector == BarSizeSelector_None || barSizeSelector.barSizeSelector == BarSizeSelector_Excluded)
+//         return barSizeMask;
+//     else
+//         if (barSizeMask >> 9u)  // any BAR sizes over 256 MB
+//             SetStatusVar(StatusVar_GpuReBarConfigured);
+//
+//
+//     return barSizeMask | UINT32_C(0x00000001) << (6u + (unsigned)barSizeSelector.barSizeSelector);
+// }
+//
 
 // vim: ft=cpp

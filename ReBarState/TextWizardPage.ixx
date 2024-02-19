@@ -263,6 +263,9 @@ static wstring_view driverStatusString(uint_least64_t driverStatus)
     case StatusVar_GpuExcluded:
         return L"GPU excluded"sv;
 
+    case StatusVar_BootScriptWritten:
+	return L"Boot script written"sv;
+
     case StatusVar_NoBridgeConfig:
 	return L"Missing bridge configuration"sv;
 
@@ -338,6 +341,15 @@ wstring_view driverErrorString(EFIErrorLocation errLocation)
     case EFIError_LoadBridgeProtocol:
         return L" (at Load bridge protocol)"sv;
 
+    case EFIError_LocateS3SaveStateProtocol:
+	return L" (at Locate S3 Save State Protocol)"sv;
+
+    case EFIError_LoadS3SaveStateProtocol:
+	return L" (at Load S3 Save State Protocol)"sv;
+
+    case EFIError_ReadBaseAddress0:
+	return L" (at read base address 0)"sv;
+
     case EFIError_CMOSTime:
         return L" (at CMOS Time)"sv;
 
@@ -352,6 +364,12 @@ wstring_view driverErrorString(EFIErrorLocation errLocation)
 
     case EFIError_WaitTimer:
         return L" (at Wait Timer)"sv;
+
+    case EFIError_CreateEvent:
+	return L" (at Create Event BeforeExitBootServices)"sv;
+
+    case EFIError_CloseEvent:
+	return L" (at Close Event BeforeExitBootServices)"sv;
 
     default:
         return L""sv;

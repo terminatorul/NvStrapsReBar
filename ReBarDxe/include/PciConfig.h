@@ -20,6 +20,7 @@ uint_least32_t pciRebarPollPossibleSizes(UINTN pciAddress, uint_least16_t capabi
 EFI_STATUS pciReadDeviceSubsystem(UINTN pciAddress, uint_least16_t *subsysVenID, uint_least16_t *subsysDevID);
 EFI_STATUS pciBridgeSecondaryBus(UINTN pciAddress, uint_least8_t *secondaryBus);
 uint_least32_t pciDeviceClass(UINTN pciAddress);
+uint_least32_t pciDeviceBAR0(UINTN pciAddress, EFI_STATUS *status);
 bool pciRebarSetSize(UINTN pciAddress, uint_least16_t capabilityOffset, uint_least8_t barIndex, uint_least8_t barSizeBitIndex);
 
 void pciSaveAndRemapBridgeConfig(UINTN bridgePciAddress, UINT32 bridgeSaveArea[3u], EFI_PHYSICAL_ADDRESS baseAddress0, EFI_PHYSICAL_ADDRESS topAddress0, EFI_PHYSICAL_ADDRESS bridgeIoBaseLimit);

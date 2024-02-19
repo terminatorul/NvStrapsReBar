@@ -91,6 +91,18 @@ uint_least32_t pciDeviceClass(UINTN pciAddress)
     return configReg & UINT32_C(0xFFFF'FF00);
 }
 
+uint_least32_t pciDeviceBAR0(UINTN pciAddress, EFI_STATUS *status)
+{
+    UINT32 baseAddress;
+
+    *status = pciReadConfigDword(pciAddress, PCI_BASE_ADDRESS_0, &baseAddress);
+
+    if (EFI_ERROR(*status))
+	return UINT32_C(0xFFFF'FFFF);
+
+    return baseAddress;
+}
+
 EFI_STATUS pciBridgeSecondaryBus(UINTN pciAddress, uint_least8_t *secondaryBus)
 {
     UINT32 configReg;
