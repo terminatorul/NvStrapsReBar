@@ -19,7 +19,7 @@ Download latest release from the [Releases](https://github.com/terminatorul/NvSt
 * `NvStrapsReBar.ffs` UEFI DXE driver
 * `NvStrapsReBar.exe` Windows executable
 
-After download or build you need to go through a number of steps:
+After download or build you need to go through the following steps:
 * update the motherbord UEFI image to add the new `NvStrapsReBar.ffs` driver (see below)
 * enable ReBAR in UEFI Setup if the motherboard supports it. Otherwise enable "Above 4G Decoding" (if you have the option) and disable CSM
 * run `NvStrapsReBar.exe` as Administrator to enable the new BAR size, by following the text-mode menus. If you have a recent motherboard, you only need to input `E` to Enable ReBAR for Turing GPUs, then input `S` to save the new driver configuration to EFI variable. For older motherboards without ReBAR, you also need to input `P` to set BAR size on the PCI side (motherboard side).
