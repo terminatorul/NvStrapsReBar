@@ -5,19 +5,21 @@
 ### Do I need to flash a new UEFI image on the motherboard, to enable ReBAR on the GPU ?
 Yes, this is how it works for Turing GPUs (GTX 1600 / RTX 2000).
 
-It's ususally the video BIOS (vBIOS) that should enable ReBAR, but the vBIOS is digitally signed and can not be modified by modders and end-users (is locked-down). The motherboard UEFI image can also be signed or have integrity checks, but in general it is thankfully not as locked down, and users and UEFI modders often still have a way to modify it.
+(some ideas to get it working without UEFI modding have circulated, but may not be technically possible and nothing is implemented.)
 
-For older boards without ReBAR, adding ReBAR functionality depends on the Above 4G Decoding option in your UEFI setup (if you have it), which must be turned on in advance, and CSM must be disabled.
+It's ususally the video BIOS (vBIOS) that should enable ReBAR, but the vBIOS is digitally signed (NVIDIA vBIOS is also encrypted) and can not be modified by modders and end-users (is locked-down). The motherboard UEFI image can also be signed or have integrity checks, but in general it is thankfully not as locked down, and users and UEFI modders often still have a way to modify it.
+
+For older boards without ReBAR, adding ReBAR functionality depends on the Above 4G Decoding option in your UEFI setup, which must be turned on in advance, and CSM must be disabled.
 
 #### Warning:
 Some users report BSOD or crash when resuming from sleep, which can be even worse for laptop users. Developing a boot script for the DXE driver might address the issue, but the feature is not implemented and there is currently no fix for this issue.
 
 ### Usage
-Build the project using the instructions below (that were slightly adapted from the original [ReBarUEFI](https://github.com/xCuri0/ReBARUEFI) project). This should produce two files:
+Download latest release from the [Releases](https://github.com/terminatorul/NvStrapsReBar/releases) page, or build the project using the  [build](https://github.com/terminatorul/NvStrapsReBar/wiki/Building-(Windows-only)) instructions. This should produce two files:
 * `NvStrapsReBar.ffs` UEFI DXE driver
 * `NvStrapsReBar.exe` Windows executable
 
-After building you need to go through a number of steps:
+After download or build you need to go through a number of steps:
 * update the motherbord UEFI image to add the new `NvStrapsReBar.ffs` driver (see below)
 * enable ReBAR in UEFI Setup if the motherboard supports it. Otherwise enable "Above 4G Decoding" (if you have the option) and disable CSM
 * run `NvStrapsReBar.exe` as Administrator to enable the new BAR size, by following the text-mode menus. If you have a recent motherboard, you only need to input `E` to Enable ReBAR for Turing GPUs, then input `S` to save the new driver configuration to EFI variable. For older motherboards without ReBAR, you also need to input `P` to set BAR size on the PCI side (motherboard side).
@@ -65,7 +67,7 @@ See the original project [ReBarUEFI](https://github.com/xCuri0/ReBarUEFI/) for t
 <p>So you will still have to check the README page from the original project: <ul><li><a href="https://github.com/xCuri0/ReBarUEFI">https://github.com/xCuri0/ReBarUEFI</a></li></ul> for all the details and instructions on working with the UEFI image, and patching it if necessary (for older motherboards and chipsets). </p>
 
 ## Enable ReBAR and choose BAR size
-After flashing the motherboard with the new UEFI image, you need to enable ReBAR, enable "Above 4G Decoding" (if you have the option) and disable CSM in UEFI setup, and then run `NvStrapsReBar.exe` as Administrator.
+After flashing the motherboard with the new UEFI image, you need to enable ReBAR in UEFI Setup. For older motherboards without ReBAR, enable "Above 4G Decoding" and disable CSM. Then you need to run `NvStrapsReBar.exe` as Administrator.
 
 For older motherboard without ReBAR support, enablging ReBAR depends on Above 4G Decoding. So if you accidentaly turn it off later and can not POST, you need to clear CMOS. Remember to disconnect from wall power before you clear CMOS (bad things happened to my motherboard otherwise). Users report the Clear CMOS button present on some motherboards may still keep the current date and time for some boards. The current date has to be reset to recover the board. So if needed, you should short the Clear CMOS pin headers (with a screwdriver that is metallic, and the metal is not painted / coated), or by removing the battery for 1 to 5 minutes. Another way is to move the GPU to a different PCI slot, or replace it with a different model, if you have an extra. If you can enter UEFI Setup, you can manually set back the year to a value before 2024, reboot, and restore the year after.
 
