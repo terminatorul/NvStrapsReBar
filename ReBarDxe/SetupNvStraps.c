@@ -263,6 +263,19 @@ static bool ConfigureNvStrapsBAR1Size(EFI_PHYSICAL_ADDRESS baseAddress0, UINT8 b
         STRAPS0 |= UINT32_C(1) << (DWORD_SIZE * BYTE_BITSIZE - 1u);
 
         CopyMem(pSTRAPS0, &STRAPS0, sizeof STRAPS0);
+
+	if (S3SaveState)
+	    S3SaveState->Write
+		(
+		    S3SaveState,
+		    (UINT16)EFI_BOOT_SCRIPT_MEM_WRITE_OPCODE,
+		    (EFI_BOOT_SCRIPT_WIDTH)EfiBootScriptWidthUint32,
+		    (UINT64)((UINT64)baseAddress0 + TARGET_GPU_STRAPS_BASE_OFFSET + TARGET_GPU_STRAPS_SET0_OFFSET),
+		    (UINTN)1u,
+		    &STRAPS0
+		);
+	else
+	    SetEFIError(EFIError_LoadS3SaveStateProtocol, EFI_NOT_FOUND);
     }
 
     if (barSize_Part2 != targetBarSize_Part2)
@@ -272,6 +285,19 @@ static bool ConfigureNvStrapsBAR1Size(EFI_PHYSICAL_ADDRESS baseAddress0, UINT8 b
         STRAPS1 |= UINT32_C(1) << (DWORD_SIZE * BYTE_BITSIZE - 1u);
 
         CopyMem(pSTRAPS1, &STRAPS1, sizeof STRAPS1);
+
+	if (S3SaveState)
+	    S3SaveState->Write
+		(
+		    S3SaveState,
+		    (UINT16)EFI_BOOT_SCRIPT_MEM_WRITE_OPCODE,
+		    (EFI_BOOT_SCRIPT_WIDTH)EfiBootScriptWidthUint32,
+		    (UINT64)((UINT64)baseAddress0 + TARGET_GPU_STRAPS_BASE_OFFSET + TARGET_GPU_STRAPS_SET1_OFFSET),
+		    (UINTN)1u,
+		    &STRAPS1
+		);
+	else
+	    SetEFIError(EFIError_LoadS3SaveStateProtocol, EFI_NOT_FOUND);
     }
 
     return barSize_Part1 + barSize_Part2 != targetBarSize_Part1 + targetBarSize_Part2;

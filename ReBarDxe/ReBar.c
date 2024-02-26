@@ -198,6 +198,7 @@ static bool IsCMOSClear()
     return time.Year < BUILD_YEAR;
 }
 
+EFI_S3_SAVE_STATE_PROTOCOL *S3SaveState = NULL;
 EFI_EVENT evS3SaveStateInstalled;
 void *Registration = NULL;
 
@@ -211,7 +212,6 @@ static void EFIAPI OnS3SaveStateInstalled(EFI_EVENT event, void *context)
 
 static void RegisterS3SaveStateInstallNotification()
 {
-    EFI_S3_SAVE_STATE_PROTOCOL  *S3SaveState;
 
     EFI_STATUS status = gBS->LocateProtocol(&gEfiS3SaveStateProtocolGuid, NULL, (void **)&S3SaveState);
 
