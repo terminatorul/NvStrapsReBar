@@ -113,7 +113,7 @@ EFI_EXIT_BOOT_SERVICES ExitBootServices = NULL;
 
 EFI_STATUS EFIAPI ExitBootServicesOverride(EFI_HANDLE imageHandle, UINTN systemMap)
 {
-    PreExitBootServices(NULL, NULL);
+    //PreExitBootServices(NULL, NULL);
 
     if (ExitBootServices)
     {
@@ -137,29 +137,31 @@ void RecordUpdateGPU(uint_least8_t bus, uint_least8_t device, uint_least8_t func
 	if (updatedGPUsCount == 1u)
 	{
 	    EFI_STATUS status;
-	    UINTN handleCount;
-	    EFI_HANDLE *handleBuffer = NULL;
+	    // UINTN handleCount;
+	    // EFI_HANDLE *handleBuffer = NULL;
 
-	    status = gBS->LocateHandleBuffer(
-		ByProtocol,
-		&gEfiS3SaveStateProtocolGuid,
-		NULL,
-		&handleCount,
-		&handleBuffer);
+	    status = gBS->LocateProtocol(&gEfiS3SaveStateProtocolGuid, NULL, (void **)&s3SaveState);
 
-	    if (EFI_ERROR(status))
-	    {
-		SetEFIError(EFIError_LocateS3SaveStateProtocol, status);
-		return;
-	    }
+	//     status = gBS->LocateHandleBuffer(
+	// 	ByProtocol,
+	// 	&gEfiS3SaveStateProtocolGuid,
+	// 	NULL,
+	// 	&handleCount,
+	// 	&handleBuffer);
 
-	    status = gBS->OpenProtocol(
-		*handleBuffer,
-		&gEfiS3SaveStateProtocolGuid,
-		(VOID **)&s3SaveState,
-		gImageHandle,
-		NULL,
-		EFI_OPEN_PROTOCOL_GET_PROTOCOL);
+	//     if (EFI_ERROR(status))
+	//     {
+	// 	SetEFIError(EFIError_LocateS3SaveStateProtocol, status);
+	// 	return;
+	//     }
+
+	//     status = gBS->OpenProtocol(
+	// 	*handleBuffer,
+	// 	&gEfiS3SaveStateProtocolGuid,
+	// 	(VOID **)&s3SaveState,
+	// 	gImageHandle,
+	// 	NULL,
+	// 	EFI_OPEN_PROTOCOL_GET_PROTOCOL);
 
 	    if (EFI_ERROR(status))
 	    {
@@ -167,8 +169,9 @@ void RecordUpdateGPU(uint_least8_t bus, uint_least8_t device, uint_least8_t func
 		return;
 	    }
 
-	ExitBootServices = gBS->ExitBootServices;
-	gBS->ExitBootServices = ExitBootServicesOverride;
+	PreExitBootServices(NULL, NULL);
+	// ExitBootServices = gBS->ExitBootServices;
+	// gBS->ExitBootServices = ExitBootServicesOverride;
 
 	//    status = gBS->CreateEventEx(EVT_NOTIFY_SIGNAL, TPL_APPLICATION, &PreExitBootServices, NULL, &gEfiEventReadyToBootGuid, &eventBeforeExitBootServices);
 
@@ -352,12 +355,12 @@ void NvStraps_Setup(UINTN pciAddress, uint_least16_t vendorId, uint_least16_t de
 
                 bool configUpdated = ConfigureNvStrapsBAR1Size(gpuConfig->bar0.base & UINT32_C(0xFFFF'FFF0), barSizeSelector.barSizeSelector);     // mask the flag bits from the address
 
+		// RecordUpdateGPU(bus, device, func, barSizeSelector.barSizeSelector);
+
                 pciRestoreDeviceConfig(pciAddress, gpuSaveArea);
                 pciRestoreBridgeConfig(bridgePciAddress, bridgeSaveArea);
 
                 SetDeviceStatusVar(pciAddress, configUpdated ? StatusVar_GpuStrapsConfigured : StatusVar_GpuStrapsPreConfigured);
-
-		RecordUpdateGPU(bus, device, func, barSizeSelector.barSizeSelector);
 
                 uint_least16_t capabilityOffset = pciFindExtCapability(pciAddress, PCI_EXPRESS_EXTENDED_CAPABILITY_RESIZABLE_BAR_ID);
                 uint_least32_t barSizeMask = capabilityOffset ? pciRebarGetPossibleSizes(pciAddress, capabilityOffset, vendorId, deviceId, PCI_BAR_IDX1) : 0u;

@@ -14,6 +14,9 @@ SPDX-License-Identifier: MIT
 #include <Protocol/PciHostBridgeResourceAllocation.h>
 #include <Library/MemoryAllocationLib.h>
 
+#include <Guid/EventGroup.h>
+#include <Protocol/S3SaveState.h>
+
 #if defined(_ASSERT)
 # undef _ASSERT
 #endif
@@ -195,9 +198,52 @@ static bool IsCMOSClear()
     return time.Year < BUILD_YEAR;
 }
 
+EFI_EVENT evS3SaveStateInstalled;
+void *Registration = NULL;
+
+static void EFIAPI OnS3SaveStateInstalled(EFI_EVENT event, void *context)
+{
+    SetStatusVar(StatusVar_ParseError);
+
+    if (event == evS3SaveStateInstalled)
+	gBS->CloseEvent(evS3SaveStateInstalled);
+}
+
+static void RegisterS3SaveStateInstallNotification()
+{
+    EFI_S3_SAVE_STATE_PROTOCOL  *S3SaveState;
+
+    EFI_STATUS status = gBS->LocateProtocol(&gEfiS3SaveStateProtocolGuid, NULL, (void **)&S3SaveState);
+
+    if (EFI_ERROR(status))
+    {
+	SetEFIError(EFIError_LocateS3SaveStateProtocol, status);
+	return;
+    }
+
+    status = gBS->CreateEvent(EVT_NOTIFY_SIGNAL, TPL_CALLBACK, OnS3SaveStateInstalled, NULL, &evS3SaveStateInstalled);
+
+    if (EFI_ERROR(status))
+    {
+	SetEFIError(EFIError_CreateTimer, status);
+	return;
+    }
+
+    status = gBS->RegisterProtocolNotify(&gEfiS3SaveStateProtocolGuid, evS3SaveStateInstalled, &Registration);
+
+    if (EFI_ERROR(status))
+    {
+	SetEFIError(EFIError_SetupTimer, status);
+	gBS->CloseEvent(evS3SaveStateInstalled);
+	return;
+    }
+}
+
 EFI_STATUS EFIAPI rebarInit(IN EFI_HANDLE imageHandle, IN EFI_SYSTEM_TABLE *systemTable)
 {
     DEBUG((DEBUG_INFO, "ReBarDXE: Loaded\n"));
+
+    RegisterS3SaveStateInstallNotification();
 
     reBarImageHandle = imageHandle;
     config = GetNvStrapsConfig(false, NULL);    // attempts to overflow EFI variable data should result in EFI_BUFFER_TOO_SMALL
