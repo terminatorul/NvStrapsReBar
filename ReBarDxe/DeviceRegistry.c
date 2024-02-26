@@ -147,6 +147,7 @@ static UINT16 Turing_Device_List_Skip[] =
 
         UINT16_C(0x1F76),               // TU106GLM [Quadro RTX 3000 Mobile Refresh] 6GB
         UINT16_C(0x1FF0),               // TU117GL [T1000 8GB]
+        UINT16_C(0x21C4),		// TU116 [GeForce GTX 1660 SUPER] 6GB
         UINT16_C(0x2189),	        // TU116 [CMP 30HX] 6GB
         UINT16_C(0x2191),	        // TU116M [GeForce GTX 1660 Ti Mobile] 6GB
 
