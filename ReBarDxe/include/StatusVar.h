@@ -67,6 +67,7 @@ typedef enum EFIErrorLocation
     EFIError_LoadBridgeProtocol,
     EFIError_LocateS3SaveStateProtocol,
     EFIError_LoadS3SaveStateProtocol,
+    EFIError_WriteS3SaveStateProtocol,
     EFIError_ReadBaseAddress0,
     EFIError_CMOSTime,
     EFIError_CreateTimer,

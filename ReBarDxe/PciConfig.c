@@ -4,6 +4,7 @@
 #include <Uefi.h>
 #include <Library/UefiBootServicesTableLib.h>
 #include <Protocol/PciRootBridgeIo.h>
+#include <Protocol/S3SaveState.h>
 #include <IndustryStandard/Pci.h>
 #include <IndustryStandard/Pci22.h>
 #include <IndustryStandard/PciExpress21.h>
@@ -12,6 +13,7 @@
 #include "LocalAppConfig.h"
 #include "StatusVar.h"
 #include "SetupNvStraps.h"
+#include "ReBar.h"
 #include "PciConfig.h"
 
 inline bool PCI_POSSIBLE_ERROR(UINT32 val)
@@ -272,12 +274,15 @@ bool pciRebarSetSize(UINTN pciAddress, uint_least16_t capabilityOffset, uint_lea
 
 void pciSaveAndRemapBridgeConfig(UINTN bridgePciAddress, UINT32 bridgeSaveArea[3u], EFI_PHYSICAL_ADDRESS baseAddress0, EFI_PHYSICAL_ADDRESS topAddress0, EFI_PHYSICAL_ADDRESS ioBaseLimit)
 {
-    bool efiError = false;
+    bool efiError = false, s3SaveStateError = false;
     EFI_STATUS status;
 
     efiError = efiError || EFI_ERROR((status = pciReadConfigDword(bridgePciAddress, PCI_COMMAND_OFFSET, bridgeSaveArea + 0u)));
     efiError = efiError || EFI_ERROR((status = pciReadConfigDword(bridgePciAddress, PCI_IO_BASE,        bridgeSaveArea + 1u)));
     efiError = efiError || EFI_ERROR((status = pciReadConfigDword(bridgePciAddress, PCI_MEMORY_BASE,    bridgeSaveArea + 2u)));
+
+    UINT32 configReg;
+    efiError = efiError || EFI_ERROR((status = pciReadConfigDword(bridgePciAddress, PCI_BRIDGE_PRIMARY_BUS_REGISTER_OFFSET, &configReg)));
 
     if (!efiError)
     {
@@ -304,10 +309,79 @@ void pciSaveAndRemapBridgeConfig(UINTN bridgePciAddress, UINT32 bridgeSaveArea[3
         efiError = efiError || EFI_ERROR((status = pciWriteConfigDword(bridgePciAddress, PCI_MEMORY_BASE,    &bridgeMemoryBaseLimit)));
         efiError = efiError || EFI_ERROR((status = pciWriteConfigDword(bridgePciAddress, PCI_IO_BASE,        &bridgeIoBaseLimit)));
         efiError = efiError || EFI_ERROR((status = pciWriteConfigDword(bridgePciAddress, PCI_COMMAND_OFFSET, &bridgeCommand)));
+
+	if (S3SaveState)
+	{
+	    if (!efiError)
+	    {
+		status = S3SaveState->Write
+		    (
+			S3SaveState,
+			(UINT16)EFI_BOOT_SCRIPT_PCI_CONFIG_WRITE_OPCODE,
+			(EFI_BOOT_SCRIPT_WIDTH)EfiBootScriptWidthUint32,
+			(UINT64)pciAddrOffset(bridgePciAddress, PCI_BRIDGE_PRIMARY_BUS_REGISTER_OFFSET),
+			(UINTN)1u,
+			(void *)&configReg
+		    );
+
+		efiError = efiError || EFI_ERROR(status);
+		s3SaveStateError = s3SaveStateError || EFI_ERROR(status);
+	    }
+
+	    if (!efiError)
+	    {
+		status = S3SaveState->Write
+		    (
+			S3SaveState,
+			(UINT16)EFI_BOOT_SCRIPT_PCI_CONFIG_WRITE_OPCODE,
+			(EFI_BOOT_SCRIPT_WIDTH)EfiBootScriptWidthUint32,
+			(UINT64)pciAddrOffset(bridgePciAddress, PCI_MEMORY_BASE),
+			(UINTN)1u,
+			(void *)&bridgeMemoryBaseLimit
+		    );
+
+		efiError = efiError || EFI_ERROR(status);
+		s3SaveStateError = s3SaveStateError || EFI_ERROR(status);
+	    }
+
+	    if (!efiError)
+	    {
+		status = S3SaveState->Write
+		    (
+			S3SaveState,
+			(UINT16)EFI_BOOT_SCRIPT_PCI_CONFIG_WRITE_OPCODE,
+			(EFI_BOOT_SCRIPT_WIDTH)EfiBootScriptWidthUint32,
+			(UINT64)pciAddrOffset(bridgePciAddress, PCI_IO_BASE),
+			(UINTN)1u,
+			(void *)&bridgeIoBaseLimit
+		    );
+
+		efiError = efiError || EFI_ERROR(status);
+		s3SaveStateError = s3SaveStateError || EFI_ERROR(status);
+	    }
+
+	    if (!efiError)
+	    {
+		status = S3SaveState->Write
+		    (
+			S3SaveState,
+			(UINT16)EFI_BOOT_SCRIPT_PCI_CONFIG_WRITE_OPCODE,
+			(EFI_BOOT_SCRIPT_WIDTH)EfiBootScriptWidthUint32,
+			(UINT64)pciAddrOffset(bridgePciAddress, PCI_COMMAND_OFFSET),
+			(UINTN)1u,
+			(void *)&bridgeCommand
+		    );
+
+		efiError = efiError || EFI_ERROR(status);
+		s3SaveStateError = s3SaveStateError || EFI_ERROR(status);
+	    }
+	}
+	else
+	    SetEFIError(EFIError_LoadS3SaveStateProtocol, EFI_NOT_FOUND);
     }
 
     if (efiError)
-        SetEFIError(EFIError_PCI_BridgeConfig, status);
+        SetEFIError(s3SaveStateError ? EFIError_WriteS3SaveStateProtocol : EFIError_PCI_BridgeConfig, status);
 }
 
 void pciRestoreBridgeConfig(UINTN bridgePciAddress, UINT32 bridgeSaveArea[3u])
@@ -325,7 +399,7 @@ void pciRestoreBridgeConfig(UINTN bridgePciAddress, UINT32 bridgeSaveArea[3u])
 
 void pciSaveAndRemapDeviceBAR0(UINTN pciAddress, UINT32 gpuSaveArea[2u], EFI_PHYSICAL_ADDRESS baseAddress0)
 {
-    bool efiError = false;
+    bool efiError = false, s3SaveStateError = false;
     EFI_STATUS status;
 
     efiError = efiError || EFI_ERROR((status = pciReadConfigDword(pciAddress, PCI_COMMAND_OFFSET, gpuSaveArea + 0u)));
@@ -345,10 +419,47 @@ void pciSaveAndRemapDeviceBAR0(UINTN pciAddress, UINT32 gpuSaveArea[2u], EFI_PHY
 
         efiError = efiError || EFI_ERROR((status = pciWriteConfigDword(pciAddress, PCI_BASE_ADDRESS_0, &gpuBaseAddress)));
         efiError = efiError || EFI_ERROR((status = pciWriteConfigDword(pciAddress, PCI_COMMAND_OFFSET, &gpuCommand)));
+
+	if (S3SaveState)
+	{
+	    if (!efiError)
+	    {
+		status = S3SaveState->Write
+		    (
+			S3SaveState,
+			(UINT16)EFI_BOOT_SCRIPT_PCI_CONFIG_WRITE_OPCODE,
+			(EFI_BOOT_SCRIPT_WIDTH)EfiBootScriptWidthUint32,
+			(UINT64)pciAddrOffset(pciAddress, PCI_BASE_ADDRESS_0),
+			(UINTN)1u,
+			(void *)&gpuBaseAddress
+		    );
+
+		efiError = efiError || EFI_ERROR(status);
+		s3SaveStateError = s3SaveStateError || EFI_ERROR(status);
+	    }
+
+	    if (!efiError)
+	    {
+		status = S3SaveState->Write
+		    (
+			S3SaveState,
+			(UINT16)EFI_BOOT_SCRIPT_PCI_CONFIG_WRITE_OPCODE,
+			(EFI_BOOT_SCRIPT_WIDTH)EfiBootScriptWidthUint32,
+			(UINT64)pciAddrOffset(pciAddress, PCI_COMMAND_OFFSET),
+			(UINTN)1u,
+			(void *)&gpuCommand
+		    );
+
+		efiError = efiError || EFI_ERROR(status);
+		s3SaveStateError = s3SaveStateError || EFI_ERROR(status);
+	    }
+	}
+	else
+	    SetEFIError(EFIError_LoadS3SaveStateProtocol, EFI_NOT_FOUND);
     }
 
     if (efiError)
-        SetEFIError(EFIError_PCI_DeviceBARConfig, status);
+        SetEFIError(s3SaveStateError ? EFIError_WriteS3SaveStateProtocol : EFIError_PCI_DeviceBARConfig, status);
 }
 
 void pciRestoreDeviceConfig(UINTN pciAddress, UINT32 saveArea[2u])
