@@ -12,7 +12,7 @@ It's ususally the video BIOS (vBIOS) that should enable ReBAR, but the vBIOS is 
 For older boards without ReBAR, adding ReBAR functionality depends on the Above 4G Decoding option in your UEFI setup, which must be turned on in advance, and CSM must be disabled.
 
 #### Warning:
-Some users report BSOD or crash when resuming from sleep, which can be even worse for laptop users. Developing a boot script for the DXE driver might address the issue, but the feature is not implemented and there is currently no fix for this problem. You may want to disable Sleep and enable Hibernate instead on the same timeout.
+Some users report BSOD or reset when resuming from sleep, which can be bad for laptop users. A fix is under developement on the `bleed` branch, but not released yet. You can build the project from the `bleed` branch yourself if you want to address resume from sleep now. Or you may want to disable Sleep and enable Hibernate instead on the same timeout.
 
 ### Usage
 Download latest release from the [Releases](https://github.com/terminatorul/NvStrapsReBar/releases) page, or build the project using the  [build](https://github.com/terminatorul/NvStrapsReBar/wiki/Building-(Windows-only)) instructions. This should produce two files:
