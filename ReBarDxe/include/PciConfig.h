@@ -12,6 +12,7 @@
 #include "LocalAppConfig.h"
 
 #if defined(UEFI_SOURCE)
+UINT64 pciAddrOffset(UINTN pciAddress, INTN offset);
 UINTN pciLocateDevice(EFI_HANDLE RootBridgeHandle, EFI_PCI_ROOT_BRIDGE_IO_PROTOCOL_PCI_ADDRESS addressInfo, uint_least16_t *venID, uint_least16_t *devID, uint_least8_t *headerType);
 uint_least16_t pciFindExtCapability(UINTN pciAddress, uint_least32_t cap);
 uint_least32_t pciRebarGetPossibleSizes(UINTN pciAddress, uint_least16_t capabilityOffset, UINT16 vid, UINT16 did, uint_least8_t barIndex);

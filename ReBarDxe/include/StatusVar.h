@@ -34,9 +34,9 @@ typedef enum StatusVar
     StatusVar_GpuDelayElapsed = 110u,
     StatusVar_GpuReBarConfigured = 120u,
     StatusVar_GpuStrapsNoConfirm = 130u,
+    StatusVar_GpuReBarSizeOverride = 135u,
     StatusVar_GpuNoReBarCapability = 140u,
     StatusVar_GpuExcluded = 150u,
-    StatusVar_BootScriptWritten = 151u,
 
     StatusVar_NoBridgeConfig = 159u,
     StatusVar_BadBridgeConfig = 160u,

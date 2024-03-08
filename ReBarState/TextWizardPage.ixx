@@ -128,6 +128,23 @@ static wstring_view formatBarSizeSelector(uint_least8_t barSizeSelector)
     return L" "sv;
 }
 
+static wchar_t locationMarker(ConfigPriority location, ConfigPriority barSizePriority, ConfigPriority sizeMaskOverridePriority, bool bridgeMismatch)
+{
+    if (bridgeMismatch && location == ConfigPriority::EXPLICIT_PCI_LOCATION)
+	return L'!';
+
+    if (barSizePriority >= location)
+	if (sizeMaskOverridePriority >= location)
+	    return L'+';
+	else
+	    return L'*';
+    else
+	if (sizeMaskOverridePriority >= location)
+	    return L'\'';
+	else
+	    return L' ';
+}
+
 static void showLocalGPUs(vector<DeviceInfo> const &deviceSet, NvStrapsConfig const &nvStrapsConfig)
 {
 #if defined(NDEBUG)
@@ -154,10 +171,10 @@ static void showLocalGPUs(vector<DeviceInfo> const &deviceSet, NvStrapsConfig co
         nMaxNameSize = max(nMaxNameSize, deviceInfo.productName.size());
     }
 
-    wcout << L"+----+------------+------------+--"sv << wstring(nMaxLocationSize, L'-') << L"-+-"sv << wstring(nMaxTargetBarSize, L'-') << L"-+-"sv << wstring(nMaxCurrentBarSize, L'-') << L"-+-"sv << wstring(nMaxVRAMSize, L'-') << L"-+-"sv << wstring(nMaxNameSize, L'-') << L"-+\n"sv;
-    wcout << L"| Nr |   PCI ID   |  subsystem |  "sv << left << setw(nMaxLocationSize) << L"Bridge + GPU"sv << L" | "sv << left << setw(nMaxTargetBarSize) << " Target " << L" | "sv << setw(nMaxTargetBarSize) << left << "Current" << L" | "sv << setw(nMaxVRAMSize) << L"VRAM"sv << L" | "sv << setw(nMaxNameSize) << L"Product Name"sv << L" |\n"sv;
-    wcout << L"|    |  VID:DID   |   VID:DID  |  "sv << setw(nMaxLocationSize) << left << "bus:dev.fn" << L" | "sv << setw(nMaxTargetBarSize) << L"BAR size"sv << L" | "sv << setw(nMaxCurrentBarSize) << L"BAR size"sv << L" | "sv << setw(nMaxVRAMSize) << L"size"sv << L" | "sv << wstring(nMaxNameSize, L' ') << L" |\n"sv;
-    wcout << L"+----+------------+------------+--"sv << wstring(nMaxLocationSize, L'-') << L"-+-"sv << wstring(nMaxTargetBarSize, L'-') << L"-+-"sv << wstring(nMaxCurrentBarSize, L'-') << L"-+-"sv << wstring(nMaxVRAMSize, L'-') << L"-+-"sv << wstring(nMaxNameSize, L'-') << L"-+\n"sv;
+    wcout << L"+----+------------+------------+--"sv << wstring(nMaxLocationSize, L'-') << L"-+--"sv << wstring(nMaxTargetBarSize, L'-') << L"-+-"sv << wstring(nMaxCurrentBarSize, L'-') << L"-+-"sv << wstring(nMaxVRAMSize, L'-') << L"-+-"sv << wstring(nMaxNameSize, L'-') << L"-+\n"sv;
+    wcout << L"| Nr |   PCI ID   |  subsystem |  "sv << left << setw(nMaxLocationSize) << L"Bridge + GPU"sv << L" |  "sv << left << setw(nMaxTargetBarSize) << " Target " << L" | "sv << setw(nMaxTargetBarSize) << left << "Current" << L" | "sv << setw(nMaxVRAMSize) << L"VRAM"sv << L" | "sv << setw(nMaxNameSize) << L"Product Name"sv << L" |\n"sv;
+    wcout << L"|    |  VID:DID   |   VID:DID  |  "sv << setw(nMaxLocationSize) << left << "bus:dev.fn" << L" |  "sv << setw(nMaxTargetBarSize) << L"BAR size"sv << L" | "sv << setw(nMaxCurrentBarSize) << L"BAR size"sv << L" | "sv << setw(nMaxVRAMSize) << L"size"sv << L" | "sv << wstring(nMaxNameSize, L' ') << L" |\n"sv;
+    wcout << L"+----+------------+------------+--"sv << wstring(nMaxLocationSize, L'-') << L"-+--"sv << wstring(nMaxTargetBarSize, L'-') << L"-+-"sv << wstring(nMaxCurrentBarSize, L'-') << L"-+-"sv << wstring(nMaxVRAMSize, L'-') << L"-+-"sv << wstring(nMaxNameSize, L'-') << L"-+\n"sv;
 
     for (auto const &&[deviceIndex, deviceInfo]: deviceSet | views::enumerate)
     {
@@ -165,6 +182,16 @@ static void showLocalGPUs(vector<DeviceInfo> const &deviceSet, NvStrapsConfig co
 
         auto [configPriority, barSizeSelector] = nvStrapsConfig.lookupBarSize
             (
+                deviceInfo.deviceID,
+                deviceInfo.subsystemVendorID,
+                deviceInfo.subsystemDeviceID,
+                deviceInfo.bus,
+                deviceInfo.device,
+                deviceInfo.function
+            );
+
+	auto [sizeMaskOverridePriority, sizeMaskOverride] = nvStrapsConfig.lookupBarSizeMaskOverride
+	    (
                 deviceInfo.deviceID,
                 deviceInfo.subsystemVendorID,
                 deviceInfo.subsystemDeviceID,
@@ -184,20 +211,22 @@ static void showLocalGPUs(vector<DeviceInfo> const &deviceSet, NvStrapsConfig co
 	    )
 	};
 
+	wchar_t marker;
+
         // GPU number
         wcout << L"| "sv << dec << right << setw(2u) << setfill(L' ') << deviceIndex + 1u;
 
         // PCI ID
-        wcout << L" | "sv << (configPriority < ConfigPriority::EXPLICIT_PCI_ID ? L' ' : L'*') << hex << setw(WORD_SIZE * 2u) << setfill(L'0') << uppercase << deviceInfo.vendorID << L':' << hex << setw(WORD_SIZE * 2u) << setfill(L'0') << deviceInfo.deviceID;
+        wcout << L" | "sv << locationMarker(ConfigPriority::EXPLICIT_PCI_ID, configPriority, sizeMaskOverridePriority, bridgeMismatch) << hex << setw(WORD_SIZE * 2u) << setfill(L'0') << uppercase << deviceInfo.vendorID << L':' << hex << setw(WORD_SIZE * 2u) << setfill(L'0') << deviceInfo.deviceID;
 
         // PCI subsystem ID
-        wcout << L" | "sv << (configPriority < ConfigPriority::EXPLICIT_SUBSYSTEM_ID ? L' ' : L'*') << hex << setw(WORD_SIZE * 2u) << setfill(L'0') << uppercase << deviceInfo.subsystemVendorID << L':' << hex << setw(WORD_SIZE * 2u) << setfill(L'0') << uppercase << deviceInfo.subsystemDeviceID;
+        wcout << L" | "sv << locationMarker(ConfigPriority::EXPLICIT_SUBSYSTEM_ID, configPriority, sizeMaskOverridePriority, bridgeMismatch) << hex << setw(WORD_SIZE * 2u) << setfill(L'0') << uppercase << deviceInfo.subsystemVendorID << L':' << hex << setw(WORD_SIZE * 2u) << setfill(L'0') << uppercase << deviceInfo.subsystemDeviceID;
 
         // PCI bus location
-        wcout << L" | "sv << (bridgeMismatch ? L'!' : configPriority < ConfigPriority::EXPLICIT_PCI_LOCATION ? L' ' : L'*') << right << setw(nMaxLocationSize) << setfill(L' ') << left << formatLocation(deviceInfo);
+        wcout << L" | "sv << locationMarker(ConfigPriority::EXPLICIT_PCI_LOCATION, configPriority, sizeMaskOverridePriority, bridgeMismatch) << right << setw(nMaxLocationSize) << setfill(L' ') << left << formatLocation(deviceInfo);
 
         // Target BAR1 size
-        wcout << L" | "sv << dec << setw(nMaxTargetBarSize) << right << setfill(L' ') << formatBarSizeSelector(barSizeSelector);
+        wcout << L" | "sv << (sizeMaskOverride ? isTuringGPU(deviceInfo.deviceID) ? L'\'' : L' ' : L' ') << dec << setw(nMaxTargetBarSize) << right << setfill(L' ') << formatBarSizeSelector(barSizeSelector);
 
         // Current BAR size
         wcout << L" | "sv << dec << setw(nMaxCurrentBarSize) << right << setfill(L' ') << formatDirectBARSize(deviceInfo.currentBARSize);
@@ -211,7 +240,7 @@ static void showLocalGPUs(vector<DeviceInfo> const &deviceSet, NvStrapsConfig co
         wcout << L" |\n"sv;
     }
 
-    wcout << L"+----+------------+------------+--"sv << wstring(nMaxLocationSize, L'-') << L"-+-"sv << wstring(nMaxTargetBarSize, L'-') << L"-+-"sv << wstring(nMaxCurrentBarSize, L'-')  << L"-+-"sv << wstring(nMaxVRAMSize, L'-') << L"-+-"sv << wstring(nMaxNameSize, L'-') << L"-+\n\n"sv;
+    wcout << L"+----+------------+------------+--"sv << wstring(nMaxLocationSize, L'-') << L"-+--"sv << wstring(nMaxTargetBarSize, L'-') << L"-+-"sv << wstring(nMaxCurrentBarSize, L'-')  << L"-+-"sv << wstring(nMaxVRAMSize, L'-') << L"-+-"sv << wstring(nMaxNameSize, L'-') << L"-+\n\n"sv;
 }
 
 static wstring_view driverStatusString(uint_least64_t driverStatus)
@@ -257,14 +286,14 @@ static wstring_view driverStatusString(uint_least64_t driverStatus)
     case StatusVar_GpuStrapsNoConfirm:
         return L"GPU-side ReBAR Configured without PCI confirm"sv;
 
+    case StatusVar_GpuReBarSizeOverride:
+	return L"GPU-side ReABR Configured with PCI ReBAR size override"sv;
+
     case StatusVar_GpuNoReBarCapability:
         return L"ReBAR capability not advertised"sv;
 
     case StatusVar_GpuExcluded:
         return L"GPU excluded"sv;
-
-    case StatusVar_BootScriptWritten:
-	return L"Boot script written"sv;
 
     case StatusVar_NoBridgeConfig:
 	return L"Missing bridge configuration"sv;
@@ -385,6 +414,9 @@ static void showDriverStatus(uint_least64_t driverStatus)
     wcout << L"UEFI DXE driver status: "sv << driverStatusString(status)
         << (status == StatusVar_Internal_EFIError ? driverErrorString(static_cast<EFIErrorLocation>(driverStatus >> (DWORD_BITSIZE + BYTE_BITSIZE) & BYTE_BITMASK)) : L""sv)
         <<  L" (0x"sv << hex << right << setfill(L'0') << setw(QWORD_SIZE * 2u) << driverStatus << dec << setfill(L' ') << L")\n"sv;
+
+    if (status == StatusVar_GpuStrapsNoConfirm)
+	wcout << L"(use Overide BAR Size Mask option)\n"sv;
 }
 
 static wstring formatPciBarSize(unsigned sizeSelector)
