@@ -3,6 +3,7 @@ export module TextWizardMenu;
 import std;
 import LocalAppConfig;
 import NvStrapsConfig;
+import DeviceRegistry;
 import DeviceList;
 
 using std::tuple;
@@ -20,6 +21,8 @@ export enum class MenuCommand
     DiscardPrompt,
     GlobalEnable,
     GlobalFallbackEnable,
+    SkipS3Resume,
+    OverrideBarSizeMask,
     UEFIConfiguration,
     UEFIBARSizePrompt,
     PerGPUConfigClear,
@@ -52,6 +55,8 @@ export tuple<MenuCommand, unsigned> showMenuPrompt
         vector<DeviceInfo> const &devices,
 	NvStrapsConfig const	 &config
     );
+
+export bool runConfirmationPrompt(MenuCommand menuCommand);
 
 module: private;
 
@@ -87,11 +92,12 @@ namespace execution = std::execution;
 namespace views = std::ranges::views;
 using namespace std::literals::string_view_literals;
 
-
 static auto const mainMenuShortcuts = map<wchar_t, MenuCommand>
 {
     { L'E', MenuCommand::GlobalEnable },
     { L'D', MenuCommand::GlobalEnable },
+    { L'K', MenuCommand::SkipS3Resume },
+    { L'O', MenuCommand::OverrideBarSizeMask },
  // { L'G', MenuCommand::PerGPUConfig },
     { L'C', MenuCommand::PerGPUConfigClear },
     { L'P', MenuCommand::UEFIConfiguration },
@@ -111,7 +117,8 @@ static auto const gpuMenuShortcuts = map<wchar_t, MenuCommand>
 static auto const barSizeMenuShortcuts = map<wchar_t, MenuCommand>
 {
     { L'C', MenuCommand::GPUSelectorClear },
-    { L'X', MenuCommand::GPUSelectorExclude }
+    { L'X', MenuCommand::GPUSelectorExclude },
+    { L'O', MenuCommand::OverrideBarSizeMask }
 };
 
 static wchar_t FindMenuShortcut(map<wchar_t, MenuCommand> const &menuShortcuts, MenuCommand menuCommand)
@@ -139,6 +146,24 @@ static wstring showMainMenuEntry(MenuCommand menuCommand, bool isGlobalEnable, v
             wcout << L"\t(E) Enable auto-setting BAR size for known Turing GPUs (GTX 1600 / RTX 2000 line)\n"sv;
 
         return wstring(1u, isGlobalEnable ? L'D' : L'E');
+
+    case MenuCommand::SkipS3Resume:
+	if (config.skipS3Resume())
+	    wcout << L"\t(" << chShortcut << L") Configure BAR size during resume from S3 (sleep)\n"sv;
+	else
+	    wcout << L"\t(" << chShortcut << L") Skip BAR size configuration during resume from S3 (sleep)\n"sv;
+
+	return wstring(1u, chShortcut);
+
+    case MenuCommand::OverrideBarSizeMask:
+	if (config.overrideBarSizeMask())
+	    wcout << L"\t(" << chShortcut << L") Disable"sv;
+	else
+	    wcout << L"\t(" << chShortcut << L") Enable"sv;
+
+	wcout << L" override for BAR size mask for PCI ReBAR capability\n"sv;
+
+	return wstring(1u, chShortcut);
 
     case MenuCommand::PerGPUConfig:
         if (devices | all)
@@ -279,7 +304,7 @@ static wstring showUEFIReBarMenuEntry(MenuCommand menuCommand)
     return { };
 }
 
-static wstring showBarSizeMenuEntry(MenuCommand menuCommand)
+static wstring showBarSizeMenuEntry(MenuCommand menuCommand, unsigned short device, vector<DeviceInfo> const &devices, NvStrapsConfig const &config)
 {
     auto chShortcut = FindMenuShortcut(barSizeMenuShortcuts, menuCommand);
 
@@ -292,6 +317,21 @@ static wstring showBarSizeMenuEntry(MenuCommand menuCommand)
     case MenuCommand::GPUSelectorExclude:
         wcout << L"\t("sv << chShortcut << L"): Add exclusion for the GPU from auto-selected configuration.\n"sv;
         return wstring(1u, chShortcut);
+
+    case MenuCommand::OverrideBarSizeMask:
+	if (isTuringGPU(devices[device].deviceID))
+	{
+	    auto &&deviceInfo = devices[device];
+
+	    if (config.lookupBarSizeMaskOverride(deviceInfo.deviceID, deviceInfo.subsystemVendorID, deviceInfo.subsystemDeviceID, deviceInfo.bus, deviceInfo.device, deviceInfo.function).sizeMaskOverride)
+		wcout << L"\t("sv << chShortcut << L"): Disable"sv;
+	    else
+		wcout << L"\t("sv << chShortcut << L"): Enable"sv;
+
+	    wcout << L" override for BAR size mask for PCIe ReBAR capability\n"sv;
+
+	    return wstring(1u, chShortcut);
+	}
 
     case MenuCommand::GPUVRAMSize:
         wcout << L"\t 0):  64 MiB\n"sv;
@@ -371,7 +411,7 @@ static wstring showMenuEntry
         return showGPUConfigurationMenuEntry(menuCommand, device, devices);
 
     case MenuType::GPUBARSize:
-        return showBarSizeMenuEntry(menuCommand);
+        return showBarSizeMenuEntry(menuCommand, device, devices, config);
 
     case MenuType::PCIBARSize:
         return showUEFIReBarMenuEntry(menuCommand);
@@ -455,11 +495,9 @@ static tuple<optional<MenuCommand>, unsigned> translateInput(MenuType menuType, 
         if (isNumeric(inputValue))
             return { MenuCommand::GPUVRAMSize, stoul(inputValue) };
 
-        if (inputValue | all && toupper(*inputValue.cbegin(), wcin.getloc()) == L'C' && commands.find(L'C') != commands.npos)
-            return { MenuCommand::GPUSelectorClear, 0u };
-
-        if (inputValue | all && toupper(*inputValue.cbegin(), wcin.getloc()) == L'X' && commands.find(L'X') != commands.npos)
-            return { MenuCommand::GPUSelectorExclude, 0u };
+	if (inputValue.length() == 1u && hasShortcut(*inputValue.cbegin(), commands))
+	    if (auto it = barSizeMenuShortcuts.find(toupper(*inputValue.cbegin(), wcin.getloc())); it != barSizeMenuShortcuts.end())
+		    return { it->second, 0u };
 
         return { nullopt, 0u };
 
@@ -617,3 +655,39 @@ tuple<MenuCommand, unsigned> showMenuPrompt
     showMenuHeader(menuType, device, devices);
     return showMenu(menuType, menu, defaultCommand, defaultValue, isGlobalEnable, device, devices, config);
 }
+
+bool runConfirmationPrompt(MenuCommand menuCommand)
+{
+    wstring input;
+
+    switch (menuCommand)
+    {
+    case MenuCommand::SkipS3Resume:
+	wcout << L"WARNING: Only skip S3 Resume if the system does not support S3 sleep or the DXE driver status shows an S3 EFI error !\n"sv;
+	wcout << L"Skip BAR size configuration during S3 Resume ? (y/N) "sv;
+	break;
+
+    case MenuCommand::DiscardQuit:
+	wcout << L"Quit without saving ? (y/N) "sv;
+	break;
+
+    default:
+	wcout << L"Confirmation to continue (y/N) "sv;
+	break;
+    }
+
+    getline(wcin, input);
+
+    while (input | all && isspace(*input.begin()))
+	input.erase(input.begin());
+
+    while (input | all && isspace(*input.rbegin()))
+	input.resize(input.size() - 1u);
+
+    for (auto &ch: input)
+	ch = toupper(ch, wcin.getloc());
+
+    return input | all && L"YES"sv.starts_with(input);
+}
+
+// vim:ft=cpp

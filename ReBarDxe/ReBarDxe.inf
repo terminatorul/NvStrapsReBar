@@ -10,6 +10,7 @@
   include/pciRegs.h
   include/LocalAppConfig.h
   include/PciConfig.h
+  include/S3ResumeScript.h
   include/DeviceRegistry.h
   include/SetupNvStraps.h
   include/EfiVariable.h
@@ -17,6 +18,7 @@
   include/StatusVar.h
   include/ReBar.h
   PciConfig.c
+  S3ResumeScript.c
   DeviceRegistry.c
   SetupNvStraps.c
   EfiVariable.c

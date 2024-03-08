@@ -1,7 +1,6 @@
 #if !defined(NV_STRAPS_REBAR_CONFIG_H)
 #define NV_STRAPS_REBAR_CONFIG_H
 
-// Some test to check if compiling UEFI code
 #if defined(UEFI_SOURCE)
 # include <Uefi.h>
 #else
@@ -72,6 +71,7 @@ typedef struct NvStraps_GPUSelector
     uint_least8_t  device;
     uint_least8_t  function;
     uint_least8_t  barSizeSelector;
+    uint_least8_t  overrideBarSizeMask;
 
 #if defined(__cplusplus)
     bool operator ==(NvStraps_GPUSelector const &other) const = default;
@@ -85,7 +85,7 @@ typedef struct NvStraps_GPUSelector
 
 enum
 {
-    GPU_SELECTOR_SIZE = WORD_SIZE * 3u + BYTE_SIZE * 3u,
+    GPU_SELECTOR_SIZE = WORD_SIZE * 3u + BYTE_SIZE * 4u,
 };
 
 typedef struct NvStraps_GPUConfig
@@ -144,11 +144,18 @@ typedef struct NvStraps_BarSize
 }
     NvStraps_BarSize;
 
+typedef struct NvStraps_BarSizeMaskOverride
+{
+    ConfigPriority priority;
+    bool sizeMaskOverride;
+}
+    NvStraps_BarSizeMaskOverride;
+
 typedef struct NvStrapsConfig
 {
     bool dirty;
     uint_least8_t nPciBarSize;
-    uint_least8_t nGlobalEnable;
+    uint_least8_t nOptionFlags;
 
     uint_least8_t nGPUSelector;
     NvStraps_GPUSelector GPUs[NvStraps_GPU_MAX_COUNT];
@@ -164,6 +171,10 @@ typedef struct NvStrapsConfig
     bool isDirty(bool fDirty);
     uint_least8_t isGlobalEnable() const;
     uint_least8_t setGlobalEnable(uint_least8_t val);
+    bool skipS3Resume() const;
+    bool skipS3Resume(bool fSkip);
+    bool overrideBarSizeMask() const;
+    bool overrideBarSizeMask(bool overrideSizeMask);
 
     uint_least8_t targetPciBarSizeSelector() const;
     uint_least8_t targetPciBarSizeSelector(uint_least8_t barSizeSelector);
@@ -171,6 +182,9 @@ typedef struct NvStrapsConfig
     bool setGPUSelector(uint_least8_t barSizeSelector, uint_least16_t deviceID);
     bool setGPUSelector(uint_least8_t barSizeSelector, uint_least16_t deviceID, uint_least16_t subsysVenID, uint_least16_t subsysDevID);
     bool setGPUSelector(uint_least8_t barSizeSelector, uint_least16_t deviceID, uint_least16_t subsysVenID, uint_least16_t subsysDevID, uint_least8_t bus, uint_least8_t dev, uint_least8_t fn);
+    bool setBarSizeMaskOverride(bool sizeMaskOverride, uint_least16_t deviceID);
+    bool setBarSizeMaskOverride(bool sizeMaskOverride, uint_least16_t deviceID, uint_least16_t subsysVenID, uint_least16_t subsysDevID);
+    bool setBarSizeMaskOverride(bool sizeMaskOverride, uint_least16_t deviceID, uint_least16_t subsysVenID, uint_least16_t subsysDevID, uint_least8_t bus, uint_least8_t dev, uint_least8_t fn);
     bool setGPUConfig(NvStraps_GPUConfig const &config);
     bool setBridgeConfig(NvStraps_BridgeConfig const &config);
 
@@ -182,6 +196,7 @@ typedef struct NvStrapsConfig
     bool clearGPUSelectors();
 
     NvStraps_BarSize lookupBarSize(uint_least16_t deviceID, uint_least16_t subsysVenID, uint_least16_t subsysDevID, uint_least8_t bus, uint_least8_t dev, uint_least8_t fn) const;
+    NvStraps_BarSizeMaskOverride lookupBarSizeMaskOverride(uint_least16_t deviceID, uint_least16_t subsysVenID, uint_least16_t subsysDevID, uint_least8_t bus, uint_least8_t dev, uint_least8_t fn) const;
     std::tuple<uint_least16_t, uint_least16_t> hasBridgeDevice(uint_least8_t bridgeBus, uint_least8_t bridgeDevice, uint_least8_t bridgeFunction) const;
     NvStraps_BridgeConfig const *lookupBridgeConfig(uint_least8_t bridgeSecondaryBus) const;
     NvStraps_GPUConfig const *lookupGPUConfig(uint_least8_t bus, uint_least8_t dev, uint_least8_t fn) const;
@@ -222,12 +237,17 @@ bool NvStrapsConfig_SetGPUConfig(NvStrapsConfig *config, NvStraps_GPUConfig cons
 bool NvStrapsConfig_SetBridgeConfig(NvStrapsConfig *config, NvStraps_BridgeConfig const *bridgeConfig);
 bool NvStrapsConfig_IsDirty(NvStrapsConfig const *config);
 bool NvStrapsConfig_SetIsDirty(NvStrapsConfig *config, bool dirtyFlag);
+bool NvStrapsConfig_SkipS3Resume(NvStrapsConfig const *config);
+bool NvStrapsConfig_SetSkipS3Resume(NvStrapsConfig *config, bool fSkipS3Resume);
+bool NvStrapsConfig_OverrideBarSizeMask(NvStrapsConfig const *config);
+bool NvStrapsConfig_SetOverrideBarSizeMask(NvStrapsConfig *config, bool fOverrideSizeMask);
 bool NvStrapsConfig_IsGpuConfigured(NvStrapsConfig const *config);
 bool NvStrapsConfig_IsDriverConfigured(NvStrapsConfig const *config);
 bool NvStrapsConfig_ResetConfig(NvStrapsConfig *config);
 void NvStrapsConfig_Clear(NvStrapsConfig *config);
 
 NvStraps_BarSize NvStrapsConfig_LookupBarSize(NvStrapsConfig const *config, uint_least16_t deviceID, uint_least16_t subsysVenID, uint_least16_t subsysDevID, uint_least8_t bus, uint_least8_t dev, uint_least8_t fn);
+NvStraps_BarSizeMaskOverride NvStrapsConfig_LookupBarSizeMaskOverride(NvStrapsConfig const *config, uint_least16_t deviceID, uint_least16_t subsysVenID, uint_least16_t subsysDevID, uint_least8_t bus, uint_least8_t dev, uint_least8_t fn);
 NvStraps_GPUConfig const *NvStrapsConfig_LookupGPUConfig(NvStrapsConfig const *config, uint_least8_t bus, uint_least8_t dev, uint_least8_t fn);
 NvStraps_BridgeConfig const *NvStrapsConfig_LookupBridgeConfig(NvStrapsConfig const *config, uint_least8_t secondaryBus);
 uint_least32_t NvStrapsConfig_HasBridgeDevice(NvStrapsConfig const *config, uint_least8_t bus, uint_least8_t dev, uint_least8_t fn);
@@ -243,22 +263,29 @@ inline uint_least8_t NvStrapsConfig_TargetPciBarSizeSelector(NvStrapsConfig cons
 inline uint_least8_t NvStrapsConfig_SetTargetPciBarSizeSelector(NvStrapsConfig *config, uint_least8_t barSizeSelector)
 {
     uint_least8_t pciBarSize = config->nPciBarSize;
-    config->dirty = barSizeSelector != config->nPciBarSize;
+    config->dirty = config->dirty || barSizeSelector != config->nPciBarSize;
 
     return config->nPciBarSize = barSizeSelector, pciBarSize;
 }
 
 inline uint_least8_t NvStrapsConfig_IsGlobalEnable(NvStrapsConfig const *config)
 {
-    return config->nGlobalEnable;
+    return config->nOptionFlags & 0x03u;
 }
 
 inline uint_least8_t NvStrapsConfig_SetGlobalEnable(NvStrapsConfig *config, uint_least8_t globalEnable)
 {
-    uint_least8_t oldGlobalEnable = config->nGlobalEnable;
-    config->dirty = globalEnable != config->nGlobalEnable;
+    uint_least8_t previousGlobalEnable = NvStrapsConfig_IsGlobalEnable(config);
 
-    return config->nGlobalEnable = globalEnable, oldGlobalEnable;
+    if (previousGlobalEnable != globalEnable)
+    {
+	config->dirty = true;
+
+	config->nOptionFlags &= ~(uint_least8_t)0x03u;
+	config->nOptionFlags |= globalEnable & 0x03u;
+    }
+
+    return previousGlobalEnable;
 }
 
 inline bool NvStrapsConfig_IsDirty(NvStrapsConfig const *config)
@@ -272,9 +299,47 @@ inline bool NvStrapsConfig_SetIsDirty(NvStrapsConfig *config, bool dirtyFlag)
     return config->dirty = dirtyFlag, oldFlag;
 }
 
+inline bool NvStrapsConfig_SkipS3Resume(NvStrapsConfig const *config)
+{
+    return !!(config->nOptionFlags & 0x04u);
+}
+
+inline bool NvStrapsConfig_SetSkipS3Resume(NvStrapsConfig *config, bool fSkipS3Resume)
+{
+    bool previousFlag = NvStrapsConfig_SkipS3Resume(config);
+
+    config->dirty = config->dirty || fSkipS3Resume != previousFlag;
+
+    if (fSkipS3Resume)
+	config->nOptionFlags |= 0x04u;
+    else
+	config->nOptionFlags &= (uint_least8_t) ~(uint_least8_t)0x04u;
+
+    return previousFlag;
+}
+
+inline bool NvStrapsConfig_OverrideBarSizeMask(NvStrapsConfig const *config)
+{
+    return !!(config->nOptionFlags & 0x08u);
+}
+
+inline bool NvStrapsConfig_SetOverrideBarSizeMask(NvStrapsConfig *config, bool fOverrideSizeMask)
+{
+    bool previousFlag = NvStrapsConfig_OverrideBarSizeMask(config);
+
+    config->dirty = config->dirty || fOverrideSizeMask != previousFlag;
+
+    if (fOverrideSizeMask)
+	config->nOptionFlags |= 0x08u;
+    else
+	config->nOptionFlags &= (uint_least8_t) ~(uint_least8_t)0x08u;
+
+    return previousFlag;
+}
+
 inline bool NvStrapsConfig_IsGpuConfigured(NvStrapsConfig const *config)
 {
-    return config->nGlobalEnable || config->nGPUSelector;
+    return NvStrapsConfig_IsGlobalEnable(config) || config->nGPUSelector;
 }
 
 inline bool NvStrapsConfig_IsDriverConfigured(NvStrapsConfig const *config)
@@ -330,6 +395,16 @@ inline bool NvStrapsConfig::setGPUSelector(uint_least8_t barSizeSelector, uint_l
 inline bool NvStrapsConfig::setGPUSelector(uint_least8_t barSizeSelector, uint_least16_t deviceID, uint_least16_t subsysVenID, uint_least16_t subsysDevID)
 {
     return setGPUSelector(barSizeSelector, deviceID, subsysVenID, subsysDevID, MAX_UINT8, MAX_UINT8, MAX_UINT8);
+}
+
+inline bool NvStrapsConfig::setBarSizeMaskOverride(bool sizeMaskOverride, uint_least16_t deviceID)
+{
+    return setBarSizeMaskOverride(sizeMaskOverride, deviceID, MAX_UINT16, MAX_UINT16);
+}
+
+inline bool NvStrapsConfig::setBarSizeMaskOverride(bool sizeMaskOverride, uint_least16_t deviceID, uint_least16_t subsysVenID, uint_least16_t subsysDevID)
+{
+    return setBarSizeMaskOverride(sizeMaskOverride, deviceID, subsysVenID, subsysDevID, MAX_UINT8, MAX_UINT8, MAX_UINT8);
 }
 
 inline bool NvStrapsConfig::setGPUConfig(NvStraps_GPUConfig const &config)
@@ -394,7 +469,7 @@ inline bool NvStrapsConfig::resetConfig()
 
 inline bool NvStrapsConfig::clearGPUSelectors()
 {
-    return dirty = !!nGPUSelector, !!std::exchange(nGPUSelector, 0u);
+    return dirty = dirty || !!nGPUSelector, !!std::exchange(nGPUSelector, 0u);
 }
 
 inline bool NvStrapsConfig::isDirty() const
@@ -405,6 +480,26 @@ inline bool NvStrapsConfig::isDirty() const
 inline bool NvStrapsConfig::isDirty(bool fDirty)
 {
     return NvStrapsConfig_SetIsDirty(this, fDirty);
+}
+
+inline bool NvStrapsConfig::skipS3Resume() const
+{
+    return NvStrapsConfig_SkipS3Resume(this);
+}
+
+inline bool NvStrapsConfig::skipS3Resume(bool fSkip)
+{
+    return NvStrapsConfig_SetSkipS3Resume(this, fSkip);
+}
+
+inline bool NvStrapsConfig::overrideBarSizeMask() const
+{
+    return NvStrapsConfig_OverrideBarSizeMask(this);
+}
+
+inline bool NvStrapsConfig::overrideBarSizeMask(bool overrideSizeMask)
+{
+    return NvStrapsConfig_SetOverrideBarSizeMask(this, overrideSizeMask);
 }
 
 inline uint_least8_t NvStrapsConfig::isGlobalEnable() const
@@ -430,6 +525,12 @@ inline uint_least8_t NvStrapsConfig::targetPciBarSizeSelector(uint_least8_t barS
 inline NvStraps_BarSize NvStrapsConfig::lookupBarSize(uint_least16_t deviceID, uint_least16_t subsysVenID, uint_least16_t subsysDevID, uint_least8_t bus, uint_least8_t dev, uint_least8_t fn) const
 {
     return NvStrapsConfig_LookupBarSize(this, deviceID, subsysVenID, subsysDevID, bus, dev, fn);
+}
+
+
+inline NvStraps_BarSizeMaskOverride NvStrapsConfig::lookupBarSizeMaskOverride(uint_least16_t deviceID, uint_least16_t subsysVenID, uint_least16_t subsysDevID, uint_least8_t bus, uint_least8_t dev, uint_least8_t fn) const
+{
+    return NvStrapsConfig_LookupBarSizeMaskOverride(this, deviceID, subsysVenID, subsysDevID, bus, dev, fn);
 }
 
 inline std::tuple<uint_least16_t, uint_least16_t> NvStrapsConfig::hasBridgeDevice(uint_least8_t bridgeBus, uint_least8_t bridgeDevice, uint_least8_t bridgeFunction) const

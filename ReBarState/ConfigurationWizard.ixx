@@ -20,6 +20,8 @@ using std::uint_least8_t;
 using std::uint_least32_t;
 using std::uint_least64_t;
 using std::span;
+using std::begin;
+using std::end;
 using std::tuple;
 using std::tie;
 using std::vector;
@@ -59,6 +61,8 @@ static vector<MenuCommand> buildConfigurationMenu(NvStrapsConfig &nvStrapsConfig
 	MenuCommand::GlobalEnable,
 	MenuCommand::PerGPUConfig,
 	MenuCommand::PerGPUConfigClear,
+	MenuCommand::SkipS3Resume,
+	MenuCommand::OverrideBarSizeMask,
 	MenuCommand::UEFIConfiguration,
 	MenuCommand::ShowConfiguration
     };
@@ -77,9 +81,10 @@ static vector<MenuCommand> buildConfigurationMenu(NvStrapsConfig &nvStrapsConfig
     return configMenu;
 }
 
-static span<MenuCommand> selectCurrentMenu(MenuType menuType, NvStrapsConfig &nvStrapsConfig)
+static span<MenuCommand> selectCurrentMenu(MenuType menuType, NvStrapsConfig &nvStrapsConfig, unsigned selectedDevice, vector<DeviceInfo> const &deviceList)
 {
     static auto mainMenu = vector<MenuCommand> { };
+    static auto barSizeMenu = vector<MenuCommand> { begin(GPUBarSizePrompt), end(GPUBarSizePrompt) };
 
     switch (menuType)
     {
@@ -91,7 +96,16 @@ static span<MenuCommand> selectCurrentMenu(MenuType menuType, NvStrapsConfig &nv
         return GPUConfigMenu;
 
     case MenuType::GPUBARSize:
-        return GPUBarSizePrompt;
+	if (isTuringGPU(deviceList[selectedDevice].deviceID))
+	    if (barSizeMenu[2u] != MenuCommand::OverrideBarSizeMask)
+		barSizeMenu.insert(barSizeMenu.begin() + 2u, MenuCommand::OverrideBarSizeMask);
+	    else
+		;
+	else
+	    if (barSizeMenu[2u] == MenuCommand::OverrideBarSizeMask)
+		barSizeMenu.erase(barSizeMenu.begin() + 2u);
+
+        return barSizeMenu;
 
     case MenuType::PCIBARSize:
         return ReBarUEFIMenu;
@@ -116,7 +130,7 @@ static tuple<MenuCommand, unsigned> getDefaultCommand(MenuType menuType, NvStrap
     return { MenuCommand::DefaultChoice, 0u };
 }
 
-static bool setGPUBarSize(NvStrapsConfig &nvStrapsConfig, UINT8 barSizeSelector, unsigned selectedDevice, MenuCommand deviceSelector, vector<DeviceInfo> const &deviceList)
+static bool setGPUBarSize(NvStrapsConfig &nvStrapsConfig, uint_least8_t barSizeSelector, unsigned selectedDevice, MenuCommand deviceSelector, vector<DeviceInfo> const &deviceList)
 {
     auto configured = false;
     auto const &device = deviceList[selectedDevice];
@@ -133,6 +147,32 @@ static bool setGPUBarSize(NvStrapsConfig &nvStrapsConfig, UINT8 barSizeSelector,
 
     case MenuCommand::GPUSelectorByPCILocation:
         configured = nvStrapsConfig.setGPUSelector(barSizeSelector, device.deviceID, device.subsystemVendorID, device.subsystemDeviceID, device.bus, device.device, device.function);
+        break;
+    }
+
+    if (!configured)
+        showError(L"Cannot configure GPU. Too many GPU configurations ? Clear existing configurations and re-configure.\n"s);
+
+    return configured;
+}
+
+static bool setGPUBarSizeMaskOverride(NvStrapsConfig &nvStrapsConfig, bool maskOverride, unsigned selectedDevice, MenuCommand deviceSelector, vector<DeviceInfo> const &deviceList)
+{
+    auto configured = false;
+    auto const &device = deviceList[selectedDevice];
+
+    switch (deviceSelector)
+    {
+    case MenuCommand::GPUSelectorByPCIID:
+        configured = nvStrapsConfig.setBarSizeMaskOverride(maskOverride, device.deviceID);
+        break;
+
+    case MenuCommand::GPUSelectorByPCISubsystem:
+        configured = nvStrapsConfig.setBarSizeMaskOverride(maskOverride, device.deviceID, device.subsystemVendorID, device.subsystemDeviceID);
+        break;
+
+    case MenuCommand::GPUSelectorByPCILocation:
+        configured = nvStrapsConfig.setBarSizeMaskOverride(maskOverride, device.deviceID, device.subsystemVendorID, device.subsystemDeviceID, device.bus, device.device, device.function);
         break;
     }
 
@@ -302,7 +342,7 @@ void runConfigurationWizard()
 
         auto [menuCommand, value] = showMenuPrompt
             (
-                selectCurrentMenu(menuType, nvStrapsConfig),
+                selectCurrentMenu(menuType, nvStrapsConfig, selectedDevice, deviceList),
                 defaultCommand,
                 defaultValue,
                 nvStrapsConfig.isGlobalEnable(),
@@ -314,6 +354,13 @@ void runConfigurationWizard()
         switch (menuCommand)
         {
         case MenuCommand::DiscardQuit:
+	    if (runConfirmationPrompt(MenuCommand::DiscardQuit))
+		runMenuLoop = false;
+	    else
+		showConfig();
+
+	    break;
+
         case MenuCommand::Quit:
             runMenuLoop = false;
             break;
@@ -322,6 +369,44 @@ void runConfigurationWizard()
             nvStrapsConfig.setGlobalEnable(nvStrapsConfig.isGlobalEnable() ? 0x00u : 0x02u);
             showConfig();
             break;
+
+	case MenuCommand::SkipS3Resume:
+	    if (nvStrapsConfig.skipS3Resume() || runConfirmationPrompt(MenuCommand::SkipS3Resume))
+		nvStrapsConfig.skipS3Resume(!nvStrapsConfig.skipS3Resume());
+
+	    showConfig();
+	    break;
+
+	case MenuCommand::OverrideBarSizeMask:
+	    switch (menuType)
+	    {
+	    case MenuType::Main:
+		nvStrapsConfig.overrideBarSizeMask(!nvStrapsConfig.overrideBarSizeMask());
+		break;
+
+	    case MenuType::GPUBARSize:
+		{
+		    auto &&deviceInfo = deviceList[selectedDevice];
+		    auto barSizeMaskOverride =
+			nvStrapsConfig.lookupBarSizeMaskOverride
+			    (
+				deviceInfo.deviceID,
+				deviceInfo.subsystemVendorID,
+				deviceInfo.subsystemDeviceID,
+				deviceInfo.bus,
+				deviceInfo.device,
+				deviceInfo.function
+			    )
+				.sizeMaskOverride;
+		    setGPUBarSizeMaskOverride(nvStrapsConfig, !barSizeMaskOverride, selectedDevice, deviceSelector, deviceList);
+		}
+
+		break;
+	    }
+
+	    showConfig();
+	    menuType = MenuType::Main;
+	    break;
 
         case MenuCommand::PerGPUConfigClear:
             nvStrapsConfig.clearGPUSelectors();

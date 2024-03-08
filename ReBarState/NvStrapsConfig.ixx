@@ -96,23 +96,24 @@ void ShowNvStrapsConfig(function<void (wstring const &)> show)
 
     show(L"DXE Driver configuration:\n"s);
     show(L"\tisDirty:           "s + to_wstring(config.dirty) + L'\n');
-    show(L"\tnGlobalEnable:     "s + to_wstring(config.nGlobalEnable) + L'\n');
+    show(L"\tOptionFlags:       "s + L"0x"s + formatHexByte(config.nOptionFlags) + L'\n');
     show(L"\tnPciBarSize:       "s + to_wstring(config.nPciBarSize) + L'\n');
     show(L"\tnGPUSelectorCount: "s + to_wstring(config.nGPUSelector) + L'\n');
 
     for (auto const &&[i, gpuSelector]: config.GPUs | views::enumerate | views::take(config.nGPUSelector))
     {
-	show(L"\t\tGPUSelector"s + to_wstring(i + 1) + L":  deviceID:        "s + formatPCI_ID(gpuSelector.deviceID) + L'\n');
-	show(L"\t\tGPUSelector"s + to_wstring(i + 1) + L":  subsysVendorID:  "s + formatPCI_ID(gpuSelector.subsysVendorID) + L'\n');
-	show(L"\t\tGPUSelector"s + to_wstring(i + 1) + L":  subsysDeviceID:  "s + formatPCI_ID(gpuSelector.subsysDeviceID) + L'\n');
-	show(L"\t\tGPUSelector"s + to_wstring(i + 1) + L":  bus:             "s + formatHexByte(gpuSelector.bus) + L'\n');
-	show(L"\t\tGPUSelector"s + to_wstring(i + 1) + L":  device:          "s + formatHexByte(gpuSelector.device) + L'\n');
-	show(L"\t\tGPUSelector"s + to_wstring(i + 1) + L":  function:        "s + formatHexNibble(gpuSelector.function) + L'\n');
-	show(L"\t\tGPUSelector"s + to_wstring(i + 1) + L":  barSizeSelector: "s + to_wstring(gpuSelector.barSizeSelector) + L'\n');
+	show(L"\t\tGPUSelector"s + to_wstring(i + 1) + L":  deviceID:            "s + formatPCI_ID(gpuSelector.deviceID) + L'\n');
+	show(L"\t\tGPUSelector"s + to_wstring(i + 1) + L":  subsysVendorID:      "s + formatPCI_ID(gpuSelector.subsysVendorID) + L'\n');
+	show(L"\t\tGPUSelector"s + to_wstring(i + 1) + L":  subsysDeviceID:      "s + formatPCI_ID(gpuSelector.subsysDeviceID) + L'\n');
+	show(L"\t\tGPUSelector"s + to_wstring(i + 1) + L":  bus:                 "s + formatHexByte(gpuSelector.bus) + L'\n');
+	show(L"\t\tGPUSelector"s + to_wstring(i + 1) + L":  device:              "s + formatHexByte(gpuSelector.device) + L'\n');
+	show(L"\t\tGPUSelector"s + to_wstring(i + 1) + L":  function:            "s + formatHexNibble(gpuSelector.function) + L'\n');
+	show(L"\t\tGPUSelector"s + to_wstring(i + 1) + L":  barSizeSelector:     "s + to_wstring(gpuSelector.barSizeSelector) + L'\n');
+	show(L"\t\tGPUSelector"s + to_wstring(i + 1) + L":  overridebarSizeMask: "s + to_wstring(gpuSelector.overrideBarSizeMask) + L'\n');
 	show(L"\n"s);
     }
 
-    show(L"\tnGPUConfigCount:   " + to_wstring(config.nGPUConfig) + L'\n');
+    show(L"\tnGPUConfigCount:   "s + to_wstring(config.nGPUConfig) + L'\n');
 
     for (auto const &&[i, gpuConfig]: config.gpuConfig | views::enumerate | views::take(config.nGPUConfig))
     {
@@ -127,7 +128,7 @@ void ShowNvStrapsConfig(function<void (wstring const &)> show)
 	show(L"\n"s);
     }
 
-    show(L"\tnBridgeCount:     "s + to_wstring(config.nBridgeConfig) + L'\n');
+    show(L"\tnBridgeCount:      "s + to_wstring(config.nBridgeConfig) + L'\n');
 
     for (auto const &&[i, bridgeConfig]: config.bridge | views::enumerate | views::take(config.nBridgeConfig))
     {
@@ -140,3 +141,5 @@ void ShowNvStrapsConfig(function<void (wstring const &)> show)
 	show(L"\n"s);
     }
 }
+
+// vim:ft=cpp

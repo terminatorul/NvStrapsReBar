@@ -14,9 +14,6 @@ SPDX-License-Identifier: MIT
 #include <Protocol/PciHostBridgeResourceAllocation.h>
 #include <Library/MemoryAllocationLib.h>
 
-#include <Guid/EventGroup.h>
-#include <Protocol/S3SaveState.h>
-
 #if defined(_ASSERT)
 # undef _ASSERT
 #endif
@@ -26,6 +23,7 @@ SPDX-License-Identifier: MIT
 #include "LocalAppConfig.h"
 #include "StatusVar.h"
 #include "PciConfig.h"
+#include "S3ResumeScript.h"
 #include "NvStrapsConfig.h"
 #include "SetupNvStraps.h"
 
@@ -35,7 +33,9 @@ SPDX-License-Identifier: MIT
 static unsigned const BUILD_YEAR = 2024u;
 
 // for quirk
-static uint_least16_t const PCI_VENDOR_ID_ATI = 0x1002u;
+static uint_least16_t const
+    PCI_VENDOR_ID_ATI			 = 0x1002u,
+    PCI_DEVICE_Sapphire_RX_5600_XT_Pulse = 0x731Fu;
 
 // 0: disabled
 // >0: maximum BAR size (2^x) set to value. 32 for unlimited, 64 for selected GPU only
@@ -48,7 +48,7 @@ static EFI_PCI_HOST_BRIDGE_RESOURCE_ALLOCATION_PROTOCOL_PREPROCESS_CONTROLLER o_
 EFI_HANDLE reBarImageHandle = NULL;
 NvStrapsConfig *config = NULL;
 
-// find last set bit and return the index of it
+// find highest-order bit set and return the bit index
 static inline uint_least8_t highestBitIndex(uint_least32_t val)
 {
     uint_least8_t bitIndex = (uint_least8_t)(sizeof val * BYTE_BITSIZE - 1u);
@@ -70,11 +70,11 @@ uint_least32_t getReBarSizeMask(UINTN pciAddress, uint_least16_t capabilityOffse
     uint_least32_t barSizeMask = pciRebarGetPossibleSizes(pciAddress, capabilityOffset, vid, did, barIndex);
 
     /* Sapphire RX 5600 XT Pulse has an invalid cap dword for BAR 0 */
-    if (vid == PCI_VENDOR_ID_ATI && did == 0x731fu && barIndex == PCI_BAR_IDX0 && barSizeMask == 0x7000u)
-        barSizeMask = 0x3f000u;
-//  else
-//      if (NvStraps_CheckBARSizeListAdjust(pciAddress, vid, did, subsysVenID, subsysDevID, barIndex))
-//          barSizeMask = NvStraps_AdjustBARSizeList(pciAddress, vid, did, subsysVenID, subsysDevID, barIndex, barSizeMask);
+    if (vid == PCI_VENDOR_ID_ATI && did == PCI_DEVICE_Sapphire_RX_5600_XT_Pulse && barIndex == PCI_BAR_IDX0 && barSizeMask == 0x7000u)
+        barSizeMask = 0x3'F000u;
+    else
+        if (NvStraps_CheckBARSizeListAdjust(pciAddress, vid, did, subsysVenID, subsysDevID, barIndex))
+            barSizeMask = NvStraps_AdjustBARSizeList(pciAddress, vid, did, subsysVenID, subsysDevID, barIndex, barSizeMask);
 
     return barSizeMask;
 }
@@ -114,7 +114,7 @@ static void reBarSetupDevice(EFI_HANDLE handle, EFI_PCI_ROOT_BRIDGE_IO_PROTOCOL_
                             bool resized = pciRebarSetSize(pciAddress, capOffset, barIndex, barSizeBitIndex);
 
                             if (isSelectedGpu && resized)
-                                SetStatusVar(StatusVar_GpuReBarConfigured);
+                                SetDeviceStatusVar(pciAddress, StatusVar_GpuReBarConfigured);
 
                             break;
                         }
@@ -124,7 +124,7 @@ static void reBarSetupDevice(EFI_HANDLE handle, EFI_PCI_ROOT_BRIDGE_IO_PROTOCOL_
 
 static EFI_STATUS EFIAPI PreprocessControllerOverride
     (
-        IN  EFI_PCI_HOST_BRIDGE_RESOURCE_ALLOCATION_PROTOCOL  *This,
+        IN  EFI_PCI_HOST_BRIDGE_RESOURCE_ALLOCATION_PROTOCOL *This,
         IN  EFI_HANDLE                                        RootBridgeHandle,
         IN  EFI_PCI_ROOT_BRIDGE_IO_PROTOCOL_PCI_ADDRESS       PciAddress,
         IN  EFI_PCI_CONTROLLER_RESOURCE_ALLOCATION_PHASE      Phase
@@ -198,52 +198,9 @@ static bool IsCMOSClear()
     return time.Year < BUILD_YEAR;
 }
 
-EFI_S3_SAVE_STATE_PROTOCOL *S3SaveState = NULL;
-EFI_EVENT evS3SaveStateInstalled;
-void *Registration = NULL;
-
-static void EFIAPI OnS3SaveStateInstalled(EFI_EVENT event, void *context)
-{
-    SetStatusVar(StatusVar_ParseError);
-
-    if (event == evS3SaveStateInstalled)
-	gBS->CloseEvent(evS3SaveStateInstalled);
-}
-
-static void RegisterS3SaveStateInstallNotification()
-{
-
-    EFI_STATUS status = gBS->LocateProtocol(&gEfiS3SaveStateProtocolGuid, NULL, (void **)&S3SaveState);
-
-    if (EFI_ERROR(status))
-    {
-	SetEFIError(EFIError_LocateS3SaveStateProtocol, status);
-	return;
-    }
-
-    status = gBS->CreateEvent(EVT_NOTIFY_SIGNAL, TPL_CALLBACK, OnS3SaveStateInstalled, NULL, &evS3SaveStateInstalled);
-
-    if (EFI_ERROR(status))
-    {
-	SetEFIError(EFIError_CreateTimer, status);
-	return;
-    }
-
-    status = gBS->RegisterProtocolNotify(&gEfiS3SaveStateProtocolGuid, evS3SaveStateInstalled, &Registration);
-
-    if (EFI_ERROR(status))
-    {
-	SetEFIError(EFIError_SetupTimer, status);
-	gBS->CloseEvent(evS3SaveStateInstalled);
-	return;
-    }
-}
-
 EFI_STATUS EFIAPI rebarInit(IN EFI_HANDLE imageHandle, IN EFI_SYSTEM_TABLE *systemTable)
 {
     DEBUG((DEBUG_INFO, "ReBarDXE: Loaded\n"));
-
-    RegisterS3SaveStateInstallNotification();
 
     reBarImageHandle = imageHandle;
     config = GetNvStrapsConfig(false, NULL);    // attempts to overflow EFI variable data should result in EFI_BUFFER_TOO_SMALL
@@ -269,6 +226,8 @@ EFI_STATUS EFIAPI rebarInit(IN EFI_HANDLE imageHandle, IN EFI_SYSTEM_TABLE *syst
         }
 
         SetStatusVar(StatusVar_Configured);
+
+	S3ResumeScript_Init(NvStrapsConfig_IsGpuConfigured(config));
         pciHostBridgeResourceAllocationProtocolHook();          // For overriding PciHostBridgeResourceAllocationProtocol
     }
     else
@@ -276,3 +235,5 @@ EFI_STATUS EFIAPI rebarInit(IN EFI_HANDLE imageHandle, IN EFI_SYSTEM_TABLE *syst
 
     return EFI_SUCCESS;
 }
+
+// vim:ft=cpp

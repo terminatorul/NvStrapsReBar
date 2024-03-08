@@ -310,3 +310,5 @@ inline string ConfigManagerErrorCategory::message(int error) const
 {
     return "PnP Configuration Manager error code " + to_string(error) + ": " + configurationManagerErrorMessage(error);
 }
+
+// vim: ft=cpp
