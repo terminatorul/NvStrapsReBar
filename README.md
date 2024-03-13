@@ -24,6 +24,9 @@ After download or build you need to go through the following steps:
 * for older motherboards without ReBAR, if you want to load default UEFI settings again, or disable Above 4G Decoding / enable CSM, you need to  disable ReBAR first in `NvStrapsReBar.exe`. Or you can manually set back the current year in UEFI Setup.
 * same issue if you make hardware changes like adding or changing a GPU: you have to disable ReBAR first. The reason is NvStrapsReBar depends on the GPU BAR0 address to enable ReBAR, and system firmware changes the allocated address for BAR0 when hardware is changed or settings in UEFI Setup are changed.
 
+### Warning
+* Disable NvStrapsReBar before making changes in UEFI Setup, and before making hardware changes like adding a second GPU.
+
 ![image](https://github.com/terminatorul/NvStrapsReBar/assets/378924/21da2dc9-82be-4ac6-8e60-2f61bd619f0a)
 
 
@@ -69,11 +72,14 @@ After flashing the motherboard with the new UEFI image, you need to enable ReBAR
 
 For older motherboard without ReBAR support, enablging ReBAR depends on Above 4G Decoding. So if you accidentaly turn it off later and can not POST, you need to clear CMOS. Remember to disconnect from wall power before you clear CMOS (bad things happened to my motherboard otherwise). Users report the Clear CMOS button present on some motherboards may still keep the current date and time for some boards. The current date has to be reset to recover the board. So if needed, you should short the Clear CMOS pin headers (with a screwdriver that is metallic, and the metal is not painted / coated), or by removing the battery for 1 to 5 minutes. Another way is to move the GPU to a different PCI slot, or replace it with a different model, if you have an extra. If you can enter UEFI Setup, you can manually set back the year to a value before 2024, reboot, and restore the year after.
 
-`NvStrapsReBar.exe` prompts you with a small text-based menu. You can configure 2 value for the BAR size with this tool:
+`NvStrapsReBar.exe` prompts you with a small text-based menu. You can configure 2 values for the BAR size with this tool:
 * GPU-side BAR size
 * PCI BAR size (for older motherboards without ReBAR)
 
-Newer boards can configure PCI BAR size, so you only need to set the GPU-side value for the BAR size. If not, you should try and experiment with both of them, as needed.
+Newer boards with ReBAR support from the manufacturer can auto-configure PCI BAR size, so you only need to set the GPU-side value for the BAR size. If not, you should try and experiment with both of them, as needed.
+
+### Warning
+* Disable NvStrapsReBar before making changes in UEFI Setup, and before making hardware changes like adding a second GPU.
 
 ![image](https://github.com/terminatorul/NvStrapsReBar/assets/378924/a960adff-665f-4fbb-92ba-a8a4114996ca)
 
@@ -85,7 +91,7 @@ If you choose a GPU BAR size of 8 GiB for example, and a Target PCI BAR size of 
 
 For older boards without ReBAR support from the manufacturer, you can select other values for Target PCI BAR size, to also configure other GPUs for example. Or to limit the BAR size to smaller values even if the GPU supports higher values. Depending on the motherboard UEFI, for some boards you may need to use lower values, to limit BAR size to 4 GB or 2GB for example. Even a 2 GB BAR size still gives you the benefits of Resizable BAR in most titles, and NVIDIA tends to use 1.5 GB as the default size in the Profile Inspector. There are exceptions to this 'though (for some titles that can still see improvements with the higher BAR sizes).
 
-If later you want to make further changes in UEFI Setup, or hardware changes like adding a new GPU, you have to disable ReBAR first. Because NvStrapsReBar depends on the GPU BAR0 address allocated by system firmware, and that changes with UEFI Setup changes or with hardware changes.
+If later you want to make further changes in UEFI Setup, or hardware changes like adding a new GPU, you have to disable NvStrapsReBar first. Because NvStrapsReBar depends on the GPU BAR0 address allocated by system firmware, and that changes with UEFI Setup changes or with hardware changes.
 
 ## Using large BAR sizes
 Remember you need to use the [Profile Inspector](https://github.com/Orbmu2k/nvidiaProfileInspector) to enable ReBAR per-application, and if neeeded also globally. There appears to be a fake site for the Profile Inspector, so always downloaded it from github, or use the link above.
