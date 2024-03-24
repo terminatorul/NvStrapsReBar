@@ -94,5 +94,5 @@ For older boards without ReBAR support from the manufacturer, you can select oth
 If later you want to make further changes in UEFI Setup, or hardware changes like adding a new GPU, you have to disable NvStrapsReBar first. Because NvStrapsReBar depends on the GPU BAR0 address allocated by system firmware, and that changes with UEFI Setup changes or with hardware changes.
 
 ## Using large BAR sizes
-Remember you need to use the [Profile Inspector](https://github.com/Orbmu2k/nvidiaProfileInspector) to enable ReBAR per-application, and if neeeded also globally. There appears to be a fake site for the Profile Inspector, so always downloaded it from github, or use the link above.
+Remember you need to use the [Profile Inspector](https://github.com/Orbmu2k/nvidiaProfileInspector) because it enables ReBAR per-application, and that overrides the global value reported by the PCI bus. There appears to be a fake site for the Profile Inspector, so always downloaded it from github, or use the link above.
 
