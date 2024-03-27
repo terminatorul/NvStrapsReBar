@@ -21,11 +21,11 @@ After download or build you need to go through the following steps:
 * enable ReBAR in UEFI Setup if the motherboard supports it. Otherwise enable "Above 4G Decoding" and disable CSM
 * run `NvStrapsReBar.exe` as Administrator to enable the new BAR size, by following the text-mode menus. If you have a recent motherboard, you only need to input `E` to Enable ReBAR for Turing GPUs, then input `S` to save the new driver configuration to EFI variable. For older motherboards without ReBAR, you also need to input `P` and set BAR size on the PCI side (motherboard side).
 * reboot after saving the menu options.
-* for older motherboards without ReBAR, if you want to load default UEFI settings again, or disable Above 4G Decoding / enable CSM, you need to  disable ReBAR first in `NvStrapsReBar.exe`. Or you can manually set back the current year in UEFI Setup.
-* same issue if you make hardware changes like adding or changing a GPU: you have to disable ReBAR first. The reason is NvStrapsReBar depends on the GPU BAR0 address to enable ReBAR, and system firmware changes the allocated address for BAR0 when hardware is changed or settings in UEFI Setup are changed.
+* if you make changes in UEFI Setup, `NvStrapsReBar` will be disabled automatically and you need to re-enable it. Same if you manually set back the current year in UEFI Setup (can be used to disable NvStrapsReBar without booting to Windows).
+* if you make hardware changes like adding or changing a GPU: you have to disable ReBAR first. The reason is NvStrapsReBar depends on the GPU BAR0 address to enable ReBAR, and system firmware changes the allocated address for BAR0 when hardware is changed or settings in UEFI Setup are changed.
 
 ### Warning
-* Disable NvStrapsReBar before making changes in UEFI Setup, and before making hardware changes like adding a second GPU.
+* Disable NvStrapsReBar before making hardware changes like adding a second GPU.
 
 ![image](https://github.com/terminatorul/NvStrapsReBar/assets/378924/21da2dc9-82be-4ac6-8e60-2f61bd619f0a)
 
@@ -70,8 +70,6 @@ See the original project [ReBarUEFI](https://github.com/xCuri0/ReBarUEFI/) for t
 ## Enable ReBAR and choose BAR size
 After flashing the motherboard with the new UEFI image, you need to enable ReBAR in UEFI Setup. For older motherboards without ReBAR, enable "Above 4G Decoding" and disable CSM. Then you need to run `NvStrapsReBar.exe` as Administrator.
 
-For older motherboard without ReBAR support, enablging ReBAR depends on Above 4G Decoding. So if you accidentaly turn it off later and can not POST, you need to clear CMOS. Remember to disconnect from wall power before you clear CMOS (bad things happened to my motherboard otherwise). Users report the Clear CMOS button present on some motherboards may still keep the current date and time for some boards. The current date has to be reset to recover the board. So if needed, you should short the Clear CMOS pin headers (with a screwdriver that is metallic, and the metal is not painted / coated), or by removing the battery for 1 to 5 minutes. Another way is to move the GPU to a different PCI slot, or replace it with a different model, if you have an extra. If you can enter UEFI Setup, you can manually set back the year to a value before 2024, reboot, and restore the year after.
-
 `NvStrapsReBar.exe` prompts you with a small text-based menu. You can configure 2 values for the BAR size with this tool:
 * GPU-side BAR size
 * PCI BAR size (for older motherboards without ReBAR)
@@ -79,10 +77,11 @@ For older motherboard without ReBAR support, enablging ReBAR depends on Above 4G
 Newer boards with ReBAR support from the manufacturer can auto-configure PCI BAR size, so you only need to set the GPU-side value for the BAR size. If not, you should try and experiment with both of them, as needed.
 
 ### Warning
-* Disable NvStrapsReBar before making changes in UEFI Setup, and before making hardware changes like adding a second GPU.
+* Disable NvStrapsReBar making hardware changes like adding a second GPU.
+
+NvStrapsReBar will be disabled automatically if you make changes in UEFI Setup, and you will have to re-enable it after.
 
 ![image](https://github.com/terminatorul/NvStrapsReBar/assets/378924/a960adff-665f-4fbb-92ba-a8a4114996ca)
-
 
 
 Most people should choose the first menu option and press `E` to Enable auto-settings BAR size for Turing GPUs. Depending on your board, you may need to also input `P` at the menu prompt, to choose Target PCI BAR size, and select value 64 (for the option to configure PCI BAR for selected GPUs only). Before quitting the menu, input `S` to save the changes you made to the EFI variable store, for the UEFI DXE driver to read them.
