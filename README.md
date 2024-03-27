@@ -26,6 +26,7 @@ After download or build you need to go through the following steps:
 
 ### Warning
 * Disable NvStrapsReBar before making hardware changes like adding a second GPU.
+* NvStrapsReBar will be disabled automatically if you make changes in UEFI Setup
 
 ![image](https://github.com/terminatorul/NvStrapsReBar/assets/378924/21da2dc9-82be-4ac6-8e60-2f61bd619f0a)
 
@@ -78,8 +79,7 @@ Newer boards with ReBAR support from the manufacturer can auto-configure PCI BAR
 
 ### Warning
 * Disable NvStrapsReBar making hardware changes like adding a second GPU.
-
-NvStrapsReBar will be disabled automatically if you make changes in UEFI Setup, and you will have to re-enable it after.
+* NvStrapsReBar will be disabled automatically if you make changes in UEFI Setup.
 
 ![image](https://github.com/terminatorul/NvStrapsReBar/assets/378924/a960adff-665f-4fbb-92ba-a8a4114996ca)
 
