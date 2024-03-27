@@ -55,13 +55,17 @@ enum
 #endif
     BYTE_BITMASK = (1u << BYTE_BITSIZE) - 1u,
     BYTE_SIZE = 1u,
+
     WORD_SIZE = 2u,
     WORD_BITSIZE = WORD_SIZE * BYTE_BITSIZE,
     WORD_BITMASK = (1u << WORD_BITSIZE) - 1u,
+
     DWORD_SIZE = 4u,
     DWORD_BITSIZE = DWORD_SIZE * BYTE_BITSIZE,
     // DWORD_BITMASK = ((uint_least64_t)1u << DWORD_BITSIZE) - 1u,	// end up with the wrong type (int)
-    QWORD_SIZE = 8u
+
+    QWORD_SIZE = 8u,
+    QWORD_BITSIZE = QWORD_SIZE * BYTE_BITSIZE
 };
 
 #endif          // !defined(NV_STRAPS_REBAR_LOCAL_APP_CONFIG_H)

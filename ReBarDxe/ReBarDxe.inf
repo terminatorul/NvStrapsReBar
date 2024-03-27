@@ -9,6 +9,7 @@
 [Sources]
   include/pciRegs.h
   include/LocalAppConfig.h
+  include/CheckSetupVar.h
   include/PciConfig.h
   include/S3ResumeScript.h
   include/DeviceRegistry.h
@@ -22,6 +23,7 @@
   DeviceRegistry.c
   SetupNvStraps.c
   EfiVariable.c
+  CheckSetupVar.c
   NvStrapsConfig.c
   StatusVar.c
   ReBar.c

@@ -23,6 +23,8 @@ export enum class MenuCommand
     GlobalFallbackEnable,
     SkipS3Resume,
     OverrideBarSizeMask,
+    EnableSetupVarCRC,
+    ClearSetupVarCRC,
     UEFIConfiguration,
     UEFIBARSizePrompt,
     PerGPUConfigClear,
@@ -96,10 +98,12 @@ static auto const mainMenuShortcuts = map<wchar_t, MenuCommand>
 {
     { L'E', MenuCommand::GlobalEnable },
     { L'D', MenuCommand::GlobalEnable },
-    { L'K', MenuCommand::SkipS3Resume },
-    { L'O', MenuCommand::OverrideBarSizeMask },
  // { L'G', MenuCommand::PerGPUConfig },
     { L'C', MenuCommand::PerGPUConfigClear },
+    { L'K', MenuCommand::SkipS3Resume },
+    { L'O', MenuCommand::OverrideBarSizeMask },
+    { L'R', MenuCommand::EnableSetupVarCRC },
+    { L'L', MenuCommand::ClearSetupVarCRC },
     { L'P', MenuCommand::UEFIConfiguration },
     { L'S', MenuCommand::SaveConfiguration },
     { L'W', MenuCommand::ShowConfiguration },
@@ -162,6 +166,21 @@ static wstring showMainMenuEntry(MenuCommand menuCommand, bool isGlobalEnable, v
 	    wcout << L"\t(" << chShortcut << L") Enable"sv;
 
 	wcout << L" override for BAR size mask for PCI ReBAR capability\n"sv;
+
+	return wstring(1u, chShortcut);
+
+    case MenuCommand::EnableSetupVarCRC:
+	if (config.enableSetupVarCRC())
+	    wcout << L"\t(" << chShortcut << L") Disable"sv;
+	else
+	    wcout << L"\t(" << chShortcut << L") Enable"sv;
+
+	wcout << L" Setup variable change detection using CRC check\n"sv;
+
+	return wstring(1u, chShortcut);
+
+    case MenuCommand::ClearSetupVarCRC:
+	wcout << L"\t\t(" << chShortcut << L") Clear Setup variable CRC and re-compute it on next boot.\n"sv;
 
 	return wstring(1u, chShortcut);
 
@@ -669,6 +688,11 @@ bool runConfirmationPrompt(MenuCommand menuCommand)
 
     case MenuCommand::DiscardQuit:
 	wcout << L"Quit without saving ? (y/N) "sv;
+	break;
+
+    case MenuCommand::EnableSetupVarCRC:
+	wcout << L"WARNING: Manually disable ReBAR before changing settings in UEFI Setup and before making hardware changes !\n"sv;
+	wcout << L"Disable automatic Setup variable change detection ? (y/N) "sv;
 	break;
 
     default:

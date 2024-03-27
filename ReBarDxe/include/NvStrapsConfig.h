@@ -124,6 +124,7 @@ typedef struct NvStraps_BridgeConfig
     uint_least8_t  bridgeDevice;
     uint_least8_t  bridgeFunction;
     uint_least8_t  bridgeSecondaryBus;
+
 #if defined(__cplusplus)
     bool operator ==(NvStraps_BridgeConfig const &other) const = default;
     bool deviceMatch(uint_least16_t venID, uint_least16_t devID) const;
@@ -155,7 +156,8 @@ typedef struct NvStrapsConfig
 {
     bool dirty;
     uint_least8_t nPciBarSize;
-    uint_least8_t nOptionFlags;
+    uint_least16_t nOptionFlags;
+    uint_least64_t nSetupVarCRC;
 
     uint_least8_t nGPUSelector;
     NvStraps_GPUSelector GPUs[NvStraps_GPU_MAX_COUNT];
@@ -175,9 +177,15 @@ typedef struct NvStrapsConfig
     bool skipS3Resume(bool fSkip);
     bool overrideBarSizeMask() const;
     bool overrideBarSizeMask(bool overrideSizeMask);
+    bool hasSetupVarCRC() const;
+    bool hasSetupVarCRC(bool hasCRC);
+    bool enableSetupVarCRC() const;
+    bool enableSetupVarCRC(bool enableCRC);
 
     uint_least8_t targetPciBarSizeSelector() const;
     uint_least8_t targetPciBarSizeSelector(uint_least8_t barSizeSelector);
+    uint_least64_t setupVarCRC() const;
+    uint_least64_t setupVarCRC(uint_least64_t varCRC);
 
     bool setGPUSelector(uint_least8_t barSizeSelector, uint_least16_t deviceID);
     bool setGPUSelector(uint_least8_t barSizeSelector, uint_least16_t deviceID, uint_least16_t subsysVenID, uint_least16_t subsysDevID);
@@ -206,7 +214,7 @@ typedef struct NvStrapsConfig
 
 enum
 {
-    NV_STRAPS_HEADER_SIZE = 2u,
+    NV_STRAPS_HEADER_SIZE = BYTE_SIZE /* PCI BAR size */ + WORD_SIZE /* Option flags */ + QWORD_SIZE /* SetupVar CRC64 */,
     NV_STRAPS_CONFIG_SIZE = NV_STRAPS_HEADER_SIZE
         + BYTE_SIZE + GPU_SELECTOR_SIZE * NvStraps_GPU_MAX_COUNT
         + BYTE_SIZE + GPU_CONFIG_SIZE * NvStraps_GPU_MAX_COUNT
@@ -233,6 +241,8 @@ uint_least8_t NvStrapsConfig_TargetPciBarSizeSelector(NvStrapsConfig const *conf
 uint_least8_t NvStrapsConfig_SetTargetPciBarSizeSelector(NvStrapsConfig *config, uint_least8_t barSizeSelector);
 uint_least8_t NvStrapsConfig_IsGlobalEnable(NvStrapsConfig const *config);
 uint_least8_t NvStrapsConfig_SetGlobalEnable(NvStrapsConfig *config, uint_least8_t globalEnable);
+uint_least64_t NvStrapsConfig_SetupVarCRC(NvStrapsConfig const *config);
+uint_least64_t NvStrapsConfig_SetSetupVarCRC(NvStrapsConfig *config, uint_least64_t varCRC);
 bool NvStrapsConfig_SetGPUConfig(NvStrapsConfig *config, NvStraps_GPUConfig const *gpuConfig);
 bool NvStrapsConfig_SetBridgeConfig(NvStrapsConfig *config, NvStraps_BridgeConfig const *bridgeConfig);
 bool NvStrapsConfig_IsDirty(NvStrapsConfig const *config);
@@ -241,6 +251,8 @@ bool NvStrapsConfig_SkipS3Resume(NvStrapsConfig const *config);
 bool NvStrapsConfig_SetSkipS3Resume(NvStrapsConfig *config, bool fSkipS3Resume);
 bool NvStrapsConfig_OverrideBarSizeMask(NvStrapsConfig const *config);
 bool NvStrapsConfig_SetOverrideBarSizeMask(NvStrapsConfig *config, bool fOverrideSizeMask);
+bool NvStrapsConfig_HasSetupVarCRC(NvStrapsConfig const *config);
+bool NvStrapsConfig_SetHasSetupVarCRC(NvStrapsConfig *config, bool hasCrc);
 bool NvStrapsConfig_IsGpuConfigured(NvStrapsConfig const *config);
 bool NvStrapsConfig_IsDriverConfigured(NvStrapsConfig const *config);
 bool NvStrapsConfig_ResetConfig(NvStrapsConfig *config);
@@ -268,9 +280,27 @@ inline uint_least8_t NvStrapsConfig_SetTargetPciBarSizeSelector(NvStrapsConfig *
     return config->nPciBarSize = barSizeSelector, pciBarSize;
 }
 
+inline uint_least64_t NvStrapsConfig_SetupVarCRC(NvStrapsConfig const *config)
+{
+    return config->nSetupVarCRC;
+}
+
+inline uint_least64_t NvStrapsConfig_SetSetupVarCRC(NvStrapsConfig *config, uint_least64_t varCRC)
+{
+    uint_least64_t previousCRC = NvStrapsConfig_SetupVarCRC(config);
+
+    if (previousCRC != varCRC)
+    {
+	config->dirty = true;
+	config->nSetupVarCRC = varCRC;
+    }
+
+    return previousCRC;
+}
+
 inline uint_least8_t NvStrapsConfig_IsGlobalEnable(NvStrapsConfig const *config)
 {
-    return config->nOptionFlags & 0x03u;
+    return config->nOptionFlags & 0x00'03u;
 }
 
 inline uint_least8_t NvStrapsConfig_SetGlobalEnable(NvStrapsConfig *config, uint_least8_t globalEnable)
@@ -281,8 +311,8 @@ inline uint_least8_t NvStrapsConfig_SetGlobalEnable(NvStrapsConfig *config, uint
     {
 	config->dirty = true;
 
-	config->nOptionFlags &= ~(uint_least8_t)0x03u;
-	config->nOptionFlags |= globalEnable & 0x03u;
+	config->nOptionFlags &= ~(uint_least16_t)0x00'03u;
+	config->nOptionFlags |= globalEnable & 0x00'03u;
     }
 
     return previousGlobalEnable;
@@ -301,7 +331,7 @@ inline bool NvStrapsConfig_SetIsDirty(NvStrapsConfig *config, bool dirtyFlag)
 
 inline bool NvStrapsConfig_SkipS3Resume(NvStrapsConfig const *config)
 {
-    return !!(config->nOptionFlags & 0x04u);
+    return !!(config->nOptionFlags & 0x00'04u);
 }
 
 inline bool NvStrapsConfig_SetSkipS3Resume(NvStrapsConfig *config, bool fSkipS3Resume)
@@ -311,16 +341,16 @@ inline bool NvStrapsConfig_SetSkipS3Resume(NvStrapsConfig *config, bool fSkipS3R
     config->dirty = config->dirty || fSkipS3Resume != previousFlag;
 
     if (fSkipS3Resume)
-	config->nOptionFlags |= 0x04u;
+	config->nOptionFlags |= 0x00'04u;
     else
-	config->nOptionFlags &= (uint_least8_t) ~(uint_least8_t)0x04u;
+	config->nOptionFlags &= (uint_least16_t) ~(uint_least16_t)0x04u;
 
     return previousFlag;
 }
 
 inline bool NvStrapsConfig_OverrideBarSizeMask(NvStrapsConfig const *config)
 {
-    return !!(config->nOptionFlags & 0x08u);
+    return !!(config->nOptionFlags & 0x00'08u);
 }
 
 inline bool NvStrapsConfig_SetOverrideBarSizeMask(NvStrapsConfig *config, bool fOverrideSizeMask)
@@ -330,9 +360,47 @@ inline bool NvStrapsConfig_SetOverrideBarSizeMask(NvStrapsConfig *config, bool f
     config->dirty = config->dirty || fOverrideSizeMask != previousFlag;
 
     if (fOverrideSizeMask)
-	config->nOptionFlags |= 0x08u;
+	config->nOptionFlags |= 0x00'08u;
     else
-	config->nOptionFlags &= (uint_least8_t) ~(uint_least8_t)0x08u;
+	config->nOptionFlags &= (uint_least16_t) ~(uint_least16_t)0x00'08u;
+
+    return previousFlag;
+}
+
+inline bool NvStrapsConfig_HasSetupVarCRC(NvStrapsConfig const *config)
+{
+    return !!(config->nOptionFlags & 0x00'10u);
+}
+
+inline bool NvStrapsConfig_SetHasSetupVarCRC(NvStrapsConfig *config, bool hasCRC)
+{
+    bool previousFlag = NvStrapsConfig_HasSetupVarCRC(config);
+
+    config->dirty = config->dirty || previousFlag != hasCRC;
+
+    if (hasCRC)
+	config->nOptionFlags |= 0x00'10u;
+    else
+	config->nOptionFlags &= (uint_least16_t) ~(uint_least16_t)0x00'10u;
+
+    return previousFlag;
+}
+
+inline bool NvStrapsConfig_EnableSetupVarCRC(NvStrapsConfig const *config)
+{
+    return !(config->nOptionFlags & 0x00'20u);
+}
+
+inline bool NvStrapsConfig_SetEnableSetupVarCRC(NvStrapsConfig *config, bool enableCRC)
+{
+    bool previousFlag = NvStrapsConfig_EnableSetupVarCRC(config);
+
+    config->dirty = config->dirty || previousFlag != enableCRC;
+
+    if (enableCRC)
+	config->nOptionFlags &= (uint_least16_t) ~(uint_least16_t)0x00'20u;
+    else
+	config->nOptionFlags |= 0x00'20u;
 
     return previousFlag;
 }
@@ -512,9 +580,39 @@ inline uint_least8_t NvStrapsConfig::setGlobalEnable(uint_least8_t val)
     return NvStrapsConfig_SetGlobalEnable(this, val);
 }
 
+inline bool NvStrapsConfig::hasSetupVarCRC() const
+{
+    return NvStrapsConfig_HasSetupVarCRC(this);
+}
+
+inline bool NvStrapsConfig::hasSetupVarCRC(bool hasCRC)
+{
+    return NvStrapsConfig_SetHasSetupVarCRC(this, hasCRC);
+}
+
+inline bool NvStrapsConfig::enableSetupVarCRC() const
+{
+    return NvStrapsConfig_EnableSetupVarCRC(this);
+}
+
+inline bool NvStrapsConfig::enableSetupVarCRC(bool enableCRC)
+{
+    return NvStrapsConfig_SetEnableSetupVarCRC(this, enableCRC);
+}
+
 inline uint_least8_t NvStrapsConfig::targetPciBarSizeSelector() const
 {
     return NvStrapsConfig_TargetPciBarSizeSelector(this);
+}
+
+inline uint_least64_t NvStrapsConfig::setupVarCRC() const
+{
+    return NvStrapsConfig_SetupVarCRC(this);
+}
+
+inline uint_least64_t NvStrapsConfig::setupVarCRC(uint_least64_t crc)
+{
+    return NvStrapsConfig_SetSetupVarCRC(this, crc);
 }
 
 inline uint_least8_t NvStrapsConfig::targetPciBarSizeSelector(uint_least8_t barSizeSelector)

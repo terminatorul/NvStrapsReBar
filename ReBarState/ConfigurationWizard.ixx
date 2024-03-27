@@ -31,6 +31,8 @@ using std::runtime_error;
 using std::system_error;
 using namespace std::literals::string_literals;
 
+namespace ranges = std::ranges;
+
 MenuCommand
     GPUConfigMenu[] =
 {
@@ -54,7 +56,7 @@ MenuCommand
     MenuCommand::DefaultChoice
 };
 
-static vector<MenuCommand> buildConfigurationMenu(NvStrapsConfig &nvStrapsConfig, bool isDirty)
+static vector<MenuCommand> buildConfigurationMenu(NvStrapsConfig const &nvStrapsConfig, bool isDirty)
 {
     auto configMenu = vector<MenuCommand>
     {
@@ -63,6 +65,8 @@ static vector<MenuCommand> buildConfigurationMenu(NvStrapsConfig &nvStrapsConfig
 	MenuCommand::PerGPUConfigClear,
 	MenuCommand::SkipS3Resume,
 	MenuCommand::OverrideBarSizeMask,
+	MenuCommand::EnableSetupVarCRC,
+	MenuCommand::ClearSetupVarCRC,
 	MenuCommand::UEFIConfiguration,
 	MenuCommand::ShowConfiguration
     };
@@ -71,12 +75,14 @@ static vector<MenuCommand> buildConfigurationMenu(NvStrapsConfig &nvStrapsConfig
     {
         configMenu.push_back(MenuCommand::SaveConfiguration);
         configMenu.push_back(MenuCommand::DiscardConfiguration);
-    }
-
-    if (isDirty)
         configMenu.push_back(MenuCommand::DiscardQuit);
+    }
     else
         configMenu.push_back(MenuCommand::Quit);
+
+    if (!nvStrapsConfig.hasSetupVarCRC())
+	if (auto it = ranges::find(configMenu, MenuCommand::ClearSetupVarCRC); it != configMenu.end())
+	    configMenu.erase(it);
 
     return configMenu;
 }
@@ -210,6 +216,12 @@ static bool clearGPUBarSize(NvStrapsConfig &nvStrapsConfig, unsigned selectedDev
 
 static void setConfigDirtyOnMismatch(vector<DeviceInfo> const &deviceList, NvStrapsConfig &config)
 {
+    auto errorCode = ERROR_CODE { };
+    auto statusVar = ReadStatusVar(&errorCode);
+
+    if (errorCode == ERROR_CODE_SUCCESS && statusVar == StatusVar_Cleared && config.hasSetupVarCRC())
+	return (void)config.isDirty(true);
+
     for (auto const &device: deviceList)
     {
 	auto const [priority, barSize] = config.lookupBarSize
@@ -408,6 +420,20 @@ void runConfigurationWizard()
 	    menuType = MenuType::Main;
 	    break;
 
+	case MenuCommand::EnableSetupVarCRC:
+	    if (!nvStrapsConfig.enableSetupVarCRC() || runConfirmationPrompt(MenuCommand::EnableSetupVarCRC))
+		nvStrapsConfig.enableSetupVarCRC(!nvStrapsConfig.enableSetupVarCRC());
+
+	    showConfig();
+	    break;
+
+	case MenuCommand::ClearSetupVarCRC:
+	    nvStrapsConfig.hasSetupVarCRC(false);
+	    nvStrapsConfig.setupVarCRC(0u);
+
+	    showConfig();
+	    break;
+
         case MenuCommand::PerGPUConfigClear:
             nvStrapsConfig.clearGPUSelectors();
             showConfig();
@@ -483,6 +509,8 @@ void runConfigurationWizard()
 
         case MenuCommand::SaveConfiguration:
 	    populateBridgeAndGpuConfig(nvStrapsConfig, deviceList);
+	    nvStrapsConfig.hasSetupVarCRC(false);
+	    nvStrapsConfig.setupVarCRC(0u);
             SaveNvStrapsConfig();
 	    setConfigDirtyOnMismatch(deviceList, nvStrapsConfig);
 

@@ -26,6 +26,7 @@ SPDX-License-Identifier: MIT
 #include "S3ResumeScript.h"
 #include "NvStrapsConfig.h"
 #include "SetupNvStraps.h"
+#include "CheckSetupVar.h"
 
 #include "ReBar.h"
 
@@ -34,7 +35,7 @@ static unsigned const BUILD_YEAR = 2024u;
 
 // for quirk
 static uint_least16_t const
-    PCI_VENDOR_ID_ATI			 = 0x1002u,
+    PCI_VENDOR_ID_AMD			 = 0x1002u,
     PCI_DEVICE_Sapphire_RX_5600_XT_Pulse = 0x731Fu;
 
 // 0: disabled
@@ -70,7 +71,7 @@ uint_least32_t getReBarSizeMask(UINTN pciAddress, uint_least16_t capabilityOffse
     uint_least32_t barSizeMask = pciRebarGetPossibleSizes(pciAddress, capabilityOffset, vid, did, barIndex);
 
     /* Sapphire RX 5600 XT Pulse has an invalid cap dword for BAR 0 */
-    if (vid == PCI_VENDOR_ID_ATI && did == PCI_DEVICE_Sapphire_RX_5600_XT_Pulse && barIndex == PCI_BAR_IDX0 && barSizeMask == 0x7000u)
+    if (vid == PCI_VENDOR_ID_AMD && did == PCI_DEVICE_Sapphire_RX_5600_XT_Pulse && barIndex == PCI_BAR_IDX0 && barSizeMask == 0x7000u)
         barSizeMask = 0x3'F000u;
     else
         if (NvStraps_CheckBARSizeListAdjust(pciAddress, vid, did, subsysVenID, subsysDevID, barIndex))
@@ -161,13 +162,15 @@ static void pciHostBridgeResourceAllocationProtocolHook()
         goto free;
     }
 
-    status = gBS->OpenProtocol(
-        handleBuffer[0],
-        &gEfiPciHostBridgeResourceAllocationProtocolGuid,
-        (VOID **)&pciResAlloc,
-        gImageHandle,
-        NULL,
-        EFI_OPEN_PROTOCOL_GET_PROTOCOL);
+    status = gBS->OpenProtocol
+	(
+	    handleBuffer[0],
+	    &gEfiPciHostBridgeResourceAllocationProtocolGuid,
+	    (VOID **)&pciResAlloc,
+	    gImageHandle,
+	    NULL,
+	    EFI_OPEN_PROTOCOL_GET_PROTOCOL
+	);
 
     if (EFI_ERROR(status))
     {
@@ -214,12 +217,18 @@ EFI_STATUS EFIAPI rebarInit(IN EFI_HANDLE imageHandle, IN EFI_SYSTEM_TABLE *syst
 
     if (nPciBarSizeSelector != TARGET_PCI_BAR_SIZE_DISABLED)
     {
-        DEBUG((DEBUG_INFO, "ReBarDXE: Enabled, maximum BAR size 2^%u MB\n", nPciBarSizeSelector));
+        DEBUG((DEBUG_INFO, "ReBarDXE: Enabled, maximum BAR size 2^%u MiB\n", nPciBarSizeSelector));
 
-        if (IsCMOSClear())
+	bool isSetupVarChanged = NvStrapsConfig_EnableSetupVarCRC(config) && IsSetupVariableChanged();
+
+        if (isSetupVarChanged || IsCMOSClear())
         {
             NvStrapsConfig_Clear(config);
-            SaveNvStrapsConfig(NULL);
+	    NvStrapsConfig_SetIsDirty(config, true);
+
+	    if (!isSetupVarChanged)
+		SaveNvStrapsConfig(NULL);
+
             SetStatusVar(StatusVar_Cleared);
 
             return EFI_SUCCESS;

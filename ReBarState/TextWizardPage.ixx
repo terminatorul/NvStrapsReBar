@@ -307,6 +307,15 @@ static wstring_view driverStatusString(uint_least64_t driverStatus)
     case StatusVar_BadGpuConfig:
 	return L"Improper GPU BAR configuration"sv;
 
+    case StatusVar_BadSetupVarAttributes:
+	return L"Bad attributes for Setup variable"sv;
+
+    case StatusVar_AmbiguousSetupVariable:
+	return L"Ambiguous Setup variable"sv;
+
+    case StatusVar_MissingSetupVariable:
+	return L"Setup variable missing"sv;
+
     case StatusVar_NoGpuConfig:
 	return L"Missing GPU BAR0 Configuration"sv;
 
@@ -336,6 +345,21 @@ wstring_view driverErrorString(EFIErrorLocation errLocation)
 
     case EFIError_ReadConfigVar:
         return L" (at Read config var)"sv;
+
+    case EFIError_EnumVar:
+	return L" (at Enumerate EFI variables)"sv;
+
+    case EFIError_ReadSetupVar:
+	return L" (at Read Setup variable)"sv;
+
+    case EFIError_ReadSetupVarSize:
+	return L" (at Read Setup variable size)"sv;
+
+    case EFIError_AllocateSetupVarName:
+	return L" (at Allocate Setup variable name)"sv;
+
+    case EFIError_AllocateSetupVarData:
+	return L" (at Allocate Setup variable data)"sv;
 
     case EFIError_WriteConfigVar:
         return L" (at Write config var)"sv;

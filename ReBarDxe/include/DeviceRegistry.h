@@ -1,5 +1,5 @@
-#if !defined(NV_STRAPS_REBAR_DEVICE_REGISTRY_HH)
-#define NV_STRAPS_REBAR_DEVICE_REGISTRY_HH
+#if !defined(NV_STRAPS_REBAR_DEVICE_REGISTRY_H)
+#define NV_STRAPS_REBAR_DEVICE_REGISTRY_H
 
 // Some test to check if compiling UEFI code
 #if defined(UEFI_SOURCE) || defined(EFIAPI)
@@ -56,4 +56,4 @@ BarSizeSelector lookupBarSizeInRegistry(UINT16 deviceID);
 }       // extern "C"
 #endif
 
-#endif          // !defined(NV_STRAPS_REBAR_DEVICE_REGISTRY_HH)
+#endif          // !defined(NV_STRAPS_REBAR_DEVICE_REGISTRY_H)
