@@ -78,7 +78,7 @@ After flashing the motherboard with the new UEFI image, you need to enable ReBAR
 Newer boards with ReBAR support from the manufacturer can auto-configure PCI BAR size, so you only need to set the GPU-side value for the BAR size. If not, you should try and experiment with both of them, as needed.
 
 ### Warning
-* Disable NvStrapsReBar making hardware changes like adding a second GPU.
+* Disable NvStrapsReBar before making hardware changes like adding a second GPU.
 * NvStrapsReBar will be disabled automatically if you make changes in UEFI Setup. Re-enable it afterwards.
 
 ![image](https://github.com/terminatorul/NvStrapsReBar/assets/378924/a960adff-665f-4fbb-92ba-a8a4114996ca)
