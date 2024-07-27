@@ -24,16 +24,16 @@ export struct DeviceInfo
 
     struct
     {
-	uint_least16_t vendorID, deviceID;
-	uint_least8_t  bus, dev, func;
+    uint_least16_t vendorID, deviceID;
+    uint_least8_t  bus, dev, func;
     }
-		   bridge;
+           bridge;
 
     struct
     {
-	uint_least64_t Base, Top;
+    uint_least64_t Base, Top;
     }
-		   bar0;
+           bar0;
     uint_least64_t currentBARSize;
     uint_least64_t dedicatedVideoMemory;
     wstring        productName;
@@ -96,7 +96,7 @@ static bool fillDedicatedMemorySize(vector<DeviceInfo> &deviceSet)
     if (SUCCEEDED(hr))
     {
         UINT iAdapter = 0u;
-	dxgi::IAdapter *pAdapter = nullptr;
+    dxgi::IAdapter *pAdapter = nullptr;
 
         do
         {
@@ -104,7 +104,7 @@ static bool fillDedicatedMemorySize(vector<DeviceInfo> &deviceSet)
 
             if (SUCCEEDED(hr))
             {
-		dxgi::ADAPTER_DESC adapterDescription { };
+        dxgi::ADAPTER_DESC adapterDescription { };
 
                 if (SUCCEEDED(pAdapter->GetDesc(&adapterDescription)))
                 {
@@ -184,80 +184,80 @@ try
     {
         unique_ptr<RES_DES, void (*)(RES_DES *)> resourceGuard(&resourceDescriptor, [](RES_DES *p) { validate_config_ret(::CM_Free_Res_Des_Handle(*p)); });
 
-	bool firstResource = true;
+    bool firstResource = true;
 
         do
         {
-	    switch (resourceType)
-	    {
-	    case ResType_Mem:
-	    {
-		MEM_RESOURCE memoryDescriptor { { .MD_Count = 0u, .MD_Type = MType_Range, .MD_Reserved = 0u } };
-		validate_config_ret(::CM_Get_Res_Des_Data(resourceDescriptor, &memoryDescriptor, sizeof memoryDescriptor, ULONG { 0u }), "Error reading memory range resource for device");
+        switch (resourceType)
+        {
+        case ResType_Mem:
+        {
+        MEM_RESOURCE memoryDescriptor { { .MD_Count = 0u, .MD_Type = MType_Range, .MD_Reserved = 0u } };
+        validate_config_ret(::CM_Get_Res_Des_Data(resourceDescriptor, &memoryDescriptor, sizeof memoryDescriptor, ULONG { 0u }), "Error reading memory range resource for device");
 
-		if ((memoryDescriptor.MEM_Header.MD_Flags & mMD_MemoryType) == fMD_RAM && (memoryDescriptor.MEM_Header.MD_Flags & mMD_Readable) == fMD_ReadAllowed)
-		{
-		    maxBarSize = max(maxBarSize, uint_least64_t { memoryDescriptor.MEM_Header.MD_Alloc_End - memoryDescriptor.MEM_Header.MD_Alloc_Base });
-		    // std::cout << " - "s << formatMemorySize(memoryDescriptor.MEM_Header.MD_Alloc_End - memoryDescriptor.MEM_Header.MD_Alloc_Base) << " memory resource\n";
+        if ((memoryDescriptor.MEM_Header.MD_Flags & mMD_MemoryType) == fMD_RAM && (memoryDescriptor.MEM_Header.MD_Flags & mMD_Readable) == fMD_ReadAllowed)
+        {
+            maxBarSize = max(maxBarSize, uint_least64_t { memoryDescriptor.MEM_Header.MD_Alloc_End - memoryDescriptor.MEM_Header.MD_Alloc_Base });
+            // std::cout << " - "s << formatMemorySize(memoryDescriptor.MEM_Header.MD_Alloc_End - memoryDescriptor.MEM_Header.MD_Alloc_Base) << " memory resource\n";
 
-		    if (firstResource)
-		    {
-			BAR0 = tie(memoryDescriptor.MEM_Header.MD_Alloc_Base, memoryDescriptor.MEM_Header.MD_Alloc_End);
-			firstResource = false;
-		    }
-		}
-		else
-		{
-		    // BAR0 is not read-write
-		    firstResource = false;
-		    wcerr << L"BAR0 must be read-write for adapter: " << productName << endl;
-		}
+            if (firstResource)
+            {
+            BAR0 = tie(memoryDescriptor.MEM_Header.MD_Alloc_Base, memoryDescriptor.MEM_Header.MD_Alloc_End);
+            firstResource = false;
+            }
+        }
+        else
+        {
+            // BAR0 is not read-write
+            firstResource = false;
+            wcerr << L"BAR0 must be read-write for adapter: " << productName << endl;
+        }
 
-		break;
-	    }
-	    case ResType_MemLarge:
-	    {
-		MEM_LARGE_RESOURCE memoryDescriptor { { .MLD_Count = 0u, .MLD_Type = MLType_Range, .MLD_Reserved = 0u } };
-		validate_config_ret(::CM_Get_Res_Des_Data(resourceDescriptor, &memoryDescriptor, sizeof memoryDescriptor, ULONG { 0u }), "Error reading memory range resource for device");
+        break;
+        }
+        case ResType_MemLarge:
+        {
+        MEM_LARGE_RESOURCE memoryDescriptor { { .MLD_Count = 0u, .MLD_Type = MLType_Range, .MLD_Reserved = 0u } };
+        validate_config_ret(::CM_Get_Res_Des_Data(resourceDescriptor, &memoryDescriptor, sizeof memoryDescriptor, ULONG { 0u }), "Error reading memory range resource for device");
 
-		if ((memoryDescriptor.MEM_LARGE_Header.MLD_Flags & mMD_MemoryType) == fMD_RAM && (memoryDescriptor.MEM_LARGE_Header.MLD_Flags & mMD_Readable) == fMD_ReadAllowed)
-		{
-		    maxBarSize = max(maxBarSize, uint_least64_t { memoryDescriptor.MEM_LARGE_Header.MLD_Alloc_End - memoryDescriptor.MEM_LARGE_Header.MLD_Alloc_Base });
-		    // std::cout << " - "s << formatMemorySize(memoryDescriptor.MEM_LARGE_Header.MLD_Alloc_End - memoryDescriptor.MEM_LARGE_Header.MLD_Alloc_Base) << " memory resource\n";
+        if ((memoryDescriptor.MEM_LARGE_Header.MLD_Flags & mMD_MemoryType) == fMD_RAM && (memoryDescriptor.MEM_LARGE_Header.MLD_Flags & mMD_Readable) == fMD_ReadAllowed)
+        {
+            maxBarSize = max(maxBarSize, uint_least64_t { memoryDescriptor.MEM_LARGE_Header.MLD_Alloc_End - memoryDescriptor.MEM_LARGE_Header.MLD_Alloc_Base });
+            // std::cout << " - "s << formatMemorySize(memoryDescriptor.MEM_LARGE_Header.MLD_Alloc_End - memoryDescriptor.MEM_LARGE_Header.MLD_Alloc_Base) << " memory resource\n";
 
-		    if (firstResource)
-		    {
-			BAR0 = tie(memoryDescriptor.MEM_LARGE_Header.MLD_Alloc_Base, memoryDescriptor.MEM_LARGE_Header.MLD_Alloc_End);
-			firstResource = false;
-		    }
-		}
-		else
-		{
-		    // Large BAR0 is not read-write
-		    firstResource = false;
-		    wcerr << L"BAR0 must be read-write for adapter: " << productName << endl;
-		}
+            if (firstResource)
+            {
+            BAR0 = tie(memoryDescriptor.MEM_LARGE_Header.MLD_Alloc_Base, memoryDescriptor.MEM_LARGE_Header.MLD_Alloc_End);
+            firstResource = false;
+            }
+        }
+        else
+        {
+            // Large BAR0 is not read-write
+            firstResource = false;
+            wcerr << L"BAR0 must be read-write for adapter: " << productName << endl;
+        }
 
-		break;
-	    }
-	    case ResType_IO:
-		if (firstResource)
-		{
-		    // BAR0 in the I/O port address space
-		    firstResource = false;
-		    wcerr << "Unexpected BAR0 in the I/O port address space for adapter: " << productName << endl;
-		}
+        break;
+        }
+        case ResType_IO:
+        if (firstResource)
+        {
+            // BAR0 in the I/O port address space
+            firstResource = false;
+            wcerr << "Unexpected BAR0 in the I/O port address space for adapter: " << productName << endl;
+        }
 
-		[[fallthrough]];
-	    default:
-		break;
-	    }
+        [[fallthrough]];
+        default:
+        break;
+        }
 
         }
         while (nextResourceDescriptor(resourceDescriptor, resourceType));
 
-	if (BAR0 == tuple(0u, 0u))
-	    throw runtime_error("No proper BAR0 could be found for display adapter"s);
+    if (BAR0 == tuple(0u, 0u))
+        throw runtime_error("No proper BAR0 could be found for display adapter"s);
     }
 
     return tuple(maxBarSize, BAR0);
@@ -287,18 +287,18 @@ tuple<uint_least8_t, uint_least8_t, uint_least8_t> getDeviceBusLocation(HDEVINFO
     DWORD devPropLength;
 
     if (!::SetupDiGetDevicePropertyW(hDeviceInfoSet, &devInfoData, &DEVPKEY_Device_BusNumber, &devPropType, devPropBuffer, sizeof devPropBuffer, &devPropLength, 0u))
-	check_last_error("Error listing bus information for "s + deviceTypeDisplayName);
+    check_last_error("Error listing bus information for "s + deviceTypeDisplayName);
     else
-	if (devPropType != DEVPROP_TYPE_UINT32 || devPropLength != sizeof(ULONG) || *static_cast<ULONG const *>(static_cast<void const *>(devPropBuffer)) > BYTE_BITMASK)
-	    throw runtime_error("Unexpected PCI bus number format " + to_string(devPropType) + ", length " + to_string(devPropLength) + ", value "s + to_string(*static_cast<ULONG const *>(static_cast<void const *>(devPropBuffer))) + "for display adapter"s);
+    if (devPropType != DEVPROP_TYPE_UINT32 || devPropLength != sizeof(ULONG) || *static_cast<ULONG const *>(static_cast<void const *>(devPropBuffer)) > BYTE_BITMASK)
+        throw runtime_error("Unexpected PCI bus number format " + to_string(devPropType) + ", length " + to_string(devPropLength) + ", value "s + to_string(*static_cast<ULONG const *>(static_cast<void const *>(devPropBuffer))) + "for display adapter"s);
 
     uint_least8_t bus = static_cast<uint_least8_t>(*static_cast<ULONG const *>(static_cast <void const *>(devPropBuffer)));
 
     if (!::SetupDiGetDevicePropertyW(hDeviceInfoSet, &devInfoData, &DEVPKEY_Device_Address, &devPropType, devPropBuffer, sizeof devPropBuffer, &devPropLength, 0u))
-	check_last_error("Error listing bus information for "s + deviceTypeDisplayName);
+    check_last_error("Error listing bus information for "s + deviceTypeDisplayName);
     else
-	if (devPropType != DEVPROP_TYPE_UINT32 || devPropLength != sizeof(ULONG) || *static_cast<ULONG const *>(static_cast<void const *>(devPropBuffer)) & uint_least32_t { 0xFF'E0'FF'F8u })
-	    throw runtime_error("Unexpected PCI bus address format " + to_string(devPropType) + ", length " + to_string(devPropLength) + ", value "s + to_string(*static_cast<ULONG const *>(static_cast<void const *>(devPropBuffer))) + "for display adapter"s);
+    if (devPropType != DEVPROP_TYPE_UINT32 || devPropLength != sizeof(ULONG) || *static_cast<ULONG const *>(static_cast<void const *>(devPropBuffer)) & uint_least32_t { 0xFF'E0'FF'F8u })
+        throw runtime_error("Unexpected PCI bus address format " + to_string(devPropType) + ", length " + to_string(devPropLength) + ", value "s + to_string(*static_cast<ULONG const *>(static_cast<void const *>(devPropBuffer))) + "for display adapter"s);
 
     uint_least8_t device = static_cast<uint_least8_t>(*static_cast<ULONG const *>(static_cast <void const *>(devPropBuffer)) >> 16u & BYTE_BITMASK);
     uint_least8_t function = static_cast<uint_least8_t>(*static_cast<ULONG const *>(static_cast <void const *>(devPropBuffer))) & BYTE_BITMASK;
@@ -311,7 +311,7 @@ tuple<uint_least8_t, uint_least8_t, uint_least8_t> getParentBridgeLocation(HDEVI
     SP_DEVINFO_DATA devInfoData { .cbSize = sizeof devInfoData };
 
     if (::SetupDiOpenDeviceInfoW(hBridgeList, instanceID, ::GetConsoleWindow(), 0u, &devInfoData))
-	return getDeviceBusLocation(hBridgeList, devInfoData, devPropBuffer, "PCI bridge");
+    return getDeviceBusLocation(hBridgeList, devInfoData, devPropBuffer, "PCI bridge");
 
     check_last_error("Reading PCI bridge for display adapter failed.");
 
@@ -332,22 +332,22 @@ static void enumPciDisplayAdapters(vector<DeviceInfo> &deviceSet)
     {
         HDEVINFO hDeviceInfoSet = INVALID_HANDLE_VALUE;
 
-	DeviceInfoSet(HDEVINFO hDevInfo)
-	    : hDeviceInfoSet(hDevInfo)
-	{
-	    if (hDevInfo == INVALID_HANDLE_VALUE)
-		check_last_error("Error listing display adapters"s);
-	}
+    DeviceInfoSet(HDEVINFO hDevInfo)
+        : hDeviceInfoSet(hDevInfo)
+    {
+        if (hDevInfo == INVALID_HANDLE_VALUE)
+        check_last_error("Error listing display adapters"s);
+    }
 
         ~DeviceInfoSet()
         {
             if (hDeviceInfoSet != INVALID_HANDLE_VALUE)
                 if (!::SetupDiDestroyDeviceInfoList(exchange(hDeviceInfoSet, INVALID_HANDLE_VALUE)))
-		    check_last_error("Error listing display adapters"s);
+            check_last_error("Error listing display adapters"s);
         }
     }
         dev(SetupDiGetClassDevsW(&DisplayAdapterClass, L"PCI", GetConsoleWindow(), DIGCF_PRESENT)),
-	bridge(SetupDiCreateDeviceInfoList(NULL, GetConsoleWindow()));
+    bridge(SetupDiCreateDeviceInfoList(NULL, GetConsoleWindow()));
 
     DWORD iDeviceIndex = 0u;
     SP_DEVINFO_DATA devInfoData { .cbSize = sizeof devInfoData, .Reserved = 0ul };
@@ -385,32 +385,32 @@ static void enumPciDisplayAdapters(vector<DeviceInfo> &deviceSet)
             while (deviceInfo.productName | all && !isprint(*deviceInfo.productName.rbegin(), globalLocale))
                 deviceInfo.productName.pop_back();
 
-	    tie(deviceInfo.bus, deviceInfo.device, deviceInfo.function) = getDeviceBusLocation(dev.hDeviceInfoSet, devInfoData, devPropBuffer, "display adapter");
+        tie(deviceInfo.bus, deviceInfo.device, deviceInfo.function) = getDeviceBusLocation(dev.hDeviceInfoSet, devInfoData, devPropBuffer, "display adapter");
 
-	    if (!::SetupDiGetDevicePropertyW(dev.hDeviceInfoSet, &devInfoData, &DEVPKEY_Device_Parent, &devPropType, devPropBuffer, sizeof devPropBuffer, &devPropLength, 0u))
-		check_last_error("Error listing bus information for display adapter"s);
-	    else
-		if (devPropType != DEVPROP_TYPE_STRING || devPropLength % sizeof(WCHAR) || devPropLength + sizeof(WCHAR) > sizeof devPropBuffer)
-		    throw runtime_error("Unexpected parent bus ID format " + to_string(devPropType) + ", of length " + to_string(devPropLength));
+        if (!::SetupDiGetDevicePropertyW(dev.hDeviceInfoSet, &devInfoData, &DEVPKEY_Device_Parent, &devPropType, devPropBuffer, sizeof devPropBuffer, &devPropLength, 0u))
+        check_last_error("Error listing bus information for display adapter"s);
+        else
+        if (devPropType != DEVPROP_TYPE_STRING || devPropLength % sizeof(WCHAR) || devPropLength + sizeof(WCHAR) > sizeof devPropBuffer)
+            throw runtime_error("Unexpected parent bus ID format " + to_string(devPropType) + ", of length " + to_string(devPropLength));
 
-	    auto len = devPropLength / sizeof(WCHAR);
+        auto len = devPropLength / sizeof(WCHAR);
 
-	    static_cast<WCHAR *>(static_cast<void *>(devPropBuffer))[len] = WCHAR { };
+        static_cast<WCHAR *>(static_cast<void *>(devPropBuffer))[len] = WCHAR { };
 
-	    if (wcmatch matches; regexp_match(devProp, devProp + devPropLength / sizeof *devProp, matches, pciInstanceRegexp))
-	    {
-		deviceInfo.bridge.vendorID = static_cast<uint_least16_t>(wcstoul(matches[1u].str().c_str(), nullptr, 16));
-		deviceInfo.bridge.deviceID = static_cast<uint_least16_t>(wcstoul(matches[2u].str().c_str(), nullptr, 16));
-	    }
-	    else
-	    {
-		std::wcout << L"Device instace ID: "s << wstring_view(devProp, devPropLength / sizeof *devProp) << std::endl;
-		throw runtime_error("Error listing PCI bridge for display adapter: wrong PCI instance ID property value"s);
-	    }
+        if (wcmatch matches; regexp_match(devProp, devProp + devPropLength / sizeof *devProp, matches, pciInstanceRegexp))
+        {
+        deviceInfo.bridge.vendorID = static_cast<uint_least16_t>(wcstoul(matches[1u].str().c_str(), nullptr, 16));
+        deviceInfo.bridge.deviceID = static_cast<uint_least16_t>(wcstoul(matches[2u].str().c_str(), nullptr, 16));
+        }
+        else
+        {
+        std::wcout << L"Device instace ID: "s << wstring_view(devProp, devPropLength / sizeof *devProp) << std::endl;
+        throw runtime_error("Error listing PCI bridge for display adapter: wrong PCI instance ID property value"s);
+        }
 
-	    tie(deviceInfo.bridge.bus, deviceInfo.bridge.dev, deviceInfo.bridge.func) = getParentBridgeLocation(bridge.hDeviceInfoSet, devProp, devPropBuffer);
+        tie(deviceInfo.bridge.bus, deviceInfo.bridge.dev, deviceInfo.bridge.func) = getParentBridgeLocation(bridge.hDeviceInfoSet, devProp, devPropBuffer);
 
-	    auto DeviceBAR0 = tie(deviceInfo.bar0.Base, deviceInfo.bar0.Top);
+        auto DeviceBAR0 = tie(deviceInfo.bar0.Base, deviceInfo.bar0.Top);
             tie(deviceInfo.currentBARSize, DeviceBAR0) = getMaxBarSize(devInfoData.DevInst, deviceInfo.productName);
         }
         else

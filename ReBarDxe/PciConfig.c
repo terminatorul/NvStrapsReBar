@@ -88,7 +88,7 @@ uint_least32_t pciDeviceClass(UINTN pciAddress)
     UINT32 configReg;
 
     if (EFI_ERROR(pciReadConfigDword(pciAddress, PCI_REVISION_ID_OFFSET, &configReg)))
-	return UINT32_C(0xFFFF'FFFF);
+    return UINT32_C(0xFFFF'FFFF);
 
     return configReg & UINT32_C(0xFFFF'FF00);
 }
@@ -100,7 +100,7 @@ uint_least32_t pciDeviceBAR0(UINTN pciAddress, EFI_STATUS *status)
     *status = pciReadConfigDword(pciAddress, PCI_BASE_ADDRESS_0, &baseAddress);
 
     if (EFI_ERROR(*status))
-	return UINT32_C(0xFFFF'FFFF);
+    return UINT32_C(0xFFFF'FFFF);
 
     return baseAddress;
 }
@@ -112,9 +112,9 @@ EFI_STATUS pciBridgeSecondaryBus(UINTN pciAddress, uint_least8_t *secondaryBus)
     EFI_STATUS status = pciReadConfigDword(pciAddress, PCI_BRIDGE_PRIMARY_BUS_REGISTER_OFFSET, &configReg);
 
     if (EFI_ERROR(status))
-	*secondaryBus = BYTE_BITMASK;
+    *secondaryBus = BYTE_BITMASK;
     else
-	*secondaryBus = configReg >> BYTE_BITSIZE & BYTE_BITMASK;
+    *secondaryBus = configReg >> BYTE_BITSIZE & BYTE_BITMASK;
 
     return status;
 }
@@ -127,9 +127,9 @@ bool pciIsPciBridge(uint_least8_t headerType)
 bool pciIsVgaController(uint_least32_t pciClassReg)
 {
     return pciClassReg ==
-	     ((uint_least32_t)PCI_CLASS_DISPLAY     << 3u * BYTE_BITSIZE
-	    | (uint_least32_t)PCI_CLASS_DISPLAY_VGA << 2u * BYTE_BITSIZE
-	    | (uint_least32_t)PCI_IF_VGA_VGA	    << 1u * BYTE_BITSIZE);
+         ((uint_least32_t)PCI_CLASS_DISPLAY     << 3u * BYTE_BITSIZE
+        | (uint_least32_t)PCI_CLASS_DISPLAY_VGA << 2u * BYTE_BITSIZE
+        | (uint_least32_t)PCI_IF_VGA_VGA	    << 1u * BYTE_BITSIZE);
 }
 
 UINTN pciLocateDevice(EFI_HANDLE RootBridgeHandle, EFI_PCI_ROOT_BRIDGE_IO_PROTOCOL_PCI_ADDRESS addressInfo, uint_least16_t *venID, uint_least16_t *devID, uint_least8_t *headerType)
@@ -143,15 +143,15 @@ UINTN pciLocateDevice(EFI_HANDLE RootBridgeHandle, EFI_PCI_ROOT_BRIDGE_IO_PROTOC
 
     if (pciID != ((uint_least32_t) WORD_BITMASK << WORD_BITSIZE | WORD_BITMASK))
     {
-	UINT32 configReg;
+    UINT32 configReg;
 
-	if (EFI_ERROR(pciReadConfigDword(pciAddress, PCI_CACHELINE_SIZE_OFFSET, &configReg)))
-	    *headerType = BYTE_BITMASK;
-	else
-	    *headerType = (configReg >> WORD_BITSIZE) & BYTE_BITMASK;
+    if (EFI_ERROR(pciReadConfigDword(pciAddress, PCI_CACHELINE_SIZE_OFFSET, &configReg)))
+        *headerType = BYTE_BITMASK;
+    else
+        *headerType = (configReg >> WORD_BITSIZE) & BYTE_BITMASK;
     }
     else
-	*headerType = BYTE_BITMASK;
+    *headerType = BYTE_BITMASK;
 
     *venID = pciID & WORD_BITMASK;
     *devID = pciID >> WORD_BITSIZE & WORD_BITMASK;
@@ -286,19 +286,19 @@ void pciSaveAndRemapBridgeConfig(UINTN bridgePciAddress, UINT32 bridgeSaveArea[3
 
     if (!efiError)
     {
-	topAddress0++;
+    topAddress0++;
 
-	if (topAddress0 & UINT32_C(0x000F'FFFF))
-	{
-	    topAddress0 += UINT32_C(0x0010'0000);	// round up to next 1 MiByte alignment
-	    topAddress0 &= UINT32_C(0xFFF0'0000);
-	}
+    if (topAddress0 & UINT32_C(0x000F'FFFF))
+    {
+        topAddress0 += UINT32_C(0x0010'0000);	// round up to next 1 MiByte alignment
+        topAddress0 &= UINT32_C(0xFFF0'0000);
+    }
 
-	if (topAddress0 <= baseAddress0)
-	{
-	    SetStatusVar(StatusVar_BadBridgeConfig);
-	    return;
-	}
+    if (topAddress0 <= baseAddress0)
+    {
+        SetStatusVar(StatusVar_BadBridgeConfig);
+        return;
+    }
 
         UINT32 bridgeIoRange = ioBaseLimit & 0xFF00u | ioBaseLimit >> BYTE_BITSIZE & 0x00FFu;
         UINT32
@@ -310,60 +310,60 @@ void pciSaveAndRemapBridgeConfig(UINTN bridgePciAddress, UINT32 bridgeSaveArea[3
         efiError = efiError || EFI_ERROR((status = pciWriteConfigDword(bridgePciAddress, PCI_IO_BASE,        &bridgeIoBaseLimit)));
         efiError = efiError || EFI_ERROR((status = pciWriteConfigDword(bridgePciAddress, PCI_COMMAND_OFFSET, &bridgeCommand)));
 
-	if (!efiError)
-	{
-	    status = S3ResumeScript_PciConfigReadWrite_DWORD
-		(
-		    bridgePciAddress,
-		    PCI_BRIDGE_PRIMARY_BUS_REGISTER_OFFSET,
-		    configReg & UINT32_C(0x00FF'FFFF),	    // primary bus, secondary bus, subsidiary bus
-		    UINT32_C(0xFF00'0000)
-		);
+    if (!efiError)
+    {
+        status = S3ResumeScript_PciConfigReadWrite_DWORD
+        (
+            bridgePciAddress,
+            PCI_BRIDGE_PRIMARY_BUS_REGISTER_OFFSET,
+            configReg & UINT32_C(0x00FF'FFFF),	    // primary bus, secondary bus, subsidiary bus
+            UINT32_C(0xFF00'0000)
+        );
 
-	    efiError = efiError || EFI_ERROR(status);
-	    s3SaveStateError = s3SaveStateError || EFI_ERROR(status);
-	}
+        efiError = efiError || EFI_ERROR(status);
+        s3SaveStateError = s3SaveStateError || EFI_ERROR(status);
+    }
 
-	if (!efiError)
-	{
-	    status = S3ResumeScript_PciConfigWrite_DWORD
-		(
-		    bridgePciAddress,
-		    PCI_MEMORY_BASE,
-		    bridgeMemoryBaseLimit
-		);
+    if (!efiError)
+    {
+        status = S3ResumeScript_PciConfigWrite_DWORD
+        (
+            bridgePciAddress,
+            PCI_MEMORY_BASE,
+            bridgeMemoryBaseLimit
+        );
 
-	    efiError = efiError || EFI_ERROR(status);
-	    s3SaveStateError = s3SaveStateError || EFI_ERROR(status);
-	}
+        efiError = efiError || EFI_ERROR(status);
+        s3SaveStateError = s3SaveStateError || EFI_ERROR(status);
+    }
 
-	if (!efiError)
-	{
-	    status = S3ResumeScript_PciConfigReadWrite_DWORD
-		(
-		    bridgePciAddress,
-		    PCI_IO_BASE,
-		    bridgeIoBaseLimit & UINT32_C(0x0000'FFFF),
-		    UINT32_C(0xFFFF'0000)
-		);
+    if (!efiError)
+    {
+        status = S3ResumeScript_PciConfigReadWrite_DWORD
+        (
+            bridgePciAddress,
+            PCI_IO_BASE,
+            bridgeIoBaseLimit & UINT32_C(0x0000'FFFF),
+            UINT32_C(0xFFFF'0000)
+        );
 
-	    efiError = efiError || EFI_ERROR(status);
-	    s3SaveStateError = s3SaveStateError || EFI_ERROR(status);
-	}
+        efiError = efiError || EFI_ERROR(status);
+        s3SaveStateError = s3SaveStateError || EFI_ERROR(status);
+    }
 
-	if (!efiError)
-	{
-	    status = S3ResumeScript_PciConfigReadWrite_DWORD
-		(
-		    bridgePciAddress,
-		    PCI_COMMAND_OFFSET,
-		    EFI_PCI_COMMAND_IO_SPACE | EFI_PCI_COMMAND_MEMORY_SPACE | EFI_PCI_COMMAND_BUS_MASTER,
-		    (UINT32) ~(UINT32)(EFI_PCI_COMMAND_IO_SPACE | EFI_PCI_COMMAND_MEMORY_SPACE | EFI_PCI_COMMAND_BUS_MASTER)
-		);
+    if (!efiError)
+    {
+        status = S3ResumeScript_PciConfigReadWrite_DWORD
+        (
+            bridgePciAddress,
+            PCI_COMMAND_OFFSET,
+            EFI_PCI_COMMAND_IO_SPACE | EFI_PCI_COMMAND_MEMORY_SPACE | EFI_PCI_COMMAND_BUS_MASTER,
+            (UINT32) ~(UINT32)(EFI_PCI_COMMAND_IO_SPACE | EFI_PCI_COMMAND_MEMORY_SPACE | EFI_PCI_COMMAND_BUS_MASTER)
+        );
 
-	    efiError = efiError || EFI_ERROR(status);
-	    s3SaveStateError = s3SaveStateError || EFI_ERROR(status);
-	}
+        efiError = efiError || EFI_ERROR(status);
+        s3SaveStateError = s3SaveStateError || EFI_ERROR(status);
+    }
     }
 
     if (efiError)
@@ -393,11 +393,11 @@ void pciSaveAndRemapDeviceBAR0(UINTN pciAddress, UINT32 gpuSaveArea[2u], EFI_PHY
 
     if (!efiError)
     {
-	if (baseAddress0 & UINT32_C(0x0000'000F))
-	{
-	    SetDeviceStatusVar(pciAddress, StatusVar_BadGpuConfig);
-	    return;
-	}
+    if (baseAddress0 & UINT32_C(0x0000'000F))
+    {
+        SetDeviceStatusVar(pciAddress, StatusVar_BadGpuConfig);
+        return;
+    }
 
         UINT32
            gpuBaseAddress = baseAddress0 & UINT32_C(0xFFFFFFF0),
@@ -406,32 +406,32 @@ void pciSaveAndRemapDeviceBAR0(UINTN pciAddress, UINT32 gpuSaveArea[2u], EFI_PHY
         efiError = efiError || EFI_ERROR((status = pciWriteConfigDword(pciAddress, PCI_BASE_ADDRESS_0, &gpuBaseAddress)));
         efiError = efiError || EFI_ERROR((status = pciWriteConfigDword(pciAddress, PCI_COMMAND_OFFSET, &gpuCommand)));
 
-	if (!efiError)
-	{
-	    status = S3ResumeScript_PciConfigWrite_DWORD
-		(
-		    pciAddress,
-		    PCI_BASE_ADDRESS_0,
-		    gpuBaseAddress
-		);
+    if (!efiError)
+    {
+        status = S3ResumeScript_PciConfigWrite_DWORD
+        (
+            pciAddress,
+            PCI_BASE_ADDRESS_0,
+            gpuBaseAddress
+        );
 
-	    efiError = efiError || EFI_ERROR(status);
-	    s3SaveStateError = s3SaveStateError || EFI_ERROR(status);
-	}
+        efiError = efiError || EFI_ERROR(status);
+        s3SaveStateError = s3SaveStateError || EFI_ERROR(status);
+    }
 
-	if (!efiError)
-	{
-	    status = S3ResumeScript_PciConfigReadWrite_DWORD
-		(
-		    pciAddress,
-		    PCI_COMMAND_OFFSET,
-		    EFI_PCI_COMMAND_IO_SPACE | EFI_PCI_COMMAND_MEMORY_SPACE | EFI_PCI_COMMAND_BUS_MASTER,
-		    (uint_least32_t) ~(uint_least32_t)(EFI_PCI_COMMAND_IO_SPACE | EFI_PCI_COMMAND_MEMORY_SPACE | EFI_PCI_COMMAND_BUS_MASTER)
-		);
+    if (!efiError)
+    {
+        status = S3ResumeScript_PciConfigReadWrite_DWORD
+        (
+            pciAddress,
+            PCI_COMMAND_OFFSET,
+            EFI_PCI_COMMAND_IO_SPACE | EFI_PCI_COMMAND_MEMORY_SPACE | EFI_PCI_COMMAND_BUS_MASTER,
+            (uint_least32_t) ~(uint_least32_t)(EFI_PCI_COMMAND_IO_SPACE | EFI_PCI_COMMAND_MEMORY_SPACE | EFI_PCI_COMMAND_BUS_MASTER)
+        );
 
-	    efiError = efiError || EFI_ERROR(status);
-	    s3SaveStateError = s3SaveStateError || EFI_ERROR(status);
-	}
+        efiError = efiError || EFI_ERROR(status);
+        s3SaveStateError = s3SaveStateError || EFI_ERROR(status);
+    }
     }
 
     if (efiError)

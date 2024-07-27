@@ -131,18 +131,18 @@ static wstring_view formatBarSizeSelector(uint_least8_t barSizeSelector)
 static wchar_t locationMarker(ConfigPriority location, ConfigPriority barSizePriority, ConfigPriority sizeMaskOverridePriority, bool bridgeMismatch)
 {
     if (bridgeMismatch && location == ConfigPriority::EXPLICIT_PCI_LOCATION)
-	return L'!';
+    return L'!';
 
     if (barSizePriority >= location)
-	if (sizeMaskOverridePriority >= location)
-	    return L'+';
-	else
-	    return L'*';
+    if (sizeMaskOverridePriority >= location)
+        return L'+';
     else
-	if (sizeMaskOverridePriority >= location)
-	    return L'\'';
-	else
-	    return L' ';
+        return L'*';
+    else
+    if (sizeMaskOverridePriority >= location)
+        return L'\'';
+    else
+        return L' ';
 }
 
 static void showLocalGPUs(vector<DeviceInfo> const &deviceSet, NvStrapsConfig const &nvStrapsConfig)
@@ -178,7 +178,7 @@ static void showLocalGPUs(vector<DeviceInfo> const &deviceSet, NvStrapsConfig co
 
     for (auto const &&[deviceIndex, deviceInfo]: deviceSet | views::enumerate)
     {
-	auto bridgeInfo = nvStrapsConfig.lookupBridgeConfig(deviceInfo.bus);
+    auto bridgeInfo = nvStrapsConfig.lookupBridgeConfig(deviceInfo.bus);
 
         auto [configPriority, barSizeSelector] = nvStrapsConfig.lookupBarSize
             (
@@ -190,8 +190,8 @@ static void showLocalGPUs(vector<DeviceInfo> const &deviceSet, NvStrapsConfig co
                 deviceInfo.function
             );
 
-	auto [sizeMaskOverridePriority, sizeMaskOverride] = nvStrapsConfig.lookupBarSizeMaskOverride
-	    (
+    auto [sizeMaskOverridePriority, sizeMaskOverride] = nvStrapsConfig.lookupBarSizeMaskOverride
+        (
                 deviceInfo.deviceID,
                 deviceInfo.subsystemVendorID,
                 deviceInfo.subsystemDeviceID,
@@ -200,18 +200,18 @@ static void showLocalGPUs(vector<DeviceInfo> const &deviceSet, NvStrapsConfig co
                 deviceInfo.function
             );
 
-	auto bridgeMismatch = bool
-	{
-		!!configPriority && barSizeSelector < BarSizeSelector_Excluded
-	    &&
-	    (
-		   !bridgeInfo
-		|| !bridgeInfo->deviceMatch(deviceInfo.bridge.vendorID, deviceInfo.bridge.deviceID)
-		|| !bridgeInfo->busLocationMatch(deviceInfo.bridge.bus, deviceInfo.bridge.dev, deviceInfo.bridge.func)
-	    )
-	};
+    auto bridgeMismatch = bool
+    {
+        !!configPriority && barSizeSelector < BarSizeSelector_Excluded
+        &&
+        (
+           !bridgeInfo
+        || !bridgeInfo->deviceMatch(deviceInfo.bridge.vendorID, deviceInfo.bridge.deviceID)
+        || !bridgeInfo->busLocationMatch(deviceInfo.bridge.bus, deviceInfo.bridge.dev, deviceInfo.bridge.func)
+        )
+    };
 
-	wchar_t marker;
+    wchar_t marker;
 
         // GPU number
         wcout << L"| "sv << dec << right << setw(2u) << setfill(L' ') << deviceIndex + 1u;
@@ -287,7 +287,7 @@ static wstring_view driverStatusString(uint_least64_t driverStatus)
         return L"GPU-side ReBAR Configured without PCI confirm"sv;
 
     case StatusVar_GpuReBarSizeOverride:
-	return L"GPU-side ReABR Configured with PCI ReBAR size override"sv;
+    return L"GPU-side ReABR Configured with PCI ReBAR size override"sv;
 
     case StatusVar_GpuNoReBarCapability:
         return L"ReBAR capability not advertised"sv;
@@ -296,28 +296,28 @@ static wstring_view driverStatusString(uint_least64_t driverStatus)
         return L"GPU excluded"sv;
 
     case StatusVar_NoBridgeConfig:
-	return L"Missing bridge configuration"sv;
+    return L"Missing bridge configuration"sv;
 
     case StatusVar_BadBridgeConfig:
-	return L"Bad PCI Bridge Configuration"sv;
+    return L"Bad PCI Bridge Configuration"sv;
 
     case StatusVar_BridgeNotEnumerated:
-	return L"GPU enumerated before bridge"sv;
+    return L"GPU enumerated before bridge"sv;
 
     case StatusVar_BadGpuConfig:
-	return L"Improper GPU BAR configuration"sv;
+    return L"Improper GPU BAR configuration"sv;
 
     case StatusVar_BadSetupVarAttributes:
-	return L"Bad attributes for Setup variable"sv;
+    return L"Bad attributes for Setup variable"sv;
 
     case StatusVar_AmbiguousSetupVariable:
-	return L"Ambiguous Setup variable"sv;
+    return L"Ambiguous Setup variable"sv;
 
     case StatusVar_MissingSetupVariable:
-	return L"Setup variable missing"sv;
+    return L"Setup variable missing"sv;
 
     case StatusVar_NoGpuConfig:
-	return L"Missing GPU BAR0 Configuration"sv;
+    return L"Missing GPU BAR0 Configuration"sv;
 
     case StatusVar_EFIAllocationError:
         return L"EFI Allocation error"sv;
@@ -347,19 +347,19 @@ wstring_view driverErrorString(EFIErrorLocation errLocation)
         return L" (at Read config var)"sv;
 
     case EFIError_EnumVar:
-	return L" (at Enumerate EFI variables)"sv;
+    return L" (at Enumerate EFI variables)"sv;
 
     case EFIError_ReadSetupVar:
-	return L" (at Read Setup variable)"sv;
+    return L" (at Read Setup variable)"sv;
 
     case EFIError_ReadSetupVarSize:
-	return L" (at Read Setup variable size)"sv;
+    return L" (at Read Setup variable size)"sv;
 
     case EFIError_AllocateSetupVarName:
-	return L" (at Allocate Setup variable name)"sv;
+    return L" (at Allocate Setup variable name)"sv;
 
     case EFIError_AllocateSetupVarData:
-	return L" (at Allocate Setup variable data)"sv;
+    return L" (at Allocate Setup variable data)"sv;
 
     case EFIError_WriteConfigVar:
         return L" (at Write config var)"sv;
@@ -371,7 +371,7 @@ wstring_view driverErrorString(EFIErrorLocation errLocation)
         return L" (at PCI find capability)"sv;
 
     case EFIError_PCI_BridgeSecondaryBus:
-	return L" (at Secondary Bus read)"sv;
+    return L" (at Secondary Bus read)"sv;
 
     case EFIError_PCI_BridgeConfig:
         return L" (at PCI bridge configuration)"sv;
@@ -395,13 +395,13 @@ wstring_view driverErrorString(EFIErrorLocation errLocation)
         return L" (at Load bridge protocol)"sv;
 
     case EFIError_LocateS3SaveStateProtocol:
-	return L" (at Locate S3 Save State Protocol)"sv;
+    return L" (at Locate S3 Save State Protocol)"sv;
 
     case EFIError_LoadS3SaveStateProtocol:
-	return L" (at Load S3 Save State Protocol)"sv;
+    return L" (at Load S3 Save State Protocol)"sv;
 
     case EFIError_ReadBaseAddress0:
-	return L" (at read base address 0)"sv;
+    return L" (at read base address 0)"sv;
 
     case EFIError_CMOSTime:
         return L" (at CMOS Time)"sv;
@@ -419,10 +419,10 @@ wstring_view driverErrorString(EFIErrorLocation errLocation)
         return L" (at Wait Timer)"sv;
 
     case EFIError_CreateEvent:
-	return L" (at Create Event BeforeExitBootServices)"sv;
+    return L" (at Create Event BeforeExitBootServices)"sv;
 
     case EFIError_CloseEvent:
-	return L" (at Close Event BeforeExitBootServices)"sv;
+    return L" (at Close Event BeforeExitBootServices)"sv;
 
     default:
         return L""sv;
@@ -440,7 +440,7 @@ static void showDriverStatus(uint_least64_t driverStatus)
         <<  L" (0x"sv << hex << right << setfill(L'0') << setw(QWORD_SIZE * 2u) << driverStatus << dec << setfill(L' ') << L")\n"sv;
 
     if (status == StatusVar_GpuStrapsNoConfirm)
-	wcout << L"(use Overide BAR Size Mask option)\n"sv;
+    wcout << L"(use Overide BAR Size Mask option)\n"sv;
 }
 
 static wstring formatPciBarSize(unsigned sizeSelector)

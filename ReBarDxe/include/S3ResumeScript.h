@@ -12,4 +12,4 @@ EFI_STATUS S3ResumeScript_MemReadWrite_DWORD(uintptr_t address, uint_least32_t d
 EFI_STATUS S3ResumeScript_PciConfigWrite_DWORD(UINTN pciAddress, uint_least16_t offset, uint_least32_t data);
 EFI_STATUS S3ResumeScript_PciConfigReadWrite_DWORD(UINTN pciAddress, uint_least16_t offset, uint_least32_t data, uint_least32_t dataMask);
 
-#endif	    // !defined(NV_STRAPS_REBAR_S3_RESUME_SCRIPT_H)
+#endif    // !defined(NV_STRAPS_REBAR_S3_RESUME_SCRIPT_H)

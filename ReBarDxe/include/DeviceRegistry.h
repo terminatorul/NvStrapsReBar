@@ -23,7 +23,7 @@ import NvStraps.WinAPI;
 #else
     static
 #endif
-	unsigned short const MAX_BAR_SIZE_SELECTOR = 10u;
+    unsigned short const MAX_BAR_SIZE_SELECTOR = 10u;
 
 typedef enum BarSizeSelector
 {

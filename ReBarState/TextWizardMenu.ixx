@@ -55,7 +55,7 @@ export tuple<MenuCommand, unsigned> showMenuPrompt
         bool			  isGlobalEnable,
         unsigned short		  device,
         vector<DeviceInfo> const &devices,
-	NvStrapsConfig const	 &config
+    NvStrapsConfig const	 &config
     );
 
 export bool runConfirmationPrompt(MenuCommand menuCommand);
@@ -152,37 +152,37 @@ static wstring showMainMenuEntry(MenuCommand menuCommand, bool isGlobalEnable, v
         return wstring(1u, isGlobalEnable ? L'D' : L'E');
 
     case MenuCommand::SkipS3Resume:
-	if (config.skipS3Resume())
-	    wcout << L"\t(" << chShortcut << L") Configure BAR size during resume from S3 (sleep)\n"sv;
-	else
-	    wcout << L"\t(" << chShortcut << L") Skip BAR size configuration during resume from S3 (sleep)\n"sv;
+    if (config.skipS3Resume())
+        wcout << L"\t(" << chShortcut << L") Configure BAR size during resume from S3 (sleep)\n"sv;
+    else
+        wcout << L"\t(" << chShortcut << L") Skip BAR size configuration during resume from S3 (sleep)\n"sv;
 
-	return wstring(1u, chShortcut);
+    return wstring(1u, chShortcut);
 
     case MenuCommand::OverrideBarSizeMask:
-	if (config.overrideBarSizeMask())
-	    wcout << L"\t(" << chShortcut << L") Disable"sv;
-	else
-	    wcout << L"\t(" << chShortcut << L") Enable"sv;
+    if (config.overrideBarSizeMask())
+        wcout << L"\t(" << chShortcut << L") Disable"sv;
+    else
+        wcout << L"\t(" << chShortcut << L") Enable"sv;
 
-	wcout << L" override for BAR size mask for PCI ReBAR capability\n"sv;
+    wcout << L" override for BAR size mask for PCI ReBAR capability\n"sv;
 
-	return wstring(1u, chShortcut);
+    return wstring(1u, chShortcut);
 
     case MenuCommand::EnableSetupVarCRC:
-	if (config.enableSetupVarCRC())
-	    wcout << L"\t(" << chShortcut << L") Disable"sv;
-	else
-	    wcout << L"\t(" << chShortcut << L") Enable"sv;
+    if (config.enableSetupVarCRC())
+        wcout << L"\t(" << chShortcut << L") Disable"sv;
+    else
+        wcout << L"\t(" << chShortcut << L") Enable"sv;
 
-	wcout << L" Setup variable change detection using CRC check\n"sv;
+    wcout << L" Setup variable change detection using CRC check\n"sv;
 
-	return wstring(1u, chShortcut);
+    return wstring(1u, chShortcut);
 
     case MenuCommand::ClearSetupVarCRC:
-	wcout << L"\t\t(" << chShortcut << L") Clear Setup variable CRC and re-compute it on next boot.\n"sv;
+    wcout << L"\t\t(" << chShortcut << L") Clear Setup variable CRC and re-compute it on next boot.\n"sv;
 
-	return wstring(1u, chShortcut);
+    return wstring(1u, chShortcut);
 
     case MenuCommand::PerGPUConfig:
         if (devices | all)
@@ -191,64 +191,64 @@ static wstring showMainMenuEntry(MenuCommand menuCommand, bool isGlobalEnable, v
             wcout << L"\t    Manually configure BAR size for specific GPUs:\n"sv;
 
 #if defined(__clang__)
-	    auto it = max_element(/* execution::par_unseq, */ devices.cbegin(), devices.cend(), [](auto const &left, auto const &right)
+        auto it = max_element(/* execution::par_unseq, */ devices.cbegin(), devices.cend(), [](auto const &left, auto const &right)
 #else
-	    auto it = max_element(execution::par_unseq, devices.cbegin(), devices.cend(), [](auto const &left, auto const &right)
+        auto it = max_element(execution::par_unseq, devices.cbegin(), devices.cend(), [](auto const &left, auto const &right)
 #endif
-		    {
-			return left.productName.length() < right.productName.length();
-		    });
+            {
+            return left.productName.length() < right.productName.length();
+            });
 
-	    auto maxNameLen = it == devices.cend() ? 0u : it->productName.length();
+        auto maxNameLen = it == devices.cend() ? 0u : it->productName.length();
 
-	    for (auto const &&[index, device]: devices | views::enumerate)
+        for (auto const &&[index, device]: devices | views::enumerate)
             {
                 wcout << L"\t\t("sv << index + 1u << L"). "sv << setw(maxNameLen) << setfill(L' ') << left << device.productName;
 
-		auto [configPriority, barSizeSelector] = config.lookupBarSize
-		    (
-			device.deviceID,
-			device.subsystemVendorID,
-			device.subsystemDeviceID,
-			device.bus,
-			device.device,
-			device.function
-		    );
-		auto gpuConfig = config.lookupGPUConfig(device.bus, device.device, device.function);
-		auto barAddressRangeMismatch = !!configPriority && barSizeSelector < BarSizeSelector_Excluded
-		    && (!gpuConfig || !gpuConfig->bar0.base || gpuConfig->bar0.base != device.bar0.Base || gpuConfig->bar0.top != device.bar0.Top);
+        auto [configPriority, barSizeSelector] = config.lookupBarSize
+            (
+            device.deviceID,
+            device.subsystemVendorID,
+            device.subsystemDeviceID,
+            device.bus,
+            device.device,
+            device.function
+            );
+        auto gpuConfig = config.lookupGPUConfig(device.bus, device.device, device.function);
+        auto barAddressRangeMismatch = !!configPriority && barSizeSelector < BarSizeSelector_Excluded
+            && (!gpuConfig || !gpuConfig->bar0.base || gpuConfig->bar0.base != device.bar0.Base || gpuConfig->bar0.top != device.bar0.Top);
 
-		if (device.bar0.Base != device.bar0.Top)
-		{
-		    if (device.bar0.Base < DWORD_BITMASK && device.bar0.Top <= DWORD_BITMASK)
-		    {
-			if (barAddressRangeMismatch)
-			    wcout << "       ! BAR0 at: 0x";
-			else
-			    wcout << "         BAR0 at: 0x";
+        if (device.bar0.Base != device.bar0.Top)
+        {
+            if (device.bar0.Base < DWORD_BITMASK && device.bar0.Top <= DWORD_BITMASK)
+            {
+            if (barAddressRangeMismatch)
+                wcout << "       ! BAR0 at: 0x";
+            else
+                wcout << "         BAR0 at: 0x";
 
-			wcout << hex << right << setfill(L'0');
-			wcout << setw(DWORD_SIZE) << (device.bar0.Base >> WORD_BITSIZE & WORD_BITMASK);
-			wcout << L'\'';
-			wcout << setw(DWORD_SIZE) << (device.bar0.Base & WORD_BITMASK);
-		    }
-		    else
-		    {
-			if (barAddressRangeMismatch)
-			    wcout << "       ! BAR0 64-bit: 0x";
-			else
-			    wcout << "         BAR0 64-bit: 0x";
+            wcout << hex << right << setfill(L'0');
+            wcout << setw(DWORD_SIZE) << (device.bar0.Base >> WORD_BITSIZE & WORD_BITMASK);
+            wcout << L'\'';
+            wcout << setw(DWORD_SIZE) << (device.bar0.Base & WORD_BITMASK);
+            }
+            else
+            {
+            if (barAddressRangeMismatch)
+                wcout << "       ! BAR0 64-bit: 0x";
+            else
+                wcout << "         BAR0 64-bit: 0x";
 
-			wcout << hex << setfill(L'0') << right << setw(QWORD_SIZE * 2u) << device.bar0.Base;
-		    }
+            wcout << hex << setfill(L'0') << right << setw(QWORD_SIZE * 2u) << device.bar0.Base;
+            }
 
-		    wcout << dec << left << setfill(L' ') << ", size: " << formatMemorySize(device.bar0.Top - device.bar0.Base + 1u);
-		}
-		else
-		    if (barAddressRangeMismatch)
-			wcout << "       ! BAR0";
+            wcout << dec << left << setfill(L' ') << ", size: " << formatMemorySize(device.bar0.Top - device.bar0.Base + 1u);
+        }
+        else
+            if (barAddressRangeMismatch)
+            wcout << "       ! BAR0";
 
-		wcout << L'\n';
+        wcout << L'\n';
                 commands.push_back(static_cast<wchar_t>((L'0' + index + 1u) | WCHAR_T_HIGH_BIT_MASK));
             }
 
@@ -271,8 +271,8 @@ static wstring showMainMenuEntry(MenuCommand menuCommand, bool isGlobalEnable, v
         return wstring(1u, chShortcut);
 
     case MenuCommand::ShowConfiguration:
-	wcout << L"\t("sv << chShortcut << L") Show DXE driver configuration (for debugging).\n"sv;
-	return wstring(1u, chShortcut);
+    wcout << L"\t("sv << chShortcut << L") Show DXE driver configuration (for debugging).\n"sv;
+    return wstring(1u, chShortcut);
 
     case MenuCommand::SaveConfiguration:
         wcout << L"\t("sv << chShortcut << L") Save configuration changes.\n"sv;
@@ -338,19 +338,19 @@ static wstring showBarSizeMenuEntry(MenuCommand menuCommand, unsigned short devi
         return wstring(1u, chShortcut);
 
     case MenuCommand::OverrideBarSizeMask:
-	if (isTuringGPU(devices[device].deviceID))
-	{
-	    auto &&deviceInfo = devices[device];
+    if (isTuringGPU(devices[device].deviceID))
+    {
+        auto &&deviceInfo = devices[device];
 
-	    if (config.lookupBarSizeMaskOverride(deviceInfo.deviceID, deviceInfo.subsystemVendorID, deviceInfo.subsystemDeviceID, deviceInfo.bus, deviceInfo.device, deviceInfo.function).sizeMaskOverride)
-		wcout << L"\t("sv << chShortcut << L"): Disable"sv;
-	    else
-		wcout << L"\t("sv << chShortcut << L"): Enable"sv;
+        if (config.lookupBarSizeMaskOverride(deviceInfo.deviceID, deviceInfo.subsystemVendorID, deviceInfo.subsystemDeviceID, deviceInfo.bus, deviceInfo.device, deviceInfo.function).sizeMaskOverride)
+        wcout << L"\t("sv << chShortcut << L"): Disable"sv;
+        else
+        wcout << L"\t("sv << chShortcut << L"): Enable"sv;
 
-	    wcout << L" override for BAR size mask for PCIe ReBAR capability\n"sv;
+        wcout << L" override for BAR size mask for PCIe ReBAR capability\n"sv;
 
-	    return wstring(1u, chShortcut);
-	}
+        return wstring(1u, chShortcut);
+    }
 
     case MenuCommand::GPUVRAMSize:
         wcout << L"\t 0):  64 MiB\n"sv;
@@ -413,12 +413,12 @@ static wstring showGPUConfigurationMenuEntry(MenuCommand menuCommand, unsigned s
 
 static wstring showMenuEntry
     (
-	MenuType		  menuType,
-	MenuCommand		  menuCommand,
-	bool			  isGlobalEnable,
-	unsigned short		  device,
-	vector<DeviceInfo> const &devices,
-	NvStrapsConfig const	 &config
+    MenuType		  menuType,
+    MenuCommand		  menuCommand,
+    bool			  isGlobalEnable,
+    unsigned short		  device,
+    vector<DeviceInfo> const &devices,
+    NvStrapsConfig const	 &config
     )
 {
     switch (menuType)
@@ -514,9 +514,9 @@ static tuple<optional<MenuCommand>, unsigned> translateInput(MenuType menuType, 
         if (isNumeric(inputValue))
             return { MenuCommand::GPUVRAMSize, stoul(inputValue) };
 
-	if (inputValue.length() == 1u && hasShortcut(*inputValue.cbegin(), commands))
-	    if (auto it = barSizeMenuShortcuts.find(toupper(*inputValue.cbegin(), wcin.getloc())); it != barSizeMenuShortcuts.end())
-		    return { it->second, 0u };
+    if (inputValue.length() == 1u && hasShortcut(*inputValue.cbegin(), commands))
+        if (auto it = barSizeMenuShortcuts.find(toupper(*inputValue.cbegin(), wcin.getloc())); it != barSizeMenuShortcuts.end())
+            return { it->second, 0u };
 
         return { nullopt, 0u };
 
@@ -596,7 +596,7 @@ static tuple<MenuCommand, unsigned> showMenu
         bool			       isGlobalEnable,
         unsigned short		       device,
         std::vector<DeviceInfo> const &devices,
-	NvStrapsConfig const	      &config
+    NvStrapsConfig const	      &config
     )
 {
     auto commands = wstring { };
@@ -636,7 +636,7 @@ static void showMenuHeader(MenuType menuType, unsigned device, vector<DeviceInfo
     switch (menuType)
     {
     case MenuType::Main:
-	wcout << '\n';
+    wcout << '\n';
         wcout << L"BAR size configuration menu:\n"sv;
         break;
 
@@ -666,7 +666,7 @@ tuple<MenuCommand, unsigned> showMenuPrompt
         bool			  isGlobalEnable,
         unsigned short		  device,
         vector<DeviceInfo> const &devices,
-	NvStrapsConfig const	 &config
+    NvStrapsConfig const	 &config
     )
 {
     auto menuType = getMenuType(menu);
@@ -682,34 +682,34 @@ bool runConfirmationPrompt(MenuCommand menuCommand)
     switch (menuCommand)
     {
     case MenuCommand::SkipS3Resume:
-	wcout << L"WARNING: Only skip S3 Resume if the system does not support S3 sleep or the DXE driver status shows an S3 EFI error !\n"sv;
-	wcout << L"Skip BAR size configuration during S3 Resume ? (y/N) "sv;
-	break;
+    wcout << L"WARNING: Only skip S3 Resume if the system does not support S3 sleep or the DXE driver status shows an S3 EFI error !\n"sv;
+    wcout << L"Skip BAR size configuration during S3 Resume ? (y/N) "sv;
+    break;
 
     case MenuCommand::DiscardQuit:
-	wcout << L"Quit without saving ? (y/N) "sv;
-	break;
+    wcout << L"Quit without saving ? (y/N) "sv;
+    break;
 
     case MenuCommand::EnableSetupVarCRC:
-	wcout << L"WARNING: Manually disable ReBAR before changing settings in UEFI Setup and before making hardware changes !\n"sv;
-	wcout << L"Disable automatic Setup variable change detection ? (y/N) "sv;
-	break;
+    wcout << L"WARNING: Manually disable ReBAR before changing settings in UEFI Setup and before making hardware changes !\n"sv;
+    wcout << L"Disable automatic Setup variable change detection ? (y/N) "sv;
+    break;
 
     default:
-	wcout << L"Confirmation to continue (y/N) "sv;
-	break;
+    wcout << L"Confirmation to continue (y/N) "sv;
+    break;
     }
 
     getline(wcin, input);
 
     while (input | all && isspace(*input.begin()))
-	input.erase(input.begin());
+    input.erase(input.begin());
 
     while (input | all && isspace(*input.rbegin()))
-	input.resize(input.size() - 1u);
+    input.resize(input.size() - 1u);
 
     for (auto &ch: input)
-	ch = toupper(ch, wcin.getloc());
+    ch = toupper(ch, wcin.getloc());
 
     return input | all && L"YES"sv.starts_with(input);
 }

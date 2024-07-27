@@ -26,30 +26,31 @@ add_executable(NvStrapsReBar
         "ReBarState.cc")
 
 set_property(SOURCE
-	"${REBAR_DXE_DIRECTORY}/DeviceRegistry.c"
-	"${REBAR_DXE_DIRECTORY}/EfiVariable.c"
-	"${REBAR_DXE_DIRECTORY}/NvStrapsConfig.c"
-	"${REBAR_DXE_DIRECTORY}/StatusVar.c"
+    "${REBAR_DXE_DIRECTORY}/DeviceRegistry.c"
+    "${REBAR_DXE_DIRECTORY}/EfiVariable.c"
+    "${REBAR_DXE_DIRECTORY}/NvStrapsConfig.c"
+    "${REBAR_DXE_DIRECTORY}/StatusVar.c"
 
-	# for clang to compile as C++, but not include C++ headers and libraries
-	APPEND PROPERTY COMPILE_DEFINITIONS "NVSTRAPS_DXE_DRIVER")
+    # for clang to compile as C++, but not include C++ headers and libraries
+    APPEND PROPERTY COMPILE_DEFINITIONS "NVSTRAPS_DXE_DRIVER"
+)
 
 target_sources(NvStrapsReBar
-	PRIVATE "cxx_std_lib.hh"
-	PRIVATE FILE_SET CXX_MODULES BASE_DIRS "${CMAKE_CURRENT_SOURCE_DIR}" FILES
-	"LocalAppConfig.ixx"
-	"StatusVar.ixx"
-	"DeviceRegistry.ixx"
-        "NvStrapsWinAPI.ixx"
-        "NvStrapsDXGI.ixx"
-        "WinApiError.ixx"
-        "ConfigManagerError.ixx"
-        "DeviceList.ixx"
-        "TextWizardPage.ixx"
-        "NvStrapsConfig.ixx"
-        "TextWizardMenu.ixx"
-        "ConfigurationWizard.ixx"
-    )
+    PRIVATE "cxx_std_lib.hh"
+    PRIVATE FILE_SET CXX_MODULES BASE_DIRS "${CMAKE_CURRENT_SOURCE_DIR}" FILES
+    "LocalAppConfig.ixx"
+    "StatusVar.ixx"
+    "DeviceRegistry.ixx"
+    "NvStrapsWinAPI.ixx"
+    "NvStrapsDXGI.ixx"
+    "WinApiError.ixx"
+    "ConfigManagerError.ixx"
+    "DeviceList.ixx"
+    "TextWizardPage.ixx"
+    "NvStrapsConfig.ixx"
+    "TextWizardMenu.ixx"
+    "ConfigurationWizard.ixx"
+)
 
 target_compile_features(NvStrapsReBar PRIVATE c_std_17 cxx_std_23)
 target_include_directories(NvStrapsReBar PRIVATE "${REBAR_DXE_DIRECTORY}/include" "${NvStrapsReBar_SOURCE_DIR}")

@@ -182,15 +182,15 @@ ERROR_CODE WriteEfiVariable(char const name[MAX_VARIABLE_NAME_LENGTH], BYTE /* c
 
     if (file)
     {
-    	// remove immutable flag that linux sets on all unknown efi variables
+        // remove immutable flag that linux sets on all unknown efi variables
         int attr;
-    	ioctl(fileno(file), FS_IOC_GETFLAGS, &attr);
-    	attr &= ~FS_IMMUTABLE_FL;
-    	ioctl(fileno(file), FS_IOC_SETFLAGS, &attr);
+        ioctl(fileno(file), FS_IOC_GETFLAGS, &attr);
+        attr &= ~FS_IMMUTABLE_FL;
+        ioctl(fileno(file), FS_IOC_SETFLAGS, &attr);
 
         fclose(file), file = NULL;
 
-    	if (remove(filePath))
+        if (remove(filePath))
             return errno;
     }
     else

@@ -95,13 +95,13 @@ typedef struct NvStraps_GPUConfig
 
     struct MMIO_Range
     {
-	uint_least64_t base, top;
+    uint_least64_t base, top;
 
 #if defined(__cplusplus)
-	bool operator ==(MMIO_Range const &other) const = default;
+    bool operator ==(MMIO_Range const &other) const = default;
 #endif
     }
-	bar0;
+    bar0;
 
 #if defined(__cplusplus)
     bool operator ==(NvStraps_GPUConfig const &other) const = default;
@@ -291,8 +291,8 @@ inline uint_least64_t NvStrapsConfig_SetSetupVarCRC(NvStrapsConfig *config, uint
 
     if (previousCRC != varCRC)
     {
-	config->dirty = true;
-	config->nSetupVarCRC = varCRC;
+    config->dirty = true;
+    config->nSetupVarCRC = varCRC;
     }
 
     return previousCRC;
@@ -309,10 +309,10 @@ inline uint_least8_t NvStrapsConfig_SetGlobalEnable(NvStrapsConfig *config, uint
 
     if (previousGlobalEnable != globalEnable)
     {
-	config->dirty = true;
+    config->dirty = true;
 
-	config->nOptionFlags &= ~(uint_least16_t)0x00'03u;
-	config->nOptionFlags |= globalEnable & 0x00'03u;
+    config->nOptionFlags &= ~(uint_least16_t)0x00'03u;
+    config->nOptionFlags |= globalEnable & 0x00'03u;
     }
 
     return previousGlobalEnable;
@@ -341,9 +341,9 @@ inline bool NvStrapsConfig_SetSkipS3Resume(NvStrapsConfig *config, bool fSkipS3R
     config->dirty = config->dirty || fSkipS3Resume != previousFlag;
 
     if (fSkipS3Resume)
-	config->nOptionFlags |= 0x00'04u;
+    config->nOptionFlags |= 0x00'04u;
     else
-	config->nOptionFlags &= (uint_least16_t) ~(uint_least16_t)0x04u;
+    config->nOptionFlags &= (uint_least16_t) ~(uint_least16_t)0x04u;
 
     return previousFlag;
 }
@@ -360,9 +360,9 @@ inline bool NvStrapsConfig_SetOverrideBarSizeMask(NvStrapsConfig *config, bool f
     config->dirty = config->dirty || fOverrideSizeMask != previousFlag;
 
     if (fOverrideSizeMask)
-	config->nOptionFlags |= 0x00'08u;
+    config->nOptionFlags |= 0x00'08u;
     else
-	config->nOptionFlags &= (uint_least16_t) ~(uint_least16_t)0x00'08u;
+    config->nOptionFlags &= (uint_least16_t) ~(uint_least16_t)0x00'08u;
 
     return previousFlag;
 }
@@ -379,9 +379,9 @@ inline bool NvStrapsConfig_SetHasSetupVarCRC(NvStrapsConfig *config, bool hasCRC
     config->dirty = config->dirty || previousFlag != hasCRC;
 
     if (hasCRC)
-	config->nOptionFlags |= 0x00'10u;
+    config->nOptionFlags |= 0x00'10u;
     else
-	config->nOptionFlags &= (uint_least16_t) ~(uint_least16_t)0x00'10u;
+    config->nOptionFlags &= (uint_least16_t) ~(uint_least16_t)0x00'10u;
 
     return previousFlag;
 }
@@ -398,9 +398,9 @@ inline bool NvStrapsConfig_SetEnableSetupVarCRC(NvStrapsConfig *config, bool ena
     config->dirty = config->dirty || previousFlag != enableCRC;
 
     if (enableCRC)
-	config->nOptionFlags &= (uint_least16_t) ~(uint_least16_t)0x00'20u;
+    config->nOptionFlags &= (uint_least16_t) ~(uint_least16_t)0x00'20u;
     else
-	config->nOptionFlags |= 0x00'20u;
+    config->nOptionFlags |= 0x00'20u;
 
     return previousFlag;
 }

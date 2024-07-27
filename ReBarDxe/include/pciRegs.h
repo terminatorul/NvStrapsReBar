@@ -417,7 +417,7 @@
 #define  PCI_X_CMD_READ_2K	0x0008	/* 2Kbyte maximum read byte count */
 #define  PCI_X_CMD_READ_4K	0x000c	/* 4Kbyte maximum read byte count */
 #define  PCI_X_CMD_MAX_READ	0x000c	/* Max Memory Read Byte Count */
-				/* Max # of outstanding split transactions */
+                /* Max # of outstanding split transactions */
 #define  PCI_X_CMD_SPLIT_1	0x0000	/* Max 1 */
 #define  PCI_X_CMD_SPLIT_2	0x0010	/* Max 2 */
 #define  PCI_X_CMD_SPLIT_3	0x0020	/* Max 3 */
@@ -758,9 +758,9 @@
 #define  PCI_ERR_UNC_ATOMEG	0x01000000	/* Atomic egress blocked */
 #define  PCI_ERR_UNC_TLPPRE	0x02000000	/* TLP prefix blocked */
 #define PCI_ERR_UNCOR_MASK	0x08	/* Uncorrectable Error Mask */
-	/* Same bits as above */
+    /* Same bits as above */
 #define PCI_ERR_UNCOR_SEVER	0x0c	/* Uncorrectable Error Severity */
-	/* Same bits as above */
+    /* Same bits as above */
 #define PCI_ERR_COR_STATUS	0x10	/* Correctable Error Status */
 #define  PCI_ERR_COR_RCVR	0x00000001	/* Receiver Error Status */
 #define  PCI_ERR_COR_BAD_TLP	0x00000040	/* Bad TLP Status */
@@ -771,7 +771,7 @@
 #define  PCI_ERR_COR_INTERNAL	0x00004000	/* Corrected Internal */
 #define  PCI_ERR_COR_LOG_OVER	0x00008000	/* Header Log Overflow */
 #define PCI_ERR_COR_MASK	0x14	/* Correctable Error Mask */
-	/* Same bits as above */
+    /* Same bits as above */
 #define PCI_ERR_CAP		0x18	/* Advanced Error Capabilities & Ctrl*/
 #define  PCI_ERR_CAP_FEP(x)	((x) & 0x1f)	/* First Error Pointer */
 #define  PCI_ERR_CAP_ECRC_GENC	0x00000020	/* ECRC Generation Capable */

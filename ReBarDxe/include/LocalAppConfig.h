@@ -7,7 +7,7 @@
     typedef EFI_STATUS ERROR_CODE;
     enum
     {
-	ERROR_CODE_SUCCESS = (ERROR_CODE)EFI_SUCCESS
+    ERROR_CODE_SUCCESS = (ERROR_CODE)EFI_SUCCESS
     };
 #else
 # if defined(WINDOWS) || defined(_WINDOWS) || defined(_WIN64) || defined(_WIN32)
@@ -21,14 +21,14 @@
     typedef DWORD ERROR_CODE;
     enum
     {
-	ERROR_CODE_SUCCESS = (ERROR_CODE)ERROR_SUCCESS
+    ERROR_CODE_SUCCESS = (ERROR_CODE)ERROR_SUCCESS
     };
 # else
 #  include <errno.h>
     typedef errno_t ERROR_CODE;
     enum
     {
-	ERROR_CODE_SUCCESS = (ERROR_CODE)0
+    ERROR_CODE_SUCCESS = (ERROR_CODE)0
     };
 # endif
 # define ARRAY_SIZE(Container) (sizeof(Container) / sizeof((Container)[0u]))
