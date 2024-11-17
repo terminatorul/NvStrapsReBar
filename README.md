@@ -4,8 +4,8 @@
 
 ### Do I need to flash a new UEFI image on the motherboard, to enable ReBAR on the GPU ?
 Yes, this is how it works for Turing GPUs (GTX 1600 / RTX 2000).
-
-(some ideas to get it working without UEFI modding have circulated, but may not be technically possible and nothing is implemented.)
+<!--
+(some ideas to get it working without UEFI modding have circulated, but may not be technically possible and nothing is implemented.) -->
 
 It's ususally the video BIOS (vBIOS) that should enable ReBAR, but the vBIOS is digitally signed (NVIDIA vBIOS is also encrypted) and can not be modified by modders and end-users (is locked-down). The motherboard UEFI image can also be signed or have integrity checks, but in general it is thankfully not as locked down, and users and UEFI modders often still have a way to modify it.
 
@@ -32,14 +32,14 @@ After download or build you need to go through the following steps:
 
 
 Credits go to the bellow github users, as I integrated and coded their findings and results:
-* [envytools](https://github.com/envytools/envytools) project for the original effort on reverse-engineering the register interface for the GPUs, a very long time ago, for use by the [nouveau](https://nouveau.freedesktop.org/) open-source driver in Linux. Amazing how this documentation could still help us today !
+* [envytools](https://github.com/envytools/envytools) project for the original effort on reverse-engineering the register interface for the GPUs, a very long time ago, for use by the [nouveau](https://nouveau.freedesktop.org/) open-source driver in Linux. Amazing how this old documentation could still help us today !
 * [@mupuf](https://github.com/mupuf) from [envytools](https://github.com/envytools/envytools) project for bringing up the idea and the exact (low level) registers from the documentation, that enable resizable BAR
 * [@Xelafic](https://github.com/Xelafic) for the first code samples (written in assembly!) and the first test for using the GPU STRAPS bits, documented by envytools, to select the BAR size during PCIe bring-up in UEFI code.
-* [@xCuri0](https://github.com/xCuri0/ReBARUEFI") for great support and for the ReBarUEFI DXE driver that enables ReBAR on the motherboard, and allows intercepting and hooking into the PCIe enumeration phases in UEFI code on the motherboard.
+* [@xCuri0](https://github.com/xCuri0/ReBARUEFI") for great support and for the ReBarUEFI DXE driver that enables ReBAR on the motherboard side, and allows intercepting and hooking into the PCIe enumeration phases in UEFI code on the motherboard.
 
 ## Working GPUs
 Check issue https://github.com/terminatorul/NvStrapsReBar/issues/1 for a list of known working GPUs (and motherboards).
-
+<!--
 If you get Resizable BAR working on your Turing (or earlier) GPU, please post your system information on issue https://github.com/terminatorul/NvStrapsReBar/issues/1 here on github,
 in the below format
 
@@ -58,12 +58,13 @@ in the below format
 Use command `nvidia-smi -q -d memory` to check the new BAR size reported by the Windows/Linux driver.
 
 It maybe easier and more informative to post GPU-Z screenshots with the main GPU page + ReBAR page, and CPU-X with the CPU page and motherboard page screenshots, plus the output from nvidia-smi command. If you needed to apply more changes to make ReBAR work, please post about them as well.
+-->
 
 ## Updating UEFI image
 
 You can download the latest release of NvStrapsReBar from the [Releases](https://github.com/terminatorul/NvStrapsReBar/releases) page, or build the UEFI DXE driver and the Windows executable using the instructions on the [building](https://github.com/terminatorul/NvStrapsReBar/wiki/Building-(Windows-only)) page.
 
-The resulting `NvStrapsReBar.ffs` file needs to be included in the motherboard UEFI image (downloaded from the montherboard manufacturer), and the resulting image should be flashed onto the motherboard as if it were a new UEFI version for that board.
+The resulting `NvStrapsReBar.ffs` file needs to be included in the motherboard UEFI image (downloaded from the montherboard manufacturer, usually under "BIOS update"), and the resulting image should be flashed onto the motherboard as if it were a new firmware version for that board.
 See the original project [ReBarUEFI](https://github.com/xCuri0/ReBarUEFI/) for the instructions to update motherboard UEFI. Replace "ReBarUEFI.ffs" with "NvStrapsReBar.ffs" where appropriate.
 
 <p>So you will still have to check the README page from the original project: <ul><li><a href="https://github.com/xCuri0/ReBarUEFI">https://github.com/xCuri0/ReBarUEFI</a></li></ul> for all the details and instructions on working with the UEFI image, and patching it if necessary (for older motherboards and chipsets). </p>
@@ -94,4 +95,3 @@ If later you want to make further changes in UEFI Setup, or hardware changes lik
 
 ## Using large BAR sizes
 Remember you need to use the [Profile Inspector](https://github.com/Orbmu2k/nvidiaProfileInspector) because it enables ReBAR per-application, and that overrides the global value reported by the PCI bus. There appears to be a fake site for the Profile Inspector, so always downloaded it from github, or use the link above.
-
