@@ -27,7 +27,7 @@ bool NvStrapsConfig::setGPUSelector(uint_least8_t barSizeSelector, uint_least16_
         .device = dev,
         .function = fn,
         .barSizeSelector = barSizeSelector,
-	.overrideBarSizeMask = 0u
+    .overrideBarSizeMask = 0u
     };
 
     auto end_it = begin(GPUs) + nGPUSelector;
@@ -67,7 +67,7 @@ bool NvStrapsConfig::setBarSizeMaskOverride(bool sizeMaskOverride, uint_least16_
         .device = dev,
         .function = fn,
         .barSizeSelector = BarSizeSelector_None,
-	.overrideBarSizeMask = sizeMaskOverride ? (uint_least8_t)0x01u : (uint_least8_t)0xFFu
+    .overrideBarSizeMask = sizeMaskOverride ? (uint_least8_t)0x01u : (uint_least8_t)0xFFu
     };
 
     auto end_it = begin(GPUs) + nGPUSelector;

@@ -163,14 +163,14 @@ static void pciHostBridgeResourceAllocationProtocolHook()
     }
 
     status = gBS->OpenProtocol
-	(
-	    handleBuffer[0],
-	    &gEfiPciHostBridgeResourceAllocationProtocolGuid,
-	    (VOID **)&pciResAlloc,
-	    gImageHandle,
-	    NULL,
-	    EFI_OPEN_PROTOCOL_GET_PROTOCOL
-	);
+    (
+        handleBuffer[0],
+        &gEfiPciHostBridgeResourceAllocationProtocolGuid,
+        (VOID **)&pciResAlloc,
+        gImageHandle,
+        NULL,
+        EFI_OPEN_PROTOCOL_GET_PROTOCOL
+    );
 
     if (EFI_ERROR(status))
     {
@@ -219,15 +219,15 @@ EFI_STATUS EFIAPI rebarInit(IN EFI_HANDLE imageHandle, IN EFI_SYSTEM_TABLE *syst
     {
         DEBUG((DEBUG_INFO, "ReBarDXE: Enabled, maximum BAR size 2^%u MiB\n", nPciBarSizeSelector));
 
-	bool isSetupVarChanged = NvStrapsConfig_EnableSetupVarCRC(config) && IsSetupVariableChanged();
+    bool isSetupVarChanged = NvStrapsConfig_EnableSetupVarCRC(config) && IsSetupVariableChanged();
 
         if (isSetupVarChanged || IsCMOSClear())
         {
             NvStrapsConfig_Clear(config);
-	    NvStrapsConfig_SetIsDirty(config, true);
+        NvStrapsConfig_SetIsDirty(config, true);
 
-	    if (!isSetupVarChanged)
-		SaveNvStrapsConfig(NULL);
+        if (!isSetupVarChanged)
+        SaveNvStrapsConfig(NULL);
 
             SetStatusVar(StatusVar_Cleared);
 
@@ -236,7 +236,7 @@ EFI_STATUS EFIAPI rebarInit(IN EFI_HANDLE imageHandle, IN EFI_SYSTEM_TABLE *syst
 
         SetStatusVar(StatusVar_Configured);
 
-	S3ResumeScript_Init(NvStrapsConfig_IsGpuConfigured(config));
+    S3ResumeScript_Init(NvStrapsConfig_IsGpuConfigured(config));
         pciHostBridgeResourceAllocationProtocolHook();          // For overriding PciHostBridgeResourceAllocationProtocol
     }
     else

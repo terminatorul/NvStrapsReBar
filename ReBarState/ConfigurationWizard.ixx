@@ -60,15 +60,15 @@ static vector<MenuCommand> buildConfigurationMenu(NvStrapsConfig const &nvStraps
 {
     auto configMenu = vector<MenuCommand>
     {
-	MenuCommand::GlobalEnable,
-	MenuCommand::PerGPUConfig,
-	MenuCommand::PerGPUConfigClear,
-	MenuCommand::SkipS3Resume,
-	MenuCommand::OverrideBarSizeMask,
-	MenuCommand::EnableSetupVarCRC,
-	MenuCommand::ClearSetupVarCRC,
-	MenuCommand::UEFIConfiguration,
-	MenuCommand::ShowConfiguration
+    MenuCommand::GlobalEnable,
+    MenuCommand::PerGPUConfig,
+    MenuCommand::PerGPUConfigClear,
+    MenuCommand::SkipS3Resume,
+    MenuCommand::OverrideBarSizeMask,
+    MenuCommand::EnableSetupVarCRC,
+    MenuCommand::ClearSetupVarCRC,
+    MenuCommand::UEFIConfiguration,
+    MenuCommand::ShowConfiguration
     };
 
     if (isDirty)
@@ -81,8 +81,8 @@ static vector<MenuCommand> buildConfigurationMenu(NvStrapsConfig const &nvStraps
         configMenu.push_back(MenuCommand::Quit);
 
     if (!nvStrapsConfig.hasSetupVarCRC())
-	if (auto it = ranges::find(configMenu, MenuCommand::ClearSetupVarCRC); it != configMenu.end())
-	    configMenu.erase(it);
+    if (auto it = ranges::find(configMenu, MenuCommand::ClearSetupVarCRC); it != configMenu.end())
+        configMenu.erase(it);
 
     return configMenu;
 }
@@ -102,14 +102,14 @@ static span<MenuCommand> selectCurrentMenu(MenuType menuType, NvStrapsConfig &nv
         return GPUConfigMenu;
 
     case MenuType::GPUBARSize:
-	if (isTuringGPU(deviceList[selectedDevice].deviceID))
-	    if (barSizeMenu[2u] != MenuCommand::OverrideBarSizeMask)
-		barSizeMenu.insert(barSizeMenu.begin() + 2u, MenuCommand::OverrideBarSizeMask);
-	    else
-		;
-	else
-	    if (barSizeMenu[2u] == MenuCommand::OverrideBarSizeMask)
-		barSizeMenu.erase(barSizeMenu.begin() + 2u);
+    if (isTuringGPU(deviceList[selectedDevice].deviceID))
+        if (barSizeMenu[2u] != MenuCommand::OverrideBarSizeMask)
+        barSizeMenu.insert(barSizeMenu.begin() + 2u, MenuCommand::OverrideBarSizeMask);
+        else
+        ;
+    else
+        if (barSizeMenu[2u] == MenuCommand::OverrideBarSizeMask)
+        barSizeMenu.erase(barSizeMenu.begin() + 2u);
 
         return barSizeMenu;
 
@@ -220,39 +220,39 @@ static void setConfigDirtyOnMismatch(vector<DeviceInfo> const &deviceList, NvStr
     auto statusVar = ReadStatusVar(&errorCode);
 
     if (errorCode == ERROR_CODE_SUCCESS && statusVar == StatusVar_Cleared && config.hasSetupVarCRC())
-	return (void)config.isDirty(true);
+    return (void)config.isDirty(true);
 
     for (auto const &device: deviceList)
     {
-	auto const [priority, barSize] = config.lookupBarSize
-	    (
-		device.deviceID,
-		device.subsystemVendorID,
-		device.subsystemDeviceID,
-		device.bus,
-		device.device,
-		device.function
-	    );
+    auto const [priority, barSize] = config.lookupBarSize
+        (
+        device.deviceID,
+        device.subsystemVendorID,
+        device.subsystemDeviceID,
+        device.bus,
+        device.device,
+        device.function
+        );
 
-	if (!!priority && barSize < BarSizeSelector_Excluded)
-	{
-	    auto &&bridgeConfig = config.lookupBridgeConfig(device.bus);
+    if (!!priority && barSize < BarSizeSelector_Excluded)
+    {
+        auto &&bridgeConfig = config.lookupBridgeConfig(device.bus);
 
-	    if (
-		       !bridgeConfig
-		    || !bridgeConfig->deviceMatch(device.bridge.vendorID, device.bridge.deviceID)
-		    || !bridgeConfig->busLocationMatch(device.bridge.bus, device.bridge.dev, device.bridge.func)
-		    || config.hasBridgeDevice(device.bridge.bus, device.bridge.dev, device.bridge.func) != tie(device.bridge.vendorID, device.bridge.deviceID)
-		)
-	    {
-		return (void)config.isDirty(true);
-	    }
+        if (
+               !bridgeConfig
+            || !bridgeConfig->deviceMatch(device.bridge.vendorID, device.bridge.deviceID)
+            || !bridgeConfig->busLocationMatch(device.bridge.bus, device.bridge.dev, device.bridge.func)
+            || config.hasBridgeDevice(device.bridge.bus, device.bridge.dev, device.bridge.func) != tie(device.bridge.vendorID, device.bridge.deviceID)
+        )
+        {
+        return (void)config.isDirty(true);
+        }
 
-	    auto &&gpuConfig = config.lookupGPUConfig(device.bus, device.device, device.function);
+        auto &&gpuConfig = config.lookupGPUConfig(device.bus, device.device, device.function);
 
-	    if (!gpuConfig || !gpuConfig->bar0.base || gpuConfig->bar0.base != device.bar0.Base || gpuConfig->bar0.top != device.bar0.Top)
-		return (void)config.isDirty(true);
-	}
+        if (!gpuConfig || !gpuConfig->bar0.base || gpuConfig->bar0.base != device.bar0.Base || gpuConfig->bar0.top != device.bar0.Top)
+        return (void)config.isDirty(true);
+    }
     }
 }
 
@@ -262,62 +262,62 @@ static void populateBridgeAndGpuConfig(NvStrapsConfig &config, vector<DeviceInfo
 
     for (auto const &device: deviceList)
     {
-	auto const [priority, barSize] = config.lookupBarSize
-	    (
-		device.deviceID,
-		device.subsystemVendorID,
-		device.subsystemDeviceID,
-		device.bus,
-		device.device,
-		device.function
-	    );
+    auto const [priority, barSize] = config.lookupBarSize
+        (
+        device.deviceID,
+        device.subsystemVendorID,
+        device.subsystemDeviceID,
+        device.bus,
+        device.device,
+        device.function
+        );
 
-	if (!!priority && barSize < BarSizeSelector_Excluded)
-	{
-	    auto gpuConfig = NvStraps_GPUConfig
-	    {
-		.deviceID	= device.deviceID,
-		.subsysVendorID = device.subsystemVendorID,
-		.subsysDeviceID = device.subsystemDeviceID,
-		.bus		= device.bus,
-		.device		= device.device,
-		.function	= device.function,
-		.bar0		= { .base = device.bar0.Base, .top = device.bar0.Top }
-	    };
+    if (!!priority && barSize < BarSizeSelector_Excluded)
+    {
+        auto gpuConfig = NvStraps_GPUConfig
+        {
+        .deviceID	= device.deviceID,
+        .subsysVendorID = device.subsystemVendorID,
+        .subsysDeviceID = device.subsystemDeviceID,
+        .bus		= device.bus,
+        .device		= device.device,
+        .function	= device.function,
+        .bar0		= { .base = device.bar0.Base, .top = device.bar0.Top }
+        };
 
-	    if (gpuConfig.bar0.base >= UINT32_MAX || gpuConfig.bar0.top >= UINT32_MAX)
-		throw runtime_error("64-bit address for GPU BAR0 not implmented"s);
+        if (gpuConfig.bar0.base >= UINT32_MAX || gpuConfig.bar0.top >= UINT32_MAX)
+        throw runtime_error("64-bit address for GPU BAR0 not implmented"s);
 
-	    if (gpuConfig.bar0.base & uint_least32_t { 0x0000'000Ful })
-		throw runtime_error("PCI BARs must be aligned at least to 16 bytes"s);
+        if (gpuConfig.bar0.base & uint_least32_t { 0x0000'000Ful })
+        throw runtime_error("PCI BARs must be aligned at least to 16 bytes"s);
 
-	    if (gpuConfig.bar0.base % (gpuConfig.bar0.top - gpuConfig.bar0.base + 1u))
-		throw runtime_error("PCI BARs must the naturally aligned (aligned to their size)"s);
+        if (gpuConfig.bar0.base % (gpuConfig.bar0.top - gpuConfig.bar0.base + 1u))
+        throw runtime_error("PCI BARs must the naturally aligned (aligned to their size)"s);
 
-	    if (!config.setGPUConfig(gpuConfig))
-		throw runtime_error("Unsupported configuration: too many GPUs to configure: " + to_string(config.nGPUConfig) + '+');
+        if (!config.setGPUConfig(gpuConfig))
+        throw runtime_error("Unsupported configuration: too many GPUs to configure: " + to_string(config.nGPUConfig) + '+');
 
-	    auto bridgeConfig = NvStraps_BridgeConfig
-	    {
-		.vendorID	    = device.bridge.vendorID,
-		.deviceID 	    = device.bridge.deviceID,
-		.bridgeBus	    = device.bridge.bus,
-		.bridgeDevice	    = device.bridge.dev,
-		.bridgeFunction     = device.bridge.func,
-		.bridgeSecondaryBus = device.bus
-	    };
+        auto bridgeConfig = NvStraps_BridgeConfig
+        {
+        .vendorID	    = device.bridge.vendorID,
+        .deviceID 	    = device.bridge.deviceID,
+        .bridgeBus	    = device.bridge.bus,
+        .bridgeDevice	    = device.bridge.dev,
+        .bridgeFunction     = device.bridge.func,
+        .bridgeSecondaryBus = device.bus
+        };
 
-	    auto &&previousBridge = config.lookupBridgeConfig(device.bus);
+        auto &&previousBridge = config.lookupBridgeConfig(device.bus);
 
-	    if (previousBridge)
-		if (*previousBridge != bridgeConfig)
-		    throw runtime_error("Unsupported system: multiple PCI bridges for bus " + to_string(device.bus));
-		else
-		    ;
-	    else
-		if (!config.setBridgeConfig(bridgeConfig))
-		    throw runtime_error("Unsupported configuration: too many PCI bridges to record: " + to_string(config.nBridgeConfig) + '+');
-	}
+        if (previousBridge)
+        if (*previousBridge != bridgeConfig)
+            throw runtime_error("Unsupported system: multiple PCI bridges for bus " + to_string(device.bus));
+        else
+            ;
+        else
+        if (!config.setBridgeConfig(bridgeConfig))
+            throw runtime_error("Unsupported configuration: too many PCI bridges to record: " + to_string(config.nBridgeConfig) + '+');
+    }
     }
 }
 
@@ -360,18 +360,18 @@ void runConfigurationWizard()
                 nvStrapsConfig.isGlobalEnable(),
                 selectedDevice,
                 deviceList,
-		nvStrapsConfig
+        nvStrapsConfig
             );
 
         switch (menuCommand)
         {
         case MenuCommand::DiscardQuit:
-	    if (runConfirmationPrompt(MenuCommand::DiscardQuit))
-		runMenuLoop = false;
-	    else
-		showConfig();
+        if (runConfirmationPrompt(MenuCommand::DiscardQuit))
+        runMenuLoop = false;
+        else
+        showConfig();
 
-	    break;
+        break;
 
         case MenuCommand::Quit:
             runMenuLoop = false;
@@ -382,57 +382,57 @@ void runConfigurationWizard()
             showConfig();
             break;
 
-	case MenuCommand::SkipS3Resume:
-	    if (nvStrapsConfig.skipS3Resume() || runConfirmationPrompt(MenuCommand::SkipS3Resume))
-		nvStrapsConfig.skipS3Resume(!nvStrapsConfig.skipS3Resume());
+    case MenuCommand::SkipS3Resume:
+        if (nvStrapsConfig.skipS3Resume() || runConfirmationPrompt(MenuCommand::SkipS3Resume))
+        nvStrapsConfig.skipS3Resume(!nvStrapsConfig.skipS3Resume());
 
-	    showConfig();
-	    break;
+        showConfig();
+        break;
 
-	case MenuCommand::OverrideBarSizeMask:
-	    switch (menuType)
-	    {
-	    case MenuType::Main:
-		nvStrapsConfig.overrideBarSizeMask(!nvStrapsConfig.overrideBarSizeMask());
-		break;
+    case MenuCommand::OverrideBarSizeMask:
+        switch (menuType)
+        {
+        case MenuType::Main:
+        nvStrapsConfig.overrideBarSizeMask(!nvStrapsConfig.overrideBarSizeMask());
+        break;
 
-	    case MenuType::GPUBARSize:
-		{
-		    auto &&deviceInfo = deviceList[selectedDevice];
-		    auto barSizeMaskOverride =
-			nvStrapsConfig.lookupBarSizeMaskOverride
-			    (
-				deviceInfo.deviceID,
-				deviceInfo.subsystemVendorID,
-				deviceInfo.subsystemDeviceID,
-				deviceInfo.bus,
-				deviceInfo.device,
-				deviceInfo.function
-			    )
-				.sizeMaskOverride;
-		    setGPUBarSizeMaskOverride(nvStrapsConfig, !barSizeMaskOverride, selectedDevice, deviceSelector, deviceList);
-		}
+        case MenuType::GPUBARSize:
+        {
+            auto &&deviceInfo = deviceList[selectedDevice];
+            auto barSizeMaskOverride =
+            nvStrapsConfig.lookupBarSizeMaskOverride
+                (
+                deviceInfo.deviceID,
+                deviceInfo.subsystemVendorID,
+                deviceInfo.subsystemDeviceID,
+                deviceInfo.bus,
+                deviceInfo.device,
+                deviceInfo.function
+                )
+                .sizeMaskOverride;
+            setGPUBarSizeMaskOverride(nvStrapsConfig, !barSizeMaskOverride, selectedDevice, deviceSelector, deviceList);
+        }
 
-		break;
-	    }
+        break;
+        }
 
-	    showConfig();
-	    menuType = MenuType::Main;
-	    break;
+        showConfig();
+        menuType = MenuType::Main;
+        break;
 
-	case MenuCommand::EnableSetupVarCRC:
-	    if (!nvStrapsConfig.enableSetupVarCRC() || runConfirmationPrompt(MenuCommand::EnableSetupVarCRC))
-		nvStrapsConfig.enableSetupVarCRC(!nvStrapsConfig.enableSetupVarCRC());
+    case MenuCommand::EnableSetupVarCRC:
+        if (!nvStrapsConfig.enableSetupVarCRC() || runConfirmationPrompt(MenuCommand::EnableSetupVarCRC))
+        nvStrapsConfig.enableSetupVarCRC(!nvStrapsConfig.enableSetupVarCRC());
 
-	    showConfig();
-	    break;
+        showConfig();
+        break;
 
-	case MenuCommand::ClearSetupVarCRC:
-	    nvStrapsConfig.hasSetupVarCRC(false);
-	    nvStrapsConfig.setupVarCRC(0u);
+    case MenuCommand::ClearSetupVarCRC:
+        nvStrapsConfig.hasSetupVarCRC(false);
+        nvStrapsConfig.setupVarCRC(0u);
 
-	    showConfig();
-	    break;
+        showConfig();
+        break;
 
         case MenuCommand::PerGPUConfigClear:
             nvStrapsConfig.clearGPUSelectors();
@@ -493,26 +493,26 @@ void runConfigurationWizard()
             showConfig();
             break;
 
-	case MenuCommand::ShowConfiguration:
-	    ShowNvStrapsConfig(showInfo);
-	    break;
+    case MenuCommand::ShowConfiguration:
+        ShowNvStrapsConfig(showInfo);
+        break;
 
         case MenuCommand::DiscardConfiguration:
             if (nvStrapsConfig.isDirty())
-	    {
+        {
                 GetNvStrapsConfig(true);
-		setConfigDirtyOnMismatch(deviceList, nvStrapsConfig);
-	    }
+        setConfigDirtyOnMismatch(deviceList, nvStrapsConfig);
+        }
 
             showConfig();
             break;
 
         case MenuCommand::SaveConfiguration:
-	    populateBridgeAndGpuConfig(nvStrapsConfig, deviceList);
-	    nvStrapsConfig.hasSetupVarCRC(false);
-	    nvStrapsConfig.setupVarCRC(0u);
+        populateBridgeAndGpuConfig(nvStrapsConfig, deviceList);
+        nvStrapsConfig.hasSetupVarCRC(false);
+        nvStrapsConfig.setupVarCRC(0u);
             SaveNvStrapsConfig();
-	    setConfigDirtyOnMismatch(deviceList, nvStrapsConfig);
+        setConfigDirtyOnMismatch(deviceList, nvStrapsConfig);
 
             showInfo(L"Configuration saved to NvStrapsReBar UEFI variable\n"s);
             showInfo(L"\nReboot for changes to take effect\n\n"s);

@@ -35,19 +35,19 @@ bool CheckPriviledge()
 #if defined(WINDOWS) || defined(_WINDOWS) || defined(_WIN64) || defined(_WIN32)
     if (auto hToken = HANDLE { }; OpenProcessToken(GetCurrentProcess(), TOKEN_ADJUST_PRIVILEGES | TOKEN_QUERY, &hToken))
     {
-	auto tokp = TOKEN_PRIVILEGES { };
-	LookupPrivilegeValue(NULL, SE_SYSTEM_ENVIRONMENT_NAME, &tokp.Privileges[0].Luid);
+    auto tokp = TOKEN_PRIVILEGES { };
+    LookupPrivilegeValue(NULL, SE_SYSTEM_ENVIRONMENT_NAME, &tokp.Privileges[0].Luid);
 
-	tokp.PrivilegeCount = 1;
-	tokp.Privileges[0].Attributes = SE_PRIVILEGE_ENABLED;
+    tokp.PrivilegeCount = 1;
+    tokp.Privileges[0].Attributes = SE_PRIVILEGE_ENABLED;
 
-	auto len = DWORD { };
-	AdjustTokenPrivileges(hToken, FALSE, &tokp, 0, NULL, &len);
+    auto len = DWORD { };
+    AdjustTokenPrivileges(hToken, FALSE, &tokp, 0, NULL, &len);
 
-	if (GetLastError() != ERROR_SUCCESS)
-	    return cout << "Failed to obtain SE_SYSTEM_ENVIRONMENT_NAME\n"sv, false;
+    if (GetLastError() != ERROR_SUCCESS)
+        return cout << "Failed to obtain SE_SYSTEM_ENVIRONMENT_NAME\n"sv, false;
 
-	return true;
+    return true;
     }
 
     return false;

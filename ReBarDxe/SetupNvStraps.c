@@ -39,8 +39,8 @@ static uint_least8_t enumeratedBridgeCount = 0u;
 static bool isBridgeEnumerated(uint_least16_t pciLocation)
 {
     for (unsigned index = 0u; index < enumeratedBridgeCount; index++)
-	if (enumeratedBridges[index] == pciLocation)
-	    return true;
+    if (enumeratedBridges[index] == pciLocation)
+        return true;
 
     return false;
 }
@@ -49,14 +49,14 @@ void NvStraps_EnumDevice(UINTN pciAddress, uint_least16_t vendorId, uint_least16
 {
     if (pciIsPciBridge(headerType) && (enumeratedBridgeCount < ARRAY_SIZE(enumeratedBridges)))
     {
-	uint_least8_t bus, dev, fun;
-	pciUnpackAddress(pciAddress, &bus, &dev, &fun);
+    uint_least8_t bus, dev, fun;
+    pciUnpackAddress(pciAddress, &bus, &dev, &fun);
 
-	if (NvStrapsConfig_HasBridgeDevice(config, bus, dev, fun) != ((uint_least32_t)WORD_BITMASK << WORD_BITSIZE | WORD_BITMASK))
-	{
-	    enumeratedBridges[enumeratedBridgeCount++] = pciPackLocation(bus, dev, fun);
-	    SetStatusVar(StatusVar_BridgeFound);
-	}
+    if (NvStrapsConfig_HasBridgeDevice(config, bus, dev, fun) != ((uint_least32_t)WORD_BITMASK << WORD_BITSIZE | WORD_BITMASK))
+    {
+        enumeratedBridges[enumeratedBridgeCount++] = pciPackLocation(bus, dev, fun);
+        SetStatusVar(StatusVar_BridgeFound);
+    }
     }
 }
 
@@ -64,14 +64,14 @@ bool NvStraps_CheckDevice(UINTN pciAddress, uint_least16_t vendorId, uint_least1
 {
     if (vendorId == TARGET_GPU_VENDOR_ID && NvStrapsConfig_IsGpuConfigured(config) && pciIsVgaController(pciDeviceClass(pciAddress)))
     {
-	EFI_STATUS status = pciReadDeviceSubsystem(pciAddress, subsysVenID, subsysDevID);
+    EFI_STATUS status = pciReadDeviceSubsystem(pciAddress, subsysVenID, subsysDevID);
 
-	if (EFI_ERROR(status))
-	    return SetEFIError(EFIError_PCI_DeviceSubsystem, status), false;
+    if (EFI_ERROR(status))
+        return SetEFIError(EFIError_PCI_DeviceSubsystem, status), false;
 
         uint_least8_t bus, device, fun;
 
-	pciUnpackAddress(pciAddress, &bus, &device, &fun);
+    pciUnpackAddress(pciAddress, &bus, &device, &fun);
 
         NvStraps_BarSize barSizeSelector =
             NvStrapsConfig_LookupBarSize(config, deviceId, *subsysVenID, *subsysDevID, bus, device, fun);
@@ -82,7 +82,7 @@ bool NvStraps_CheckDevice(UINTN pciAddress, uint_least16_t vendorId, uint_least1
             return false;
         }
 
-	SetDeviceStatusVar(pciAddress, StatusVar_GpuFound);
+    SetDeviceStatusVar(pciAddress, StatusVar_GpuFound);
 
         return true;
     }
@@ -116,15 +116,15 @@ static bool ConfigureNvStrapsBAR1Size(EFI_PHYSICAL_ADDRESS baseAddress0, UINT8 b
 
         CopyMem(pSTRAPS0, &STRAPS0, sizeof STRAPS0);
 
-	EFI_STATUS status = S3ResumeScript_MemReadWrite_DWORD
-	    (
-		(UINT64)baseAddress0 + TARGET_GPU_STRAPS_BASE_OFFSET + TARGET_GPU_STRAPS_SET0_OFFSET,
-		(UINT32)targetBarSize_Part1 << BAR1_SIZE_PART1_SHIFT | UINT32_C(1) << (DWORD_SIZE * BYTE_BITSIZE - 1u),
-		(UINT32) ~(UINT32)(((UINT32_C(1) << BAR1_SIZE_PART1_BITSIZE) - 1u) << BAR1_SIZE_PART1_SHIFT)
-	    );
+    EFI_STATUS status = S3ResumeScript_MemReadWrite_DWORD
+        (
+        (UINT64)baseAddress0 + TARGET_GPU_STRAPS_BASE_OFFSET + TARGET_GPU_STRAPS_SET0_OFFSET,
+        (UINT32)targetBarSize_Part1 << BAR1_SIZE_PART1_SHIFT | UINT32_C(1) << (DWORD_SIZE * BYTE_BITSIZE - 1u),
+        (UINT32) ~(UINT32)(((UINT32_C(1) << BAR1_SIZE_PART1_BITSIZE) - 1u) << BAR1_SIZE_PART1_SHIFT)
+        );
 
-	if (EFI_ERROR(status))
-	    SetEFIError(EFIError_WriteS3SaveStateProtocol, status);
+    if (EFI_ERROR(status))
+        SetEFIError(EFIError_WriteS3SaveStateProtocol, status);
     }
 
     if (barSize_Part2 != targetBarSize_Part2)
@@ -135,15 +135,15 @@ static bool ConfigureNvStrapsBAR1Size(EFI_PHYSICAL_ADDRESS baseAddress0, UINT8 b
 
         CopyMem(pSTRAPS1, &STRAPS1, sizeof STRAPS1);
 
-	EFI_STATUS status = S3ResumeScript_MemReadWrite_DWORD
-	    (
-		(UINT64)baseAddress0 + TARGET_GPU_STRAPS_BASE_OFFSET + TARGET_GPU_STRAPS_SET1_OFFSET,
-		(UINT32)targetBarSize_Part2 << BAR1_SIZE_PART2_SHIFT | UINT32_C(1) << (DWORD_SIZE * BYTE_BITSIZE - 1u),
-		(UINT32) ~(UINT32)(((UINT32_C(1) << BAR1_SIZE_PART2_BITSIZE) - 1u) << BAR1_SIZE_PART2_SHIFT)
-	    );
+    EFI_STATUS status = S3ResumeScript_MemReadWrite_DWORD
+        (
+        (UINT64)baseAddress0 + TARGET_GPU_STRAPS_BASE_OFFSET + TARGET_GPU_STRAPS_SET1_OFFSET,
+        (UINT32)targetBarSize_Part2 << BAR1_SIZE_PART2_SHIFT | UINT32_C(1) << (DWORD_SIZE * BYTE_BITSIZE - 1u),
+        (UINT32) ~(UINT32)(((UINT32_C(1) << BAR1_SIZE_PART2_BITSIZE) - 1u) << BAR1_SIZE_PART2_SHIFT)
+        );
 
-	if (EFI_ERROR(status))
-	    SetEFIError(EFIError_WriteS3SaveStateProtocol, status);
+    if (EFI_ERROR(status))
+        SetEFIError(EFIError_WriteS3SaveStateProtocol, status);
     }
 
     return barSize_Part1 + barSize_Part2 != targetBarSize_Part1 + targetBarSize_Part2;
@@ -167,30 +167,30 @@ void NvStraps_Setup(UINTN pciAddress, uint_least16_t vendorId, uint_least16_t de
 
     if (!gpuConfig)
     {
-	SetDeviceStatusVar(pciAddress, StatusVar_NoGpuConfig);
-	return;
+    SetDeviceStatusVar(pciAddress, StatusVar_NoGpuConfig);
+    return;
     }
 
     if (gpuConfig->bar0.base >= UINT32_MAX || gpuConfig->bar0.top >= UINT32_MAX || gpuConfig->bar0.base & UINT32_C(0x0000'000F)
-	    || gpuConfig->bar0.base % (gpuConfig->bar0.top - gpuConfig->bar0.base + 1u))
+        || gpuConfig->bar0.base % (gpuConfig->bar0.top - gpuConfig->bar0.base + 1u))
     {
-	SetDeviceStatusVar(pciAddress, StatusVar_BadGpuConfig);
-	return;
+    SetDeviceStatusVar(pciAddress, StatusVar_BadGpuConfig);
+    return;
     }
 
     NvStraps_BridgeConfig const *bridgeConfig = NvStrapsConfig_LookupBridgeConfig(config, bus);
 
     if (!bridgeConfig)
     {
-	SetDeviceStatusVar(pciAddress, StatusVar_NoBridgeConfig);
-	return;
+    SetDeviceStatusVar(pciAddress, StatusVar_NoBridgeConfig);
+    return;
     }
     else
-	if (!isBridgeEnumerated(pciPackLocation(bridgeConfig->bridgeBus, bridgeConfig->bridgeDevice, bridgeConfig->bridgeFunction)))
-	{
-	    SetDeviceStatusVar(pciAddress, StatusVar_BridgeNotEnumerated);
-	    return;
-	}
+    if (!isBridgeEnumerated(pciPackLocation(bridgeConfig->bridgeBus, bridgeConfig->bridgeDevice, bridgeConfig->bridgeFunction)))
+    {
+        SetDeviceStatusVar(pciAddress, StatusVar_BridgeNotEnumerated);
+        return;
+    }
 
     UINTN bridgePciAddress = EFI_PCI_ADDRESS(bridgeConfig->bridgeBus, bridgeConfig->bridgeDevice, bridgeConfig->bridgeFunction, 0u);
     uint_least8_t bridgeSecondaryBus;
@@ -198,14 +198,14 @@ void NvStraps_Setup(UINTN pciAddress, uint_least16_t vendorId, uint_least16_t de
 
     if (EFI_ERROR(status))
     {
-	SetDeviceEFIError(pciAddress, EFIError_PCI_BridgeSecondaryBus, status);
-	return;
+    SetDeviceEFIError(pciAddress, EFIError_PCI_BridgeSecondaryBus, status);
+    return;
     }
 
     if (bridgeSecondaryBus != bus)
     {
-	SetDeviceStatusVar(pciAddress, StatusVar_BadBridgeConfig);
-	return;
+    SetDeviceStatusVar(pciAddress, StatusVar_BadBridgeConfig);
+    return;
     }
 
     UINT32 bridgeSaveArea[3u], gpuSaveArea[2u];
@@ -229,7 +229,7 @@ void NvStraps_Setup(UINTN pciAddress, uint_least16_t vendorId, uint_least16_t de
 
                 bool configUpdated = ConfigureNvStrapsBAR1Size(gpuConfig->bar0.base & UINT32_C(0xFFFF'FFF0), barSizeSelector.barSizeSelector);     // mask the flag bits from the address
 
-		// RecordUpdateGPU(bus, device, func, barSizeSelector.barSizeSelector);
+        // RecordUpdateGPU(bus, device, func, barSizeSelector.barSizeSelector);
 
                 pciRestoreDeviceConfig(pciAddress, gpuSaveArea);
                 pciRestoreBridgeConfig(bridgePciAddress, bridgeSaveArea);
@@ -247,19 +247,19 @@ void NvStraps_Setup(UINTN pciAddress, uint_least16_t vendorId, uint_least16_t de
                         SetDeviceStatusVar(pciAddress, StatusVar_GpuStrapsNoConfirm);
                 }
                 else
-		    if (isTuringGPU(deviceId))
-			SetDeviceStatusVar(pciAddress, StatusVar_GpuNoReBarCapability);
+            if (isTuringGPU(deviceId))
+            SetDeviceStatusVar(pciAddress, StatusVar_GpuNoReBarCapability);
 
                 if (nPciBarSizeSelector == TARGET_PCI_BAR_SIZE_GPU_ONLY)
                 {
-		    if (capabilityOffset && (barSizeMask & UINT32_C(0x0000'0001) << (barSizeSelector.barSizeSelector + 6u) || sizeMaskOverride.sizeMaskOverride))
-		    {
-			if ((barSizeMask & UINT32_C(0x0000'0001) << (barSizeSelector.barSizeSelector + 6u)) == 0)
-			    SetDeviceStatusVar(pciAddress, StatusVar_GpuReBarSizeOverride);
+            if (capabilityOffset && (barSizeMask & UINT32_C(0x0000'0001) << (barSizeSelector.barSizeSelector + 6u) || sizeMaskOverride.sizeMaskOverride))
+            {
+            if ((barSizeMask & UINT32_C(0x0000'0001) << (barSizeSelector.barSizeSelector + 6u)) == 0)
+                SetDeviceStatusVar(pciAddress, StatusVar_GpuReBarSizeOverride);
 
-			if (pciRebarSetSize(pciAddress, capabilityOffset, PCI_BAR_IDX1, (uint_least8_t)(barSizeSelector.barSizeSelector + 6u)))
-			    SetDeviceStatusVar(pciAddress, StatusVar_GpuReBarConfigured);
-		    }
+            if (pciRebarSetSize(pciAddress, capabilityOffset, PCI_BAR_IDX1, (uint_least8_t)(barSizeSelector.barSizeSelector + 6u)))
+                SetDeviceStatusVar(pciAddress, StatusVar_GpuReBarConfigured);
+            }
                 }
                 else
                     if (nPciBarSizeSelector == TARGET_PCI_BAR_SIZE_GPU_STRAPS_ONLY)
@@ -300,24 +300,24 @@ bool NvStraps_CheckBARSizeListAdjust(UINTN pciAddress, uint_least16_t vid, uint_
 {
     if (vid == TARGET_GPU_VENDOR_ID && subsysVenID != WORD_BITMASK && subsysDevID != WORD_BITMASK && barIndex == PCI_BAR_IDX1)
     {
-	uint_least8_t bus, device, func;
-	pciUnpackAddress(pciAddress, &bus, &device, &func);
+    uint_least8_t bus, device, func;
+    pciUnpackAddress(pciAddress, &bus, &device, &func);
 
-	NvStraps_BarSize barSizeSelector = NvStrapsConfig_LookupBarSize(config, did, subsysVenID, subsysDevID, bus, device, func);
+    NvStraps_BarSize barSizeSelector = NvStrapsConfig_LookupBarSize(config, did, subsysVenID, subsysDevID, bus, device, func);
 
-	if (barSizeSelector.priority == UNCONFIGURED || barSizeSelector.barSizeSelector == BarSizeSelector_None || barSizeSelector.barSizeSelector == BarSizeSelector_Excluded)
-	    return false;
+    if (barSizeSelector.priority == UNCONFIGURED || barSizeSelector.barSizeSelector == BarSizeSelector_None || barSizeSelector.barSizeSelector == BarSizeSelector_Excluded)
+        return false;
 
-	NvStraps_BarSizeMaskOverride sizeMaskOverride = NvStrapsConfig_LookupBarSizeMaskOverride(config, did, subsysVenID, subsysDevID, bus, device, func);
+    NvStraps_BarSizeMaskOverride sizeMaskOverride = NvStrapsConfig_LookupBarSizeMaskOverride(config, did, subsysVenID, subsysDevID, bus, device, func);
 
-	if (sizeMaskOverride.sizeMaskOverride)
-	{
-	    NvStraps_BridgeConfig const *bridgeConfig = NvStrapsConfig_LookupBridgeConfig(config, bus);
+    if (sizeMaskOverride.sizeMaskOverride)
+    {
+        NvStraps_BridgeConfig const *bridgeConfig = NvStrapsConfig_LookupBridgeConfig(config, bus);
 
-	    return isBridgeEnumerated(pciPackLocation(bridgeConfig->bridgeBus, bridgeConfig->bridgeDevice, bridgeConfig->bridgeFunction));
-	}
+        return isBridgeEnumerated(pciPackLocation(bridgeConfig->bridgeBus, bridgeConfig->bridgeDevice, bridgeConfig->bridgeFunction));
+    }
 
-	return false;
+    return false;
     }
 
     return false;
@@ -335,7 +335,7 @@ uint_least32_t NvStraps_AdjustBARSizeList(UINTN pciAddress, uint_least16_t vid, 
         return barSizeMask;
 
     if ((barSizeMask & UINT32_C(0x00000001) << (6u + (unsigned)barSizeSelector.barSizeSelector)) == 0u)
-	SetDeviceStatusVar(pciAddress, StatusVar_GpuReBarSizeOverride);
+    SetDeviceStatusVar(pciAddress, StatusVar_GpuReBarSizeOverride);
 
     return barSizeMask | UINT32_C(0x00000001) << (6u + (unsigned)barSizeSelector.barSizeSelector);
 }
